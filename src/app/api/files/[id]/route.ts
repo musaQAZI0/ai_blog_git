@@ -33,7 +33,8 @@ export async function GET(
     const fileBuffer = await downloadFromMongoDB(fileId)
 
     // Return file with appropriate headers
-    return new NextResponse(fileBuffer, {
+    // Convert Buffer to Uint8Array for NextResponse compatibility
+    return new NextResponse(new Uint8Array(fileBuffer), {
       headers: {
         'Content-Type': metadata.contentType || 'application/octet-stream',
         'Content-Length': metadata.length.toString(),

@@ -24,6 +24,9 @@ export const metadata: Metadata = {
     'soczewki',
   ],
   authors: [{ name: 'Dr hab. n. med. Janusz Skrzypecki' }],
+  icons: {
+    icon: '/favicon.svg',
+  },
   openGraph: {
     type: 'website',
     locale: 'pl_PL',

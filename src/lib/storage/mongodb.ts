@@ -185,7 +185,7 @@ export async function listFilesByFolder(folder: string) {
     return files.map(file => ({
       id: file._id.toString(),
       filename: file.filename,
-      contentType: file.contentType,
+      contentType: file.metadata?.contentType || 'application/octet-stream',
       length: file.length,
       uploadDate: file.uploadDate,
       metadata: file.metadata,

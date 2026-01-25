@@ -24,7 +24,8 @@ export async function uploadToFirebase(
     const storageRef = ref(storage, `${folder}/${fileName}`)
 
     // Convert Buffer to Blob for Firebase upload
-    const blob = new Blob([file], { type: contentType })
+    // Convert Buffer to Uint8Array for Blob compatibility
+    const blob = new Blob([new Uint8Array(file)], { type: contentType })
 
     // Upload file with metadata
     const metadata = {

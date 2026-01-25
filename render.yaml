@@ -1,0 +1,128 @@
+services:
+  # Main Web Service
+  - type: web
+    name: medical-blog-skrzypecki
+    env: node
+    region: frankfurt  # Options: oregon, frankfurt, singapore
+    plan: free  # Options: free, starter, standard, pro
+    buildCommand: npm install && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+
+    # Auto-deploy on push to main branch
+    autoDeploy: true
+
+    # Environment Variables
+    envVars:
+      # Node Configuration
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: 18
+
+      # App URLs
+      - key: NEXT_PUBLIC_APP_URL
+        value: https://medical-blog-skrzypecki.onrender.com
+      - key: NEXT_PUBLIC_PATIENT_BLOG_URL
+        value: https://okulistykaakademicka.pl
+      - key: NEXT_PUBLIC_PROFESSIONAL_BLOG_URL
+        value: https://www.skrzypecki.pl
+      - key: ADMIN_EMAIL
+        value: admin@skrzypecki.pl
+
+      # Provider Selections
+      - key: EMAIL_PROVIDER
+        value: sendgrid
+      - key: STORAGE_PROVIDER
+        value: firebase
+
+      # SendGrid Email
+      - key: SENDGRID_FROM_EMAIL
+        value: noreply@skrzypecki.pl
+
+      # Rate Limiting
+      - key: RATE_LIMIT_MAX_REQUESTS
+        value: 100
+      - key: RATE_LIMIT_WINDOW_MS
+        value: 900000
+
+      # Image Generation
+      - key: DALLE_MODEL
+        value: dall-e-3
+      - key: DALLE_SIZE
+        value: 1024x1024
+      - key: DALLE_QUALITY
+        value: standard
+
+      # Newsletter Settings
+      - key: NEWSLETTER_WEEKLY_SCHEDULE
+        value: "0 8 * * 1"
+      - key: NEWSLETTER_MONTHLY_SCHEDULE
+        value: "0 8 1 * *"
+      - key: NEWSLETTER_FROM_NAME
+        value: "Skrzypecki.pl Medical Blog"
+
+      # Secret Variables (Set these manually in Render Dashboard)
+      # These are marked as sync: false so they must be added via dashboard
+      - key: NEXT_PUBLIC_FIREBASE_API_KEY
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
+        sync: false
+      - key: NEXT_PUBLIC_FIREBASE_APP_ID
+        sync: false
+      - key: FIREBASE_ADMIN_PROJECT_ID
+        sync: false
+      - key: FIREBASE_ADMIN_CLIENT_EMAIL
+        sync: false
+      - key: FIREBASE_ADMIN_PRIVATE_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: MAILCHIMP_API_KEY
+        sync: false
+      - key: MAILCHIMP_SERVER_PREFIX
+        sync: false
+      - key: MAILCHIMP_AUDIENCE_ID
+        sync: false
+      - key: AWS_ACCESS_KEY_ID
+        sync: false
+      - key: AWS_SECRET_ACCESS_KEY
+        sync: false
+      - key: AWS_REGION
+        sync: false
+      - key: AWS_SES_FROM_EMAIL
+        sync: false
+      - key: AWS_S3_BUCKET
+        sync: false
+      - key: AWS_S3_REGION
+        sync: false
+      - key: AZURE_STORAGE_CONNECTION_STRING
+        sync: false
+      - key: AZURE_STORAGE_CONTAINER
+        sync: false
+      - key: EXPORT_API_SECRET
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: ENCRYPTION_KEY
+        sync: false
+      - key: NEXT_PUBLIC_GA4_MEASUREMENT_ID
+        sync: false
+      - key: GOOGLE_ANALYTICS_CLIENT_EMAIL
+        sync: false
+      - key: GOOGLE_ANALYTICS_PRIVATE_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: SENTRY_AUTH_TOKEN
+        sync: false

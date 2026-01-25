@@ -3,6 +3,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Install dependencies required for sharp and other native modules
+RUN apk add --no-cache \
+    libc6-compat \
+    python3 \
+    make \
+    g++ \
+    vips-dev
+
 # Copy package files
 COPY package*.json ./
 
@@ -21,6 +29,9 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+
+# Install runtime dependencies for sharp
+RUN apk add --no-cache vips
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

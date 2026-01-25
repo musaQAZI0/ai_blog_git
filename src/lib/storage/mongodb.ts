@@ -60,8 +60,8 @@ export async function uploadToMongoDB(
 
     // Upload to GridFS with metadata
     const uploadStream = bucket.openUploadStream(fileName, {
-      contentType,
       metadata: {
+        contentType,
         folder,
         originalName: fileName,
         uploadedAt: new Date(),
@@ -160,7 +160,7 @@ export async function getFileMetadata(fileId: string) {
       return {
         id: files[0]._id.toString(),
         filename: files[0].filename,
-        contentType: files[0].contentType,
+        contentType: files[0].metadata?.contentType || 'application/octet-stream',
         length: files[0].length,
         uploadDate: files[0].uploadDate,
         metadata: files[0].metadata,

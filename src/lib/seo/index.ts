@@ -16,9 +16,10 @@ export function extractKeywords(content: string, maxKeywords: number = 10): stri
   ])
 
   // Tokenize and clean
+  // Replace non-letter characters (including Polish diacritics) with spaces
   const words = cleanText
     .toLowerCase()
-    .replace(/[^\p{L}\s]/gu, ' ')
+    .replace(/[^a-ząćęłńóśźżĄĆĘŁŃÓŚŹŻ\s]/g, ' ')
     .split(/\s+/)
     .filter((word) => word.length > 3 && !stopWords.has(word))
 

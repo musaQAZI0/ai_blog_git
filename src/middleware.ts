@@ -91,7 +91,16 @@ export function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: https: blob:; " +
     "font-src 'self' data:; " +
-    "connect-src 'self' https://*.firebase.com https://*.firebaseio.com https://*.google-analytics.com; " +
+    "connect-src 'self' " +
+      "https://*.firebase.com " +
+      "https://*.firebaseio.com " +
+      "https://*.googleapis.com " +
+      "https://identitytoolkit.googleapis.com " +
+      "https://securetoken.googleapis.com " +
+      "https://firebasestorage.googleapis.com " +
+      "https://firestore.googleapis.com " +
+      "https://www.googleapis.com " +
+      "https://*.google-analytics.com; " +
     "frame-ancestors 'none'; " +
     "base-uri 'self'; " +
     "form-action 'self';"

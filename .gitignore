@@ -45,3 +45,6 @@ next-env.d.ts
 
 # OS
 Thumbs.db
+
+# Duplicate/backup directories
+ai_blog_git/

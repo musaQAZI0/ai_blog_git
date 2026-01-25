@@ -58,7 +58,7 @@ export function CookieConsent() {
         document.head.appendChild(script)
 
         window.dataLayer = window.dataLayer || []
-        function gtag(...args: any[]) {
+        const gtag = (...args: any[]) => {
           window.dataLayer.push(args)
         }
         gtag('js', new Date())

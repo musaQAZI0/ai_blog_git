@@ -1,57 +1,20 @@
-# Build stage
-FROM node:20-alpine AS builder
+FROM node:20-alpine
 
 WORKDIR /app
 
-# Install dependencies required for sharp and other native modules
-RUN apk add --no-cache \
-    libc6-compat \
-    python3 \
-    make \
-    g++ \
-    vips-dev
+# Native deps for sharp / next
+RUN apk add --no-cache libc6-compat python3 make g++ vips-dev
 
-# Copy package files
+# Install deps
 COPY package*.json ./
-
-# Install dependencies
 RUN npm ci
 
-# Copy source code
+# Copy source
 COPY . .
 
-    # Build the application (skip env check in image build)
-    ENV SKIP_ENV_CHECK=1
-    RUN npm run build
-
-# Production stage
-FROM node:20-alpine AS runner
-
-WORKDIR /app
-
+# Runtime envs injected by Render; build at runtime so NEXT_PUBLIC_* are available
 ENV NODE_ENV=production
+ENV HOSTNAME=0.0.0.0
 
-# Install runtime dependencies for sharp
-RUN apk add --no-cache vips
-
-# Create non-root user
-RUN addgroup --system --gid 1001 nodejs
-RUN adduser --system --uid 1001 nextjs
-
-# Copy necessary files from builder
-COPY --from=builder --chown=nextjs:nodejs /app/public ./public
-COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
-COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
-
-# Create cache directory with proper permissions
-RUN mkdir -p .next/cache/images && chown -R nextjs:nodejs .next
-
-# Set ownership
-USER nextjs
-
-EXPOSE 3000
-
-ENV PORT=3000
-ENV HOSTNAME="0.0.0.0"
-
-CMD ["node", "server.js"]
+# Render sets PORT (often 10000). Default to 3000 for local docker run.
+CMD ["sh", "-c", "export PORT=${PORT:-3000}; npm run build && npm start"]

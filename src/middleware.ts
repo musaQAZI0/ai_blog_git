@@ -87,11 +87,20 @@ export function middleware(request: NextRequest) {
   response.headers.set(
     'Content-Security-Policy',
     "default-src 'self'; " +
-    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://*.google-analytics.com; " +
+    "script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://*.google-analytics.com https://apis.google.com https://*.gstatic.com; " +
     "style-src 'self' 'unsafe-inline'; " +
     "img-src 'self' data: https: blob:; " +
     "font-src 'self' data:; " +
-    "connect-src 'self' https://*.firebase.com https://*.firebaseio.com https://*.google-analytics.com; " +
+    "connect-src 'self' " +
+      "https://*.firebase.com " +
+      "https://*.firebaseio.com " +
+      "https://*.googleapis.com " +
+      "https://identitytoolkit.googleapis.com " +
+      "https://securetoken.googleapis.com " +
+      "https://firebasestorage.googleapis.com " +
+      "https://firestore.googleapis.com " +
+      "https://www.googleapis.com " +
+      "https://*.google-analytics.com; " +
     "frame-ancestors 'none'; " +
     "base-uri 'self'; " +
     "form-action 'self';"

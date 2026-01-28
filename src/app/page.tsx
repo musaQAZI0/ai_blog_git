@@ -70,7 +70,7 @@ export default function HomePage() {
 
           <div className="mt-12 grid gap-8 md:grid-cols-2">
             {/* Patient Path */}
-            <Card className="group relative overflow-hidden rounded-[2rem] border border-muted/40 bg-card/70 transition-all hover:border-accent/40 hover:shadow-2xl">
+            <Card className="group relative overflow-hidden rounded-[2rem] border border-muted/40 bg-card/60 transition-all hover:border-accent/40 hover:shadow-2xl">
               <div className="absolute inset-0 bg-gradient-to-br from-accent/30 via-transparent to-transparent opacity-80" />
               <CardContent className="relative z-10 p-8">
                 <div className="mb-6 inline-flex rounded-2xl bg-accent/10 p-3 text-accent">
@@ -95,7 +95,7 @@ export default function HomePage() {
                     Bez rejestracji
                   </li>
                 </ul>
-                <Button asChild className="w-full group-hover:bg-primary/90">
+                <Button asChild variant="outline" className="w-full">
                   <Link href="/patient">
                     Przejdz do bloga
                     <ArrowRight className="ml-2 h-4 w-4" />
@@ -105,10 +105,13 @@ export default function HomePage() {
             </Card>
 
             {/* Professional Path */}
-            <Card className="group relative overflow-hidden rounded-[2rem] border border-muted/40 bg-card/70 transition-all hover:border-accent/40 hover:shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-secondary/30 via-transparent to-transparent opacity-80" />
+            <Card className="group relative overflow-hidden rounded-[2rem] border border-primary/40 bg-card/80 shadow-2xl transition-all hover:border-primary/60 hover:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.45)] md:-translate-y-1 md:scale-[1.02]">
+              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/10 to-transparent opacity-90" />
               <CardContent className="relative z-10 p-8">
-                <div className="mb-6 inline-flex rounded-2xl bg-accent/10 p-3 text-accent">
+                <span className="mb-4 inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                  Priorytet
+                </span>
+                <div className="mb-6 inline-flex rounded-2xl bg-primary/10 p-3 text-primary">
                   <Stethoscope className="h-8 w-8" />
                 </div>
                 <h3 className="mb-3 text-2xl font-bold tracking-tight">Dla Specjalistow</h3>
@@ -130,7 +133,7 @@ export default function HomePage() {
                     Spolecznosc specjalistow
                   </li>
                 </ul>
-                <Button asChild className="w-full group-hover:bg-primary/90">
+                <Button asChild className="w-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90">
                   <Link href="/professional">
                     Zaloguj sie
                     <ArrowRight className="ml-2 h-4 w-4" />

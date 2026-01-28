@@ -27,6 +27,7 @@ export async function getPendingApprovals(): Promise<PendingApproval[]> {
   const firestore = ensureDb()
   const q = query(
     collection(firestore, PENDING_APPROVALS_COLLECTION),
+    where('reviewedAt', '==', null),
     orderBy('submittedAt', 'desc')
   )
 
@@ -155,7 +156,12 @@ export async function getAdminStats(): Promise<{
   const firestore = ensureDb()
   const [usersSnapshot, pendingSnapshot, articlesSnapshot] = await Promise.all([
     getDocs(collection(firestore, USERS_COLLECTION)),
-    getDocs(query(collection(firestore, PENDING_APPROVALS_COLLECTION))),
+    getDocs(
+      query(
+        collection(firestore, PENDING_APPROVALS_COLLECTION),
+        where('reviewedAt', '==', null)
+      )
+    ),
     getDocs(collection(firestore, 'articles')),
   ])
 

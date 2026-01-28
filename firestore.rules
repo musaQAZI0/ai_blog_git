@@ -1,18 +1,72 @@
-rules_version='2'
+rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    function isAdmin() {
+      return isSignedIn() && userDoc().data.role == 'admin';
+    }
+
+    function isApproved() {
+      return isSignedIn() && userDoc().data.status == 'approved';
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    match /users/{userId} {
+      allow create: if isOwner(userId);
+      allow read, update: if isOwner(userId) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    match /pendingApprovals/{userId} {
+      allow create: if isOwner(userId);
+      allow read: if isAdmin() || isOwner(userId);
+      allow update, delete: if isAdmin();
+    }
+
+    match /articles/{articleId} {
+      allow read: if resource.data.status == 'published'
+        || (isSignedIn() && request.auth.uid == resource.data.authorId)
+        || isAdmin();
+
+      allow create: if isApproved()
+        && request.auth.uid == request.resource.data.authorId;
+
+      allow update, delete: if isAdmin()
+        || (isApproved() && request.auth.uid == resource.data.authorId);
+
+      // Allow public view count increments only
+      allow update: if resource.data.status == 'published'
+        && request.resource.data.diff(resource.data).changedKeys().hasOnly(['viewCount']);
+    }
+
+    match /newsletterSubscriptions/{subscriptionId} {
+      allow create: if true;
+
+      // Allow unsubscribes without auth (only set unsubscribedAt)
+      allow update: if request.resource.data.diff(resource.data).changedKeys().hasOnly(['unsubscribedAt'])
+        && resource.data.unsubscribedAt == null;
+
+      allow read, delete: if isAdmin();
+    }
+
+    match /consentLogs/{logId} {
+      allow create: if true;
+      allow read, update, delete: if false;
+    }
+
     match /{document=**} {
-      // This rule allows anyone with your database reference to view, edit,
-      // and delete all data in your database. It is useful for getting
-      // started, but it is configured to expire after 30 days because it
-      // leaves your app open to attackers. At that time, all client
-      // requests to your database will be denied.
-      //
-      // Make sure to write security rules for your app before that time, or
-      // else all client requests to your database will be denied until you
-      // update your rules.
-      allow read, write: if request.time < timestamp.date(2026, 2, 24);
+      allow read, write: if false;
     }
   }
 }

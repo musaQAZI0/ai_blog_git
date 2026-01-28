@@ -20,8 +20,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Build the application
-RUN npm run build
+    # Build the application (skip env check in image build)
+    ENV SKIP_ENV_CHECK=1
+    RUN npm run build
 
 # Production stage
 FROM node:20-alpine AS runner

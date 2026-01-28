@@ -1,5 +1,11 @@
 #!/usr/bin/env node
 
+// Allow skipping in Docker/image builds where env isn't injected
+if (process.env.SKIP_ENV_CHECK === '1') {
+  console.log('Skipping env verification because SKIP_ENV_CHECK=1')
+  process.exit(0)
+}
+
 /**
  * Environment Variables Verification Script
  * Validates that all required environment variables are set before build

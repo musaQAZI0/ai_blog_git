@@ -4,8 +4,8 @@ services:
     name: medical-blog-skrzypecki
     env: node
     region: frankfurt  # Options: oregon, frankfurt, singapore
-    plan: starter # Options: free, starter, standard, pro
-    buildCommand: NODE_OPTIONS="--max_old_space_size=1024" NEXT_DISABLE_SOURCEMAPS=1 npm install && NODE_OPTIONS="--max_old_space_size=1024" NEXT_DISABLE_SOURCEMAPS=1 npm run build
+    plan: free  # Options: free, starter, standard, pro
+    buildCommand: npm install && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
 
@@ -35,6 +35,8 @@ services:
         value: sendgrid
       - key: STORAGE_PROVIDER
         value: firebase
+      - key: AI_STORAGE_PROVIDER
+        value: cloudinary
 
       # SendGrid Email
       - key: SENDGRID_FROM_EMAIL
@@ -85,6 +87,16 @@ services:
       - key: OPENAI_API_KEY
         sync: false
       - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_IMAGEN_MODEL
+        sync: false
+      - key: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
         sync: false
       - key: SENDGRID_API_KEY
         sync: false

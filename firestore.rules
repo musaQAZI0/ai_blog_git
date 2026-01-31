@@ -10,12 +10,16 @@ service cloud.firestore {
       return get(/databases/$(database)/documents/users/$(request.auth.uid));
     }
 
+    function hasUserDoc() {
+      return isSignedIn() && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
     function isAdmin() {
-      return isSignedIn() && userDoc().data.role == 'admin';
+      return hasUserDoc() && userDoc().data.role == 'admin';
     }
 
     function isApproved() {
-      return isSignedIn() && userDoc().data.status == 'approved';
+      return hasUserDoc() && userDoc().data.status == 'approved';
     }
 
     function isOwner(userId) {

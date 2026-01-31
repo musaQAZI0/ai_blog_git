@@ -90,7 +90,7 @@ export async function signIn(email: string, password: string): Promise<{ user: F
     const userRef = doc(firestore, 'users', userCredential.user.uid)
     let userDoc = await getDoc(userRef)
 
-    const adminEmail = process.env.NEXT_PUBLIC_ADMIN_EMAIL?.toLowerCase()
+    const adminEmail = (process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL)?.toLowerCase()
     const isAdminEmail = Boolean(adminEmail && adminEmail === email.toLowerCase())
 
     if (!userDoc.exists()) {

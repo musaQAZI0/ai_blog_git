@@ -73,7 +73,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             setUser(null)
           }
         } catch (error) {
-          console.error('[auth] error fetching user data:', error)
+          const err = error as any
+          if (err?.code === 'permission-denied') {
+            console.error(
+              '[auth] Firestore permission denied while reading users/{uid}. ' +
+                'This usually means your deployed Firestore rules do not match this repo\'s firestore.rules, ' +
+                'or your Firebase config points to a different project. Deploy rules with: `firebase deploy --only firestore:rules`.',
+              err
+            )
+          } else {
+            console.error('[auth] error fetching user data:', err)
+          }
           setUser(null)
         }
       } else {

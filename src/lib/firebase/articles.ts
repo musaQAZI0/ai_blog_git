@@ -21,6 +21,38 @@ import { generateSlug } from '@/lib/utils'
 
 const ARTICLES_COLLECTION = 'articles'
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (value === null || typeof value !== 'object') return false
+  const proto = Object.getPrototypeOf(value)
+  return proto === Object.prototype || proto === null
+}
+
+function removeUndefinedDeep<T>(value: T): T | undefined {
+  if (value === undefined) return undefined
+
+  if (Array.isArray(value)) {
+    const cleaned = value
+      .map((item) => removeUndefinedDeep(item))
+      .filter((item) => item !== undefined) as unknown as T
+    return cleaned
+  }
+
+  if (isPlainObject(value)) {
+    const entries = Object.entries(value as Record<string, unknown>)
+    const cleaned: Record<string, unknown> = {}
+    for (const [key, val] of entries) {
+      const next = removeUndefinedDeep(val)
+      if (next !== undefined) {
+        cleaned[key] = next
+      }
+    }
+    return cleaned as T
+  }
+
+  // Treat non-plain objects (e.g., Firestore FieldValue) as leaf values.
+  return value
+}
+
 function ensureDb() {
   if (!isFirebaseConfigured || !db) {
     throw new Error('Firebase is not configured. Please set up your environment variables.')
@@ -36,7 +68,7 @@ export async function createArticle(
   const firestore = ensureDb()
   const slug = generateSlug(data.title)
 
-  const articleData = {
+  const articleData = removeUndefinedDeep({
     ...data,
     slug,
     authorId,
@@ -45,9 +77,12 @@ export async function createArticle(
     viewCount: 0,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
-  }
+  })
 
-  const docRef = await addDoc(collection(firestore, ARTICLES_COLLECTION), articleData)
+  const docRef = await addDoc(
+    collection(firestore, ARTICLES_COLLECTION),
+    (articleData || {}) as Record<string, unknown>
+  )
   return docRef.id
 }
 
@@ -58,10 +93,10 @@ export async function updateArticle(
   const firestore = ensureDb()
   const articleRef = doc(firestore, ARTICLES_COLLECTION, articleId)
 
-  const updateData: Record<string, unknown> = {
+  const updateData: Record<string, unknown> = (removeUndefinedDeep({
     ...data,
     updatedAt: serverTimestamp(),
-  }
+  }) as Record<string, unknown> | undefined) || {}
 
   if (data.title) {
     updateData.slug = generateSlug(data.title)
@@ -110,9 +145,12 @@ export async function getArticleById(articleId: string): Promise<Article | null>
 
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
   const firestore = ensureDb()
+  // Public slug pages should only resolve published articles.
+  // (Drafts are accessible by ID for the author/admin in the dashboard.)
   const q = query(
     collection(firestore, ARTICLES_COLLECTION),
     where('slug', '==', slug),
+    where('status', '==', 'published'),
     limit(1)
   )
 

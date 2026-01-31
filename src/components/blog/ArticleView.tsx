@@ -83,6 +83,7 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
             src={article.coverImage}
             alt={article.title}
             fill
+            sizes="(max-width: 768px) 100vw, 768px"
             className="object-cover"
             priority
             unoptimized

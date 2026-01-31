@@ -10,6 +10,32 @@ import { CategoryFilter } from '@/components/blog/CategoryFilter'
 import { NewsletterForm } from '@/components/blog/NewsletterForm'
 import { Button, Alert, AlertDescription } from '@/components/ui'
 
+const GOOGLE_ARTICLE: Article = {
+  id: 'google-vision-health',
+  title: 'Jak Google pomaga w ochronie wzroku: AI w diagnostyce oczu',
+  slug: 'google-ai-ochrona-wzroku',
+  content:
+    'Sztuczna inteligencja wspierana przez Google pomaga okulistom szybciej wykrywać retinopatie i choroby siatkówki. W artykule omawiamy, jak algorytmy analizy obrazu wspierają diagnostykę, na co zwracać uwagę w profilaktyce i jak pacjent może przygotować się do wizyty. Korzystaj z regularnych badań i pamiętaj o higienie pracy przy ekranie.',
+  excerpt:
+    'Google rozwija AI do wczesnego wykrywania chorób oczu. Sprawdź, jak technologie pomagają w diagnostyce i profilaktyce wzroku.',
+  coverImage: undefined,
+  category: 'Zdrowie oczu',
+  targetAudience: 'patient',
+  authorId: 'system',
+  authorName: 'Medical Blog AI',
+  status: 'published',
+  seoMeta: {
+    title: 'Google AI i zdrowie oczu',
+    description: 'Jak Google AI wspiera diagnostykę chorób oczu i profilaktykę wzroku.',
+    keywords: ['google', 'AI', 'wzrok', 'diagnostyka', 'profilaktyka'],
+  },
+  createdAt: new Date(),
+  updatedAt: new Date(),
+  publishedAt: new Date(),
+  viewCount: 0,
+  tags: ['AI', 'Google', 'zdrowie oczu'],
+}
+
 const CATEGORIES = [
   'Zdrowie oczu',
   'Choroby',
@@ -44,26 +70,26 @@ export default function PatientBlogPage() {
           mockArticles = mockArticles.filter((a) => a.category === selectedCategory)
         }
 
-        setArticles(mockArticles)
+        setArticles([GOOGLE_ARTICLE, ...mockArticles])
       } else {
         // Use Firebase
         const { getArticles, searchArticles } = await import('@/lib/firebase/articles')
 
         if (searchQuery) {
           const results = await searchArticles(searchQuery, 'patient')
-          setArticles(results)
+          setArticles([GOOGLE_ARTICLE, ...results])
         } else {
           const { articles: fetchedArticles } = await getArticles({
             targetAudience: 'patient',
             category: selectedCategory || undefined,
           })
-          setArticles(fetchedArticles)
+          setArticles([GOOGLE_ARTICLE, ...fetchedArticles])
         }
       }
     } catch (error) {
       console.error('Error fetching articles:', error)
       // Fallback to mock data on error
-      setArticles(getMockArticles('patient'))
+      setArticles([GOOGLE_ARTICLE, ...getMockArticles('patient')])
     } finally {
       setLoading(false)
     }

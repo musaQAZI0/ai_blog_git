@@ -20,8 +20,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Skip env check during image build (Render injects envs at runtime)
-ENV SKIP_ENV_CHECK=1
+# Run env check during image build
+# NOTE: This will fail the Docker build unless required env vars are available at build time.
+ENV SKIP_ENV_CHECK=0
 
 # Build the application
 RUN npm run build
@@ -44,6 +45,7 @@ RUN adduser --system --uid 1001 nextjs
 COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
+COPY --from=builder --chown=nextjs:nodejs /app/scripts/verify-env.js ./scripts/verify-env.js
 
 # Create cache directory with proper permissions
 RUN mkdir -p .next/cache/images && chown -R nextjs:nodejs .next
@@ -56,4 +58,4 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+CMD ["sh", "-c", "node scripts/verify-env.js && node server.js"]

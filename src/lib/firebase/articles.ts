@@ -149,11 +149,7 @@ export async function getArticleById(articleId: string): Promise<Article | null>
 }
 
 export async function getArticleBySlug(slug: string): Promise<Article | null> {
-<<<<<<< HEAD
   const firestore = await ensureDbAsync()
-=======
-  const firestore = ensureDb()
->>>>>>> ff7bc50839a3347dbc2d5e87e9b58e829c2e8a2c
   // Public slug pages should only resolve published articles.
   // (Drafts are accessible by ID for the author/admin in the dashboard.)
   const q = query(

@@ -22,9 +22,19 @@ export const isFirebaseConfigured = Boolean(
   !firebaseConfig.projectId.includes('your_')
 )
 
-// Console log for debugging
 if (typeof window !== 'undefined') {
-  console.log('Firebase configured:', isFirebaseConfigured)
+  if (isFirebaseConfigured) {
+    console.log('[firebase] configured: true')
+  } else {
+    console.warn('[firebase] configured: false (missing NEXT_PUBLIC_FIREBASE_* env vars at build time)', {
+      hasApiKey: Boolean(process.env.NEXT_PUBLIC_FIREBASE_API_KEY),
+      hasAuthDomain: Boolean(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN),
+      hasProjectId: Boolean(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID),
+      hasStorageBucket: Boolean(process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET),
+      hasMessagingSenderId: Boolean(process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID),
+      hasAppId: Boolean(process.env.NEXT_PUBLIC_FIREBASE_APP_ID),
+    })
+  }
 }
 
 let app: FirebaseApp | null = null

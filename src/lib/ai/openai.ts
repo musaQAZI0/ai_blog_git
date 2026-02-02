@@ -18,8 +18,10 @@ Format the content with clear headings, bullet points where appropriate, and eas
 
 const PROFESSIONAL_SYSTEM_PROMPT = `You are a medical content writer specializing in ophthalmology content for medical professionals.
 Write in technical, clinical Polish language appropriate for doctors and optometrists.
-Include relevant clinical details, research references, and professional terminology.
-Format the content with proper medical structure and evidence-based information.`
+Include relevant clinical details, professional terminology, and (when present in the source) key numbers, cutoffs, and study findings.
+Ground claims in the provided document content. If the document does not contain a detail, do not invent it.
+If you mention evidence, prefer referencing what is present in the document; do not fabricate citations/DOIs/PMIDs.
+Format the content with a clear clinical structure and practical takeaways.`
 
 export async function generateArticleWithOpenAI(
   pdfContent: string,
@@ -29,6 +31,18 @@ export async function generateArticleWithOpenAI(
   const systemPrompt = targetAudience === 'patient'
     ? PATIENT_SYSTEM_PROMPT
     : PROFESSIONAL_SYSTEM_PROMPT
+
+  const audienceInstructions =
+    targetAudience === 'professional'
+      ? `Professional requirements:
+- Make it specific and actionable (avoid generic statements like "regular check-ups are important" unless tied to the document).
+- Use a clinical structure with headings such as: **Tło**, **Kluczowe informacje z dokumentu**, **Implikacje kliniczne**, **Ograniczenia/uwagi**, **Wnioski**.
+- If the PDF contains numerical results, include at least 1 concise bullet list with those numbers (e.g., ranges, percentages, comparison results) and interpret them.
+`
+      : `Patient requirements:
+- Keep language simple and reassuring.
+- Explain any unavoidable medical terms briefly.
+`
 
   const userPrompt = `Based on the following medical document content, create a blog article in Polish.
 Target word count: ~400 words for the main content (aim for 380-450).
@@ -41,6 +55,7 @@ IMPORTANT:
 - Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
 - Include up to 3 figures (mix of medical illustration and/or chart/graph if the PDF contains numerical data).
 - In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. ![Alt text]({{FIGURE_1_URL}}).
+${audienceInstructions}
 
 Required JSON format:
 {
@@ -129,7 +144,38 @@ Required JSON format:
     return completion.choices[0]?.message?.content || markdown
   }
 
+  async function ensureProfessionalSpecificity(markdown: string): Promise<string> {
+    if (targetAudience !== 'professional') return markdown
+
+    const openai = getOpenAIClient()
+
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4-turbo-preview',
+      messages: [
+        { role: 'system', content: PROFESSIONAL_SYSTEM_PROMPT },
+        {
+          role: 'user',
+          content:
+            `Rewrite the following Polish professional/clinical blog article to be LESS generic and more grounded in the provided document.\n` +
+            `Constraints:\n` +
+            `- Keep total length ~400 words (aim 380-450).\n` +
+            `- Do NOT add SEO metadata.\n` +
+            `- Do NOT fabricate studies/citations.\n` +
+            `- Preserve any image placeholders like {{FIGURE_1_URL}} exactly as-is.\n` +
+            `- Prefer a clinical structure: Tło, Kluczowe informacje z dokumentu, Implikacje kliniczne, Ograniczenia/uwagi, Wnioski.\n\n` +
+            `Document (for grounding):\n${pdfContent}\n\n` +
+            `Article to rewrite:\n${markdown}`,
+        },
+      ],
+      temperature: 0.4,
+      max_tokens: 2500,
+    })
+
+    return completion.choices[0]?.message?.content || markdown
+  }
+
   content = await ensureTargetLength(content)
+  content = await ensureProfessionalSpecificity(content)
 
   function injectFigure(options: {
     content: string

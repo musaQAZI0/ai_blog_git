@@ -7,7 +7,7 @@ import {
   getDocs,
   writeBatch,
 } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from '@/lib/firebase/config'
+import { db, isFirebaseConfigured } from '@/lib/firebase/config.server'
 
 export const dynamic = 'force-dynamic'
 

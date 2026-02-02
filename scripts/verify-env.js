@@ -1,9 +1,59 @@
 #!/usr/bin/env node
 
+// Allow skipping in Docker/image builds where env isn't injected
+if (process.env.SKIP_ENV_CHECK === '1') {
+  console.log('Skipping env verification because SKIP_ENV_CHECK=1')
+  process.exit(0)
+}
+
 /**
  * Environment Variables Verification Script
  * Validates that all required environment variables are set before build
+ * Loads local .env files so "node scripts/verify-env.js" matches Next.js env behavior.
  */
+
+const fs = require('fs')
+const path = require('path')
+
+const envFiles = [
+  '.env.local',
+  '.env',
+  path.join('src', '.env'),
+]
+
+const loadEnvFile = (filePath) => {
+  if (!fs.existsSync(filePath)) return
+
+  const contents = fs.readFileSync(filePath, 'utf8')
+  contents.split(/\r?\n/).forEach((line) => {
+    const trimmed = line.trim()
+    if (!trimmed || trimmed.startsWith('#')) return
+
+    const exportPrefix = 'export '
+    const normalized = trimmed.startsWith(exportPrefix)
+      ? trimmed.slice(exportPrefix.length)
+      : trimmed
+
+    const equalsIndex = normalized.indexOf('=')
+    if (equalsIndex === -1) return
+
+    const key = normalized.slice(0, equalsIndex).trim()
+    let value = normalized.slice(equalsIndex + 1).trim()
+
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
+      value = value.slice(1, -1)
+    }
+
+    if (!process.env[key]) {
+      process.env[key] = value
+    }
+  })
+}
+
+envFiles.forEach((file) => loadEnvFile(path.resolve(process.cwd(), file)))
 
 const requiredEnvVars = {
   firebase: [
@@ -26,6 +76,7 @@ const requiredEnvVars = {
 }
 
 const optionalEnvVars = [
+  'OPENAI_TEXT_MODEL',
   'OPENAI_API_KEY',
   'ANTHROPIC_API_KEY',
   'SENDGRID_API_KEY',

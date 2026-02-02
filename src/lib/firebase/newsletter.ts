@@ -11,7 +11,7 @@ import {
   orderBy,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from './config'
+import { db, ensureFirebaseInitialized, isFirebaseConfigured } from './config.client'
 import { NewsletterSubscription } from '@/types'
 
 const NEWSLETTER_COLLECTION = 'newsletterSubscriptions'
@@ -23,12 +23,17 @@ function ensureDb() {
   return db
 }
 
+async function ensureDbAsync() {
+  await ensureFirebaseInitialized()
+  return ensureDb()
+}
+
 export async function subscribeToNewsletter(
   email: string,
   userId?: string,
   preferences?: NewsletterSubscription['preferences']
 ): Promise<string> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
 
   // Check if already subscribed
   const existing = await getSubscriptionByEmail(email)
@@ -54,7 +59,7 @@ export async function subscribeToNewsletter(
 }
 
 export async function unsubscribeFromNewsletter(email: string): Promise<void> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
 
   const q = query(collection(firestore, NEWSLETTER_COLLECTION), where('email', '==', email))
   const snapshot = await getDocs(q)
@@ -72,7 +77,7 @@ export async function unsubscribeFromNewsletter(email: string): Promise<void> {
 export async function getSubscriptionByEmail(
   email: string
 ): Promise<NewsletterSubscription | null> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
 
   const q = query(collection(firestore, NEWSLETTER_COLLECTION), where('email', '==', email))
   const snapshot = await getDocs(q)
@@ -92,7 +97,7 @@ export async function getSubscriptionByEmail(
 export async function getAllActiveSubscribers(
   frequency?: 'daily' | 'weekly' | 'monthly'
 ): Promise<NewsletterSubscription[]> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
 
   let q = query(
     collection(firestore, NEWSLETTER_COLLECTION),
@@ -120,7 +125,7 @@ export async function updateNewsletterPreferences(
   email: string,
   preferences: NewsletterSubscription['preferences']
 ): Promise<void> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
 
   const q = query(collection(firestore, NEWSLETTER_COLLECTION), where('email', '==', email))
   const snapshot = await getDocs(q)
@@ -142,7 +147,7 @@ export async function getNewsletterStats(): Promise<{
   unsubscribed: number
   byFrequency: { daily: number; weekly: number; monthly: number }
 }> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
 
   const allSnapshot = await getDocs(collection(firestore, NEWSLETTER_COLLECTION))
   const all = allSnapshot.docs.map((d) => d.data())

@@ -3,7 +3,7 @@
  * Uses Firebase Cloud Storage for file uploads
  */
 
-import { storage, isFirebaseConfigured } from '@/lib/firebase/config'
+import { storage, isFirebaseConfigured } from '@/lib/firebase/config.server'
 import { ref, uploadBytes, deleteObject, getDownloadURL } from 'firebase/storage'
 
 /**

@@ -3,7 +3,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { User as FirebaseUser } from 'firebase/auth'
 import { doc, getDoc } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from '@/lib/firebase/config'
+import { auth, db, ensureFirebaseInitialized } from '@/lib/firebase/config.client'
 import { User } from '@/types'
 
 interface AuthContextType {
@@ -32,55 +32,80 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null)
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
-  const isDemoMode = !isFirebaseConfigured
+  const [isDemoMode, setIsDemoMode] = useState(true)
 
   useEffect(() => {
-    // Demo mode - no Firebase configured
-    if (isDemoMode) {
-      setLoading(false)
-      return
-    }
+    let cancelled = false
+    let unsubscribe: (() => void) | null = null
 
-    // Firebase mode
-    const { onAuthStateChanged } = require('firebase/auth')
-    const { auth } = require('@/lib/firebase/config')
+    ;(async () => {
+      setLoading(true)
+      const configured = await ensureFirebaseInitialized()
+      if (cancelled) return
 
-    if (!auth) {
-      setLoading(false)
-      return
-    }
-
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
-      setFirebaseUser(fbUser)
-
-      if (fbUser && db) {
-        try {
-          const userDoc = await getDoc(doc(db, 'users', fbUser.uid))
-          if (userDoc.exists()) {
-            const userData = userDoc.data()
-            setUser({
-              id: userDoc.id,
-              ...userData,
-              createdAt: userData.createdAt?.toDate() || new Date(),
-              updatedAt: userData.updatedAt?.toDate() || new Date(),
-              gdprConsentDate: userData.gdprConsentDate?.toDate(),
-            } as User)
-          } else {
-            setUser(null)
-          }
-        } catch (error) {
-          console.error('Error fetching user data:', error)
-          setUser(null)
-        }
-      } else {
-        setUser(null)
+      if (!configured) {
+        console.log('[auth] demo mode enabled (Firebase not configured)')
+        setIsDemoMode(true)
+        setLoading(false)
+        return
       }
 
-      setLoading(false)
-    })
+      setIsDemoMode(false)
 
-    return () => unsubscribe()
-  }, [isDemoMode])
+      const { onAuthStateChanged } = await import('firebase/auth')
+      if (!auth) {
+        setLoading(false)
+        return
+      }
+
+      unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
+        console.log('[auth] onAuthStateChanged', { uid: fbUser?.uid || null })
+        setFirebaseUser(fbUser)
+
+        if (fbUser && db) {
+          try {
+            const userDoc = await getDoc(doc(db, 'users', fbUser.uid))
+            if (userDoc.exists()) {
+              const userData = userDoc.data()
+              console.log('[auth] user doc loaded', { status: userData.status, role: userData.role })
+              setUser({
+                id: userDoc.id,
+                ...userData,
+                createdAt: userData.createdAt?.toDate() || new Date(),
+                updatedAt: userData.updatedAt?.toDate() || new Date(),
+                gdprConsentDate: userData.gdprConsentDate?.toDate(),
+              } as User)
+            } else {
+              console.log('[auth] user doc missing for uid', fbUser.uid)
+              setUser(null)
+            }
+          } catch (error) {
+            const err = error as any
+            if (err?.code === 'permission-denied') {
+              console.error(
+                '[auth] Firestore permission denied while reading users/{uid}. ' +
+                  'This usually means your deployed Firestore rules do not match this repo\'s firestore.rules, ' +
+                  "or your Firebase config points to a different project. Deploy rules with: `firebase deploy --only firestore:rules`.",
+                err
+              )
+            } else {
+              console.error('[auth] error fetching user data:', err)
+            }
+            setUser(null)
+          }
+        } else {
+          setUser(null)
+        }
+
+        setLoading(false)
+      })
+    })()
+
+    return () => {
+      cancelled = true
+      unsubscribe?.()
+    }
+  }, [])
 
   const isAdmin = user?.role === 'admin'
   const isApproved = user?.status === 'approved'

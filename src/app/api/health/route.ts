@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { isFirebaseConfigured } from '@/lib/firebase/config'
+import { isFirebaseConfigured } from '@/lib/firebase/config.server'
 
 /**
  * Health check endpoint for monitoring services (Render, uptime monitors, etc.)

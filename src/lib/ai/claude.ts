@@ -28,6 +28,7 @@ export async function generateArticleWithClaude(
     : PROFESSIONAL_SYSTEM_PROMPT
 
   const userPrompt = `Based on the following medical document content, create a blog article in Polish.
+Target word count: ~600 words for the main content (aim for 560-650).
 
 Document content:
 ${pdfContent}

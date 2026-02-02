@@ -17,7 +17,7 @@ import {
   AlertDescription,
 } from '@/components/ui'
 import { doc, updateDoc } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from '@/lib/firebase/config'
+import { db, ensureFirebaseInitialized } from '@/lib/firebase/config.client'
 import { ArrowLeft, Save, Download, Trash2 } from 'lucide-react'
 
 function DashboardSettingsContent() {
@@ -30,7 +30,8 @@ function DashboardSettingsContent() {
   const handleSaveProfile = async () => {
     if (!user) return
 
-    if (!isFirebaseConfigured || !db) {
+    const configured = await ensureFirebaseInitialized()
+    if (!configured || !db) {
       setMessage({ type: 'success', text: 'Demo mode - zmiany nie zostaly zapisane' })
       return
     }

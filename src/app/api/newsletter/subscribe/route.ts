@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from '@/lib/firebase/config'
+import { db, isFirebaseConfigured } from '@/lib/firebase/config.server'
 import { hashString, validateEmail } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'

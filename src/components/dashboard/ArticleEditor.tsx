@@ -105,6 +105,9 @@ export function ArticleEditor({ initialData, onSave, loading }: ArticleEditorPro
           keywords: data.seoKeywords.split(',').map((k) => k.trim()).filter(Boolean),
         },
       }
+      if (initialData?.coverImage) {
+        articleData.coverImage = initialData.coverImage
+      }
       await onSave(articleData, publish)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Wystapil blad')

@@ -33,14 +33,17 @@ export function LoginForm() {
     setLoading(true)
     setError(null)
 
+    console.log('[auth] login submit', { email: data.email })
     const result = await signIn(data.email, data.password)
 
     if (result.error) {
+      console.log('[auth] login error', result.error)
       setError(result.error)
       setLoading(false)
       return
     }
 
+    console.log('[auth] login success, redirecting to /dashboard')
     router.push('/dashboard')
   }
 

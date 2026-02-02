@@ -20,6 +20,9 @@ RUN npm ci
 # Copy source code
 COPY . .
 
+# Skip env check during image build (Render injects envs at runtime)
+ENV SKIP_ENV_CHECK=1
+
 # Build the application
 RUN npm run build
 

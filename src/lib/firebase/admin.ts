@@ -10,7 +10,7 @@ import {
   orderBy,
   serverTimestamp,
 } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from './config'
+import { db, ensureFirebaseInitialized, isFirebaseConfigured } from './config.client'
 import { User, PendingApproval, UserStatus } from '@/types'
 
 const USERS_COLLECTION = 'users'
@@ -23,10 +23,16 @@ function ensureDb() {
   return db
 }
 
+async function ensureDbAsync() {
+  await ensureFirebaseInitialized()
+  return ensureDb()
+}
+
 export async function getPendingApprovals(): Promise<PendingApproval[]> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
   const q = query(
     collection(firestore, PENDING_APPROVALS_COLLECTION),
+    where('reviewedAt', '==', null),
     orderBy('submittedAt', 'desc')
   )
 
@@ -45,7 +51,7 @@ export async function approveUser(
   reviewerId: string,
   notes?: string
 ): Promise<void> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
   // Update user status
   const userRef = doc(firestore, USERS_COLLECTION, userId)
   await updateDoc(userRef, {
@@ -70,7 +76,7 @@ export async function rejectUser(
   reviewerId: string,
   notes?: string
 ): Promise<void> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
   // Update user status
   const userRef = doc(firestore, USERS_COLLECTION, userId)
   await updateDoc(userRef, {
@@ -88,7 +94,7 @@ export async function rejectUser(
 }
 
 export async function getAllUsers(status?: UserStatus): Promise<User[]> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
   let q = query(collection(firestore, USERS_COLLECTION), orderBy('createdAt', 'desc'))
 
   if (status) {
@@ -107,7 +113,7 @@ export async function getAllUsers(status?: UserStatus): Promise<User[]> {
 }
 
 export async function getUserById(userId: string): Promise<User | null> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
   const userDoc = await getDoc(doc(firestore, USERS_COLLECTION, userId))
   if (!userDoc.exists()) return null
 
@@ -124,7 +130,7 @@ export async function updateUserRole(
   userId: string,
   role: User['role']
 ): Promise<void> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
   const userRef = doc(firestore, USERS_COLLECTION, userId)
   await updateDoc(userRef, {
     role,
@@ -133,7 +139,7 @@ export async function updateUserRole(
 }
 
 export async function deleteUser(userId: string): Promise<void> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
   // Delete user document
   await deleteDoc(doc(firestore, USERS_COLLECTION, userId))
 
@@ -152,10 +158,15 @@ export async function getAdminStats(): Promise<{
   totalArticles: number
   publishedArticles: number
 }> {
-  const firestore = ensureDb()
+  const firestore = await ensureDbAsync()
   const [usersSnapshot, pendingSnapshot, articlesSnapshot] = await Promise.all([
     getDocs(collection(firestore, USERS_COLLECTION)),
-    getDocs(query(collection(firestore, PENDING_APPROVALS_COLLECTION))),
+    getDocs(
+      query(
+        collection(firestore, PENDING_APPROVALS_COLLECTION),
+        where('reviewedAt', '==', null)
+      )
+    ),
     getDocs(collection(firestore, 'articles')),
   ])
 

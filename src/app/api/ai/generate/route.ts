@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateArticle } from '@/lib/ai'
 import { extractTextFromMultiplePDFs } from '@/lib/ai/pdf-parser'
-import { AIProvider, TargetAudience } from '@/types'
+import { TargetAudience } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,19 +9,13 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const files = formData.getAll('files') as File[]
-    const provider = formData.get('provider') as AIProvider
+    // Content is always generated via OpenAI (ChatGPT); images/graphs via Gemini (if configured)
+    const provider = 'openai' as const
     const targetAudience = formData.get('targetAudience') as TargetAudience
 
     if (!files || files.length === 0) {
       return NextResponse.json(
         { success: false, error: 'Nie przeslano plikow' },
-        { status: 400 }
-      )
-    }
-
-    if (!provider || !['openai', 'claude'].includes(provider)) {
-      return NextResponse.json(
-        { success: false, error: 'Nieprawidlowy dostawca AI' },
         { status: 400 }
       )
     }
@@ -56,7 +50,8 @@ export async function POST(request: NextRequest) {
       pdfContent,
       targetAudience,
       provider,
-      generateImage: provider === 'openai', // Only OpenAI can generate images
+      // Prefer Gemini for images/graphs; if Gemini isn't configured, OpenAI code can fall back to DALL·E.
+      generateImage: true,
     })
 
     return NextResponse.json({

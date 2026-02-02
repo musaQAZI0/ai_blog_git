@@ -1,21 +1,14 @@
-import OpenAI from 'openai'
 import sharp from 'sharp'
+import { generateAndUploadImagen } from '@/lib/ai/gemini-imagen'
 
 /**
- * Generate medical illustration using DALL-E 3
+ * Generate medical illustration/thumbnail using Gemini Imagen
  */
 export async function generateMedicalImage(
   title: string,
   context?: string,
   style: 'illustration' | 'diagram' | 'photo' = 'illustration'
 ): Promise<string | null> {
-  const apiKey = process.env.OPENAI_API_KEY
-  if (!apiKey) {
-    throw new Error('OPENAI_API_KEY is not configured')
-  }
-
-  const openai = new OpenAI({ apiKey })
-
   const stylePrompts = {
     illustration:
       'Professional medical illustration, clean and modern design, educational, medical aesthetic',
@@ -26,20 +19,16 @@ export async function generateMedicalImage(
 
   const basePrompt = `${stylePrompts[style]} for an ophthalmology or medical article about "${title}"`
   const fullPrompt = context ? `${basePrompt}. ${context}` : basePrompt
-  const finalPrompt = `${fullPrompt}. No text, watermarks, or logos in the image. Medical and professional appearance.`
+  const finalPrompt =
+    `${fullPrompt}. ` +
+    `Thumbnail image, square 1:1 composition, centered subject, high contrast, clean background. ` +
+    `No text, watermarks, or logos in the image. Medical and professional appearance.`
 
   try {
-    const response = await openai.images.generate({
-      model: process.env.DALLE_MODEL || 'dall-e-3',
-      prompt: finalPrompt,
-      n: 1,
-      size: (process.env.DALLE_SIZE as '1024x1024' | '1792x1024' | '1024x1792') || '1024x1024',
-      quality: (process.env.DALLE_QUALITY as 'standard' | 'hd') || 'standard',
-    })
-
-    return response.data?.[0]?.url || null
+    const imageUrl = await generateAndUploadImagen(finalPrompt, title, 'ai-thumbnail')
+    return imageUrl
   } catch (error) {
-    console.error('DALL-E image generation failed:', error)
+    console.error('Gemini image generation failed:', error)
     return null
   }
 }

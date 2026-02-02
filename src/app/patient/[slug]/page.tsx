@@ -3,11 +3,11 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Article } from '@/types'
-import { isFirebaseConfigured } from '@/lib/firebase/config'
 import { getMockArticleBySlug } from '@/lib/mock-data'
 import { ArticleView } from '@/components/blog/ArticleView'
 import { Skeleton } from '@/components/ui'
 import { NewsletterForm } from '@/components/blog/NewsletterForm'
+import { useAuth } from '@/context/AuthContext'
 
 export default function PatientArticlePage() {
   const params = useParams()
@@ -15,7 +15,7 @@ export default function PatientArticlePage() {
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const isDemoMode = !isFirebaseConfigured
+  const { isDemoMode } = useAuth()
 
   useEffect(() => {
     async function fetchArticle() {

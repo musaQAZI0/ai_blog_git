@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from '@/lib/firebase/config'
+import { db, isFirebaseConfigured } from '@/lib/firebase/config.server'
 import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'

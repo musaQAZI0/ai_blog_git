@@ -8,22 +8,17 @@ export type StorageProvider = 'local' | 's3' | 'azure' | 'firebase' | 'mongodb' 
 
 const STORAGE_PROVIDER = (process.env.STORAGE_PROVIDER || 'cloudinary') as StorageProvider
 
-/**
- * Upload file to configured storage provider
- */
-export async function uploadFile(
+function uploadWithProvider(
+  provider: StorageProvider,
   file: Buffer,
   fileName: string,
   contentType: string
 ): Promise<string> {
-  switch (STORAGE_PROVIDER) {
+  switch (provider) {
     case 'cloudinary':
-      // Cloudinary with automatic optimization
       return uploadToCloudinary(file, fileName, contentType)
     case 'mongodb':
-      // MongoDB returns file ID, convert to download URL
-      const fileId = await uploadToMongoDB(file, fileName, contentType)
-      return getMongoDBDownloadURL(fileId)
+      return uploadToMongoDB(file, fileName, contentType).then(getMongoDBDownloadURL)
     case 'firebase':
       return uploadToFirebase(file, fileName, contentType)
     case 's3':
@@ -32,11 +27,32 @@ export async function uploadFile(
       return uploadToAzure(file, fileName, contentType)
     case 'local':
     default:
-      // For local storage, you'd save to public folder
-      // This is a simplified implementation
       console.warn('Local storage not recommended for production')
-      return `/uploads/${fileName}`
+      return Promise.resolve(`/uploads/${fileName}`)
   }
+}
+
+/**
+ * Upload file to configured storage provider
+ */
+export async function uploadFile(
+  file: Buffer,
+  fileName: string,
+  contentType: string
+): Promise<string> {
+  return uploadWithProvider(STORAGE_PROVIDER, file, fileName, contentType)
+}
+
+/**
+ * Upload file to a specific provider (overrides STORAGE_PROVIDER).
+ */
+export async function uploadFileToProvider(
+  provider: StorageProvider,
+  file: Buffer,
+  fileName: string,
+  contentType: string
+): Promise<string> {
+  return uploadWithProvider(provider, file, fileName, contentType)
 }
 
 /**

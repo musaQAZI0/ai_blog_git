@@ -7,9 +7,9 @@ import remarkGfm from 'remark-gfm'
 import { Article } from '@/types'
 import { Badge, Avatar } from '@/components/ui'
 import { formatDate, getReadingTime } from '@/lib/utils'
-import { isFirebaseConfigured } from '@/lib/firebase/config'
 import { Clock, Eye, Calendar, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
+import { useAuth } from '@/context/AuthContext'
 
 interface ArticleViewProps {
   article: Article
@@ -18,15 +18,16 @@ interface ArticleViewProps {
 
 export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
   const readingTime = getReadingTime(article.content)
+  const { isDemoMode } = useAuth()
 
   useEffect(() => {
     // Increment view count on mount (only if Firebase is configured)
-    if (isFirebaseConfigured) {
+    if (!isDemoMode) {
       import('@/lib/firebase/articles').then(({ incrementViewCount }) => {
         incrementViewCount(article.id).catch(console.error)
       })
     }
-  }, [article.id])
+  }, [article.id, isDemoMode])
 
   return (
     <article className="mx-auto max-w-3xl">
@@ -83,6 +84,7 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
             src={article.coverImage}
             alt={article.title}
             fill
+            sizes="(max-width: 768px) 100vw, 768px"
             className="object-cover"
             priority
             unoptimized

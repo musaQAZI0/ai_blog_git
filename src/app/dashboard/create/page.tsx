@@ -23,7 +23,7 @@ import {
   TabsContent,
 } from '@/components/ui'
 import { createArticle, publishArticle } from '@/lib/firebase/articles'
-import { ArticleCreateData, AIProvider, TargetAudience, AIGenerationResponse } from '@/types'
+import { ArticleCreateData, TargetAudience, AIGenerationResponse } from '@/types'
 import { Wand2, FileText, ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 
@@ -32,7 +32,6 @@ function CreateArticleContent() {
   const router = useRouter()
   const [step, setStep] = useState<'upload' | 'generate' | 'edit'>('upload')
   const [files, setFiles] = useState<File[]>([])
-  const [aiProvider, setAIProvider] = useState<AIProvider>('openai')
   const [targetAudience, setTargetAudience] = useState<TargetAudience>('patient')
   const [generating, setGenerating] = useState(false)
   const [generatedContent, setGeneratedContent] = useState<AIGenerationResponse | null>(null)
@@ -58,7 +57,6 @@ function CreateArticleContent() {
       files.forEach((file) => {
         formData.append('files', file)
       })
-      formData.append('provider', aiProvider)
       formData.append('targetAudience', targetAudience)
 
       const response = await fetch('/api/ai/generate', {
@@ -137,19 +135,6 @@ function CreateArticleContent() {
             <PDFUploader onFilesSelected={handleFilesSelected} disabled={generating} />
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="aiProvider">Dostawca AI</Label>
-                <Select
-                  id="aiProvider"
-                  value={aiProvider}
-                  onChange={(e) => setAIProvider(e.target.value as AIProvider)}
-                  options={[
-                    { value: 'openai', label: 'OpenAI GPT-4' },
-                    { value: 'claude', label: 'Claude (Anthropic)' },
-                  ]}
-                />
-              </div>
-
               <div className="space-y-2">
                 <Label htmlFor="targetAudience">Grupa docelowa</Label>
                 <Select

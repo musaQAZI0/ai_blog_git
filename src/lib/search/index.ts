@@ -1,6 +1,8 @@
+import 'server-only'
+
 import { Article, TargetAudience } from '@/types'
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore'
-import { db, isFirebaseConfigured } from '@/lib/firebase/config'
+import { db, isFirebaseConfigured } from '@/lib/firebase/config.server'
 
 export interface SearchOptions {
   query: string

@@ -6,7 +6,6 @@ import { usePathname } from 'next/navigation'
 import { Menu, X, User, LogOut, Settings } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
-import { isFirebaseConfigured } from '@/lib/firebase/config'
 import { cn } from '@/lib/utils'
 
 export function Header() {
@@ -22,7 +21,7 @@ export function Header() {
   ]
 
   const handleSignOut = async () => {
-    if (isFirebaseConfigured) {
+    if (!isDemoMode) {
       const { signOut } = await import('@/lib/firebase/auth')
       await signOut()
     }

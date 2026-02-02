@@ -35,6 +35,8 @@ services:
         value: sendgrid
       - key: STORAGE_PROVIDER
         value: firebase
+      - key: AI_STORAGE_PROVIDER
+        value: cloudinary
 
       # SendGrid Email
       - key: SENDGRID_FROM_EMAIL
@@ -64,27 +66,41 @@ services:
 
       # Secret Variables (Set these manually in Render Dashboard)
       # These are marked as sync: false so they must be added via dashboard
+      # Firebase Web SDK config (NOT a secret; safe to sync via blueprint)
       - key: NEXT_PUBLIC_FIREBASE_API_KEY
-        sync: false
+        value: "AIzaSyBzBxMBjnOO58l2_7LSrfoJP_PkrefaAVg"
       - key: NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN
-        sync: false
+        value: medical-blog-web.firebaseapp.com
       - key: NEXT_PUBLIC_FIREBASE_PROJECT_ID
-        sync: false
+        value: medical-blog-web
       - key: NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET
-        sync: false
+        value: medical-blog-web.firebasestorage.app
       - key: NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID
-        sync: false
+        value: "640633933617"
       - key: NEXT_PUBLIC_FIREBASE_APP_ID
-        sync: false
+        value: "1:640633933617:web:6451e74d9576fbe11fea10"
       - key: FIREBASE_ADMIN_PROJECT_ID
         sync: false
       - key: FIREBASE_ADMIN_CLIENT_EMAIL
         sync: false
       - key: FIREBASE_ADMIN_PRIVATE_KEY
         sync: false
+      # OpenAI model selection (not a secret)
+      - key: OPENAI_TEXT_MODEL
+        value: gpt-4-turbo
       - key: OPENAI_API_KEY
         sync: false
       - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_IMAGEN_MODEL
+        sync: false
+      - key: NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
         sync: false
       - key: SENDGRID_API_KEY
         sync: false

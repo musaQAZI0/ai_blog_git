@@ -8,8 +8,13 @@ import {
   onAuthStateChanged,
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
-import { auth, db, isFirebaseConfigured } from './config'
+import { auth, db, ensureFirebaseInitialized, isFirebaseConfigured } from './config.client'
 import { User, UserRegistrationData, UserStatus } from '@/types'
+
+function removeUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
+  const entries = Object.entries(data).filter(([, value]) => value !== undefined)
+  return Object.fromEntries(entries) as Partial<T>
+}
 
 function ensureAuth() {
   if (!isFirebaseConfigured || !auth) {
@@ -27,6 +32,7 @@ function ensureDb() {
 
 export async function registerUser(data: UserRegistrationData): Promise<{ user: FirebaseUser; error?: string }> {
   try {
+    await ensureFirebaseInitialized()
     const firebaseAuth = ensureAuth()
     const firestore = ensureDb()
     const userCredential = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.password)
@@ -36,7 +42,7 @@ export async function registerUser(data: UserRegistrationData): Promise<{ user: 
     await sendEmailVerification(firebaseUser)
 
     // Create user document in Firestore
-    const userData: Omit<User, 'id'> = {
+    const userData = removeUndefined<Omit<User, 'id'>>({
       email: data.email,
       name: data.name,
       role: 'professional',
@@ -50,7 +56,7 @@ export async function registerUser(data: UserRegistrationData): Promise<{ user: 
       newsletterSubscribed: data.newsletterConsent,
       gdprConsent: data.gdprConsent,
       gdprConsentDate: new Date(),
-    }
+    })
 
     await setDoc(doc(firestore, 'users', firebaseUser.uid), {
       ...userData,
@@ -75,38 +81,101 @@ export async function registerUser(data: UserRegistrationData): Promise<{ user: 
 
 export async function signIn(email: string, password: string): Promise<{ user: FirebaseUser | null; error?: string }> {
   try {
+    console.log('[auth] signIn start', { email })
+    await ensureFirebaseInitialized()
     const firebaseAuth = ensureAuth()
     const firestore = ensureDb()
     const userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password)
+    console.log('[auth] firebase signIn ok', { uid: userCredential.user.uid })
 
     // Check if user is approved
-    const userDoc = await getDoc(doc(firestore, 'users', userCredential.user.uid))
+    const userRef = doc(firestore, 'users', userCredential.user.uid)
+    let userDoc = await getDoc(userRef)
+
+    const adminEmail = (process.env.ADMIN_EMAIL || process.env.NEXT_PUBLIC_ADMIN_EMAIL)?.toLowerCase()
+    const isAdminEmail = Boolean(adminEmail && adminEmail === email.toLowerCase())
+
+    if (!userDoc.exists()) {
+      const defaultName = email.split('@')[0] || email
+
+      const newUserData = {
+        email,
+        name: defaultName,
+        role: isAdminEmail ? 'admin' : 'professional',
+        status: (isAdminEmail ? 'approved' : 'pending'),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        newsletterSubscribed: false,
+        gdprConsent: false,
+        gdprConsentDate: new Date(),
+      }
+
+      await setDoc(userRef, {
+        ...newUserData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        gdprConsentDate: serverTimestamp(),
+      })
+
+      if (!isAdminEmail) {
+        await setDoc(doc(firestore, 'pendingApprovals', userCredential.user.uid), {
+          userId: userCredential.user.uid,
+          userData: newUserData,
+          submittedAt: serverTimestamp(),
+        })
+      }
+
+      console.log('[auth] user doc auto-created', {
+        role: newUserData.role,
+        status: newUserData.status,
+      })
+      userDoc = await getDoc(userRef)
+    }
+
     if (userDoc.exists()) {
       const userData = userDoc.data() as User
+
+      // Backfill: if this is the designated admin email, ensure admin+approved
+      if (isAdminEmail && (userData.role !== 'admin' || userData.status !== 'approved')) {
+        await setDoc(userRef, {
+          ...userData,
+          role: 'admin',
+          status: 'approved',
+          updatedAt: serverTimestamp(),
+        }, { merge: true })
+        console.log('[auth] upgraded user to admin+approved based on NEXT_PUBLIC_ADMIN_EMAIL')
+        userDoc = await getDoc(userRef)
+      }
+
+      console.log('[auth] user doc found', { status: userData.status, role: userData.role })
       if (userData.status === 'pending') {
         await firebaseSignOut(firebaseAuth)
-        return { user: null, error: 'Twoje konto oczekuje na weryfikację. Skontaktujemy się z Tobą po zatwierdzeniu.' }
+        return { user: null, error: 'Twoje konto oczekuje na weryfikacjÄ™. Skontaktujemy siÄ™ z TobÄ… po zatwierdzeniu.' }
       }
       if (userData.status === 'rejected') {
         await firebaseSignOut(firebaseAuth)
-        return { user: null, error: 'Twoje konto zostało odrzucone. Skontaktuj się z administratorem.' }
+        return { user: null, error: 'Twoje konto zostaÅ‚o odrzucone. Skontaktuj siÄ™ z administratorem.' }
       }
     }
+
 
     return { user: userCredential.user }
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Login failed'
+    console.log('[auth] signIn error', errorMessage)
     return { user: null, error: errorMessage }
   }
 }
 
 export async function signOut(): Promise<void> {
+  await ensureFirebaseInitialized()
   const firebaseAuth = ensureAuth()
   await firebaseSignOut(firebaseAuth)
 }
 
 export async function resetPassword(email: string): Promise<{ success: boolean; error?: string }> {
   try {
+    await ensureFirebaseInitialized()
     const firebaseAuth = ensureAuth()
     await sendPasswordResetEmail(firebaseAuth, email)
     return { success: true }
@@ -117,6 +186,7 @@ export async function resetPassword(email: string): Promise<{ success: boolean; 
 }
 
 export async function getCurrentUser(): Promise<User | null> {
+  await ensureFirebaseInitialized()
   if (!isFirebaseConfigured || !auth || !db) return null
 
   const firebaseUser = auth.currentUser

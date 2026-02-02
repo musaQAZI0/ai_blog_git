@@ -11,11 +11,107 @@ function getGeminiClient() {
 }
 
 function getGeminiTextModel() {
-  return process.env.GEMINI_TEXT_MODEL || 'gemini-2.0-pro'
+  // Note: availability depends on your API key + API version (this SDK uses v1beta).
+  // If you set an unsupported model, we will attempt fallbacks at runtime.
+  return process.env.GEMINI_TEXT_MODEL || 'gemini-1.5-pro-latest'
 }
 
 function getFigurePlaceholderUrl(index: number) {
   return `https://www.google.com/search?q=%7B%7BFIGURE_${index}_URL%7D%7D`
+}
+
+type GeminiListModelsResponse = {
+  models?: Array<{
+    name?: string
+    supportedGenerationMethods?: string[]
+  }>
+}
+
+async function listAvailableTextModels(apiKey: string): Promise<string[]> {
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models', {
+    headers: {
+      'x-goog-api-key': apiKey,
+    },
+    cache: 'no-store',
+  })
+
+  if (!res.ok) return []
+  const data = (await res.json()) as GeminiListModelsResponse
+  const models = Array.isArray(data.models) ? data.models : []
+
+  return models
+    .filter((m) => (m.supportedGenerationMethods || []).includes('generateContent'))
+    .map((m) => (m.name || '').replace(/^models\//, ''))
+    .filter(Boolean)
+}
+
+function pickFallbackModel(available: string[], preferred: 'pro' | 'flash'): string | null {
+  const normalized = new Set(available)
+  const candidates =
+    preferred === 'flash'
+      ? [
+          'gemini-1.5-flash-latest',
+          'gemini-1.5-flash',
+          'gemini-1.5-pro-latest',
+          'gemini-1.5-pro',
+          'gemini-pro',
+        ]
+      : [
+          'gemini-1.5-pro-latest',
+          'gemini-1.5-pro',
+          'gemini-1.5-flash-latest',
+          'gemini-1.5-flash',
+          'gemini-pro',
+        ]
+
+  for (const c of candidates) {
+    if (normalized.has(c)) return c
+  }
+  return available[0] || null
+}
+
+function isModelNotFoundError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err || '')).toLowerCase()
+  return msg.includes('404') && msg.includes('is not found')
+}
+
+async function getGenerativeModelWithFallback(options: {
+  systemPrompt: string
+  prefer: 'pro' | 'flash'
+}) {
+  const genAI = getGeminiClient()
+  const apiKey = process.env.GEMINI_API_KEY as string
+  const requested = getGeminiTextModel()
+
+  const model = (name: string) =>
+    genAI.getGenerativeModel({
+      model: name,
+      generationConfig: {
+        temperature: 0.6,
+        maxOutputTokens: 4096,
+        responseMimeType: 'application/json',
+      } as any,
+      systemInstruction: options.systemPrompt as any,
+    })
+
+  // First try requested model.
+  try {
+    return { model: model(requested), modelName: requested }
+  } catch (err) {
+    if (!isModelNotFoundError(err)) throw err
+  }
+
+  // If requested model isn't supported for this key/API, list models and pick best fallback.
+  const available = await listAvailableTextModels(apiKey)
+  const fallback = pickFallbackModel(available, options.prefer)
+  if (!fallback) {
+    throw new Error(
+      `No Gemini text models available for generateContent. Set GEMINI_TEXT_MODEL to an available model (call ListModels).`
+    )
+  }
+
+  console.warn(`[gemini] GEMINI_TEXT_MODEL "${requested}" not available; falling back to "${fallback}"`)
+  return { model: model(fallback), modelName: fallback }
 }
 
 const PATIENT_SYSTEM_PROMPT = `You are a medical content writer specializing in ophthalmology content for patients.
@@ -109,19 +205,10 @@ Required JSON format:
   ]
 }`
 
-  const genAI = getGeminiClient()
-  const modelName = getGeminiTextModel()
+  const prefer: 'pro' | 'flash' =
+    (process.env.GEMINI_TEXT_MODEL || '').toLowerCase().includes('flash') ? 'flash' : 'pro'
 
-  const model = genAI.getGenerativeModel({
-    model: modelName,
-    generationConfig: {
-      temperature: 0.6,
-      maxOutputTokens: 4096,
-      responseMimeType: 'application/json',
-    } as any,
-    systemInstruction: systemPrompt as any,
-  })
-
+  const { model } = await getGenerativeModelWithFallback({ systemPrompt, prefer })
   const result = await model.generateContent(userPrompt)
   const responseText = result.response.text()
   const jsonStr = extractJsonObject(responseText)
@@ -200,16 +287,10 @@ export async function improveContentWithGemini(
     ? PATIENT_SYSTEM_PROMPT
     : PROFESSIONAL_SYSTEM_PROMPT
 
-  const genAI = getGeminiClient()
-  const modelName = getGeminiTextModel()
-  const model = genAI.getGenerativeModel({
-    model: modelName,
-    generationConfig: {
-      temperature: 0.4,
-      maxOutputTokens: 2048,
-    },
-    systemInstruction: systemPrompt as any,
-  })
+  const prefer: 'pro' | 'flash' =
+    (process.env.GEMINI_TEXT_MODEL || '').toLowerCase().includes('flash') ? 'flash' : 'pro'
+
+  const { model } = await getGenerativeModelWithFallback({ systemPrompt, prefer })
 
   const result = await model.generateContent(
     `Improve and enhance the following Polish article content while maintaining the same message and information. ` +
@@ -218,4 +299,3 @@ export async function improveContentWithGemini(
 
   return result.response.text() || content
 }
-

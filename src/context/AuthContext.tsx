@@ -35,19 +35,73 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isDemoMode, setIsDemoMode] = useState(true)
 
   useEffect(() => {
+<<<<<<< HEAD
     let cancelled = false
     let unsubscribe: (() => void) | null = null
+=======
+    // Demo mode - no Firebase configured
+    if (isDemoMode) {
+      console.log('[auth] demo mode enabled (Firebase not configured)')
+      setLoading(false)
+      return
+    }
+>>>>>>> ff7bc50839a3347dbc2d5e87e9b58e829c2e8a2c
 
     ;(async () => {
       setLoading(true)
       const configured = await ensureFirebaseInitialized()
       if (cancelled) return
 
+<<<<<<< HEAD
       if (!configured) {
         console.log('[auth] demo mode enabled (Firebase not configured)')
         setIsDemoMode(true)
         setLoading(false)
         return
+=======
+    if (!auth) {
+      setLoading(false)
+      return
+    }
+
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
+      console.log('[auth] onAuthStateChanged', { uid: fbUser?.uid || null })
+      setFirebaseUser(fbUser)
+
+      if (fbUser && db) {
+        try {
+          const userDoc = await getDoc(doc(db, 'users', fbUser.uid))
+          if (userDoc.exists()) {
+            const userData = userDoc.data()
+            console.log('[auth] user doc loaded', { status: userData.status, role: userData.role })
+            setUser({
+              id: userDoc.id,
+              ...userData,
+              createdAt: userData.createdAt?.toDate() || new Date(),
+              updatedAt: userData.updatedAt?.toDate() || new Date(),
+              gdprConsentDate: userData.gdprConsentDate?.toDate(),
+            } as User)
+          } else {
+            console.log('[auth] user doc missing for uid', fbUser.uid)
+            setUser(null)
+          }
+        } catch (error) {
+          const err = error as any
+          if (err?.code === 'permission-denied') {
+            console.error(
+              '[auth] Firestore permission denied while reading users/{uid}. ' +
+                'This usually means your deployed Firestore rules do not match this repo\'s firestore.rules, ' +
+                'or your Firebase config points to a different project. Deploy rules with: `firebase deploy --only firestore:rules`.',
+              err
+            )
+          } else {
+            console.error('[auth] error fetching user data:', err)
+          }
+          setUser(null)
+        }
+      } else {
+        setUser(null)
+>>>>>>> ff7bc50839a3347dbc2d5e87e9b58e829c2e8a2c
       }
 
       setIsDemoMode(false)

@@ -82,7 +82,10 @@ export async function registerUser(data: UserRegistrationData): Promise<{ user: 
 export async function signIn(email: string, password: string): Promise<{ user: FirebaseUser | null; error?: string }> {
   try {
     console.log('[auth] signIn start', { email })
+<<<<<<< HEAD
     await ensureFirebaseInitialized()
+=======
+>>>>>>> ff7bc50839a3347dbc2d5e87e9b58e829c2e8a2c
     const firebaseAuth = ensureAuth()
     const firestore = ensureDb()
     const userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password)

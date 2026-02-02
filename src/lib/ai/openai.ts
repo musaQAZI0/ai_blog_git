@@ -11,17 +11,32 @@ function getOpenAIClient() {
   return new OpenAI({ apiKey })
 }
 
+function getOpenAITextModel() {
+  return process.env.OPENAI_TEXT_MODEL || 'gpt-4-turbo'
+}
+
+function getFigurePlaceholderUrl(index: number) {
+  return `https://www.google.com/search?q=%7B%7BFIGURE_${index}_URL%7D%7D`
+}
+
 const PATIENT_SYSTEM_PROMPT = `You are a medical content writer specializing in ophthalmology content for patients.
 Write in simple, accessible Polish language. Avoid medical jargon or explain it when necessary.
 Focus on being educational, reassuring, and practical.
 Format the content with clear headings, bullet points where appropriate, and easy-to-understand explanations.`
 
-const PROFESSIONAL_SYSTEM_PROMPT = `You are a medical content writer specializing in ophthalmology content for medical professionals.
-Write in technical, clinical Polish language appropriate for doctors and optometrists.
-Include relevant clinical details, professional terminology, and (when present in the source) key numbers, cutoffs, and study findings.
-Ground claims in the provided document content. If the document does not contain a detail, do not invent it.
-If you mention evidence, prefer referencing what is present in the document; do not fabricate citations/DOIs/PMIDs.
-Format the content with a clear clinical structure and practical takeaways.`
+const PROFESSIONAL_SYSTEM_PROMPT = `You are the Editor-in-Chief of a high-impact scientific journal specializing in ophthalmology.
+Your task is to write a concise editorial review of the provided article, targeted specifically at ophthalmologists and optometrists.
+Write in sophisticated, academic Polish appropriate for peer-reviewed literature.
+Adopt an authoritative, analytical, and objective tone.
+Structure the review to include:
+
+Editorial Summary: A high-level synthesis of the article's subject.
+
+Key Highlights: Extract the most important data points, specific study findings, statistical outcomes, or distinct clinical protocols found in the text.
+
+Clinical Impact: Explicitly explain why this matters for daily practice (e.g., diagnostics, treatment efficacy, patient management).
+
+Ground all claims strictly in the provided document content. If the document does not contain a detail, do not invent it.`
 
 export async function generateArticleWithOpenAI(
   pdfContent: string,
@@ -34,33 +49,31 @@ export async function generateArticleWithOpenAI(
 
   const audienceInstructions =
     targetAudience === 'professional'
-      ? `Professional requirements:
-- Make it specific and actionable (avoid generic statements like "regular check-ups are important" unless tied to the document).
-- Use a clinical structure with headings such as: **Tło**, **Kluczowe informacje z dokumentu**, **Implikacje kliniczne**, **Ograniczenia/uwagi**, **Wnioski**.
-- If the PDF contains numerical results, include at least 1 concise bullet list with those numbers (e.g., ranges, percentages, comparison results) and interpret them.
+      ? `AudienceInstructions (professional):
+- Use headings aligned with: **Streszczenie redakcyjne**, **Kluczowe informacje**, **Znaczenie kliniczne**.
+- Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
 `
-      : `Patient requirements:
+      : `AudienceInstructions (patient):
 - Keep language simple and reassuring.
 - Explain any unavoidable medical terms briefly.
 `
 
-  const userPrompt = `Based on the following medical document content, create a blog article in Polish.
+  const userPrompt = `Based on the following medical document content, create a blog article/review in Polish.
 Target word count: ~400 words for the main content (aim for 380-450).
 IMPORTANT: word count refers ONLY to the "content" field (the markdown article body), excluding title, excerpt, SEO meta, tags/categories, and excluding URLs/placeholders.
 
-Document content:
-${pdfContent}
+Document content: ${pdfContent}
 
 IMPORTANT:
 - Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
 - Include up to 3 figures (mix of medical illustration and/or chart/graph if the PDF contains numerical data).
-- In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. ![Alt text]({{FIGURE_1_URL}}).
+- In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. ${getFigurePlaceholderUrl(1)}.
 ${audienceInstructions}
 
 Required JSON format:
 {
   "title": "Article title",
-  "content": "Full article content in markdown format (must include placeholders like {{FIGURE_1_URL}} where images should appear)",
+  "content": "Full article content in markdown format (must include placeholders like ${getFigurePlaceholderUrl(1)} where images should appear)",
   "excerpt": "A brief 2-3 sentence summary (max 160 characters)",
   "seoMeta": {
     "title": "SEO optimized title (max 60 characters)",
@@ -76,16 +89,17 @@ Required JSON format:
       "type": "illustration|chart",
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
-      "placeholder": "{{FIGURE_1_URL}}",
+      "placeholder": "${getFigurePlaceholderUrl(1)}",
       "prompt": "Image generation prompt in English. If chart, include exact data and style instructions."
     }
   ]
 }`
 
   const openai = getOpenAIClient()
+  const model = getOpenAITextModel()
 
   const completion = await openai.chat.completions.create({
-    model: 'gpt-4-turbo-preview',
+    model,
     messages: [
       { role: 'system', content: systemPrompt },
       { role: 'user', content: userPrompt },
@@ -122,7 +136,7 @@ Required JSON format:
       : PROFESSIONAL_SYSTEM_PROMPT
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: getOpenAITextModel(),
       messages: [
         { role: 'system', content: systemPrompt },
         {
@@ -132,7 +146,7 @@ Required JSON format:
             `Rules:\n` +
             `- Return ONLY the improved markdown content.\n` +
             `- Do NOT add SEO metadata.\n` +
-            `- Keep any image placeholders like {{FIGURE_1_URL}} exactly as-is.\n` +
+            `- Keep any figure placeholder URLs like ${getFigurePlaceholderUrl(1)} exactly as-is.\n` +
             `- If the content contains ![...](...) images, keep them unchanged.\n\n` +
             markdown,
         },
@@ -150,7 +164,7 @@ Required JSON format:
     const openai = getOpenAIClient()
 
     const completion = await openai.chat.completions.create({
-      model: 'gpt-4-turbo-preview',
+      model: getOpenAITextModel(),
       messages: [
         { role: 'system', content: PROFESSIONAL_SYSTEM_PROMPT },
         {
@@ -161,8 +175,8 @@ Required JSON format:
             `- Keep total length ~400 words (aim 380-450).\n` +
             `- Do NOT add SEO metadata.\n` +
             `- Do NOT fabricate studies/citations.\n` +
-            `- Preserve any image placeholders like {{FIGURE_1_URL}} exactly as-is.\n` +
-            `- Prefer a clinical structure: Tło, Kluczowe informacje z dokumentu, Implikacje kliniczne, Ograniczenia/uwagi, Wnioski.\n\n` +
+            `- Preserve any figure placeholder URLs (e.g. ${getFigurePlaceholderUrl(1)}) exactly as-is.\n` +
+            `- Prefer the editorial structure: Streszczenie redakcyjne, Kluczowe informacje, Znaczenie kliniczne.\n\n` +
             `Document (for grounding):\n${pdfContent}\n\n` +
             `Article to rewrite:\n${markdown}`,
         },
@@ -184,20 +198,15 @@ Required JSON format:
     alt: string
     caption?: string
   }): string {
-    const { placeholder, url, alt, caption } = options
-    const replacementMarkdown = `![${alt}](${url})${caption ? `\n\n*${caption}*` : ''}`
+    const { placeholder, url, caption } = options
+    const captionSuffix = caption ? `\n\n*${caption}*` : ''
 
     if (options.content.includes(placeholder)) {
-      // If the placeholder was used correctly inside markdown image syntax, replace with URL only.
-      if (options.content.includes(`](${placeholder})`)) {
-        return options.content.split(placeholder).join(url)
-      }
-      // Otherwise replace the raw token with a full markdown image.
-      return options.content.split(placeholder).join(replacementMarkdown)
+      return options.content.split(placeholder).join(url)
     }
 
-    // No placeholder present: append figure at end.
-    return options.content + `\n\n${replacementMarkdown}\n`
+    // No placeholder present: append a plain URL token (no markdown image).
+    return options.content + `\n\n${url}${captionSuffix}\n`
   }
 
   const figures: Array<{
@@ -239,7 +248,9 @@ Required JSON format:
           'ai-figure'
         )
 
-        const placeholder = figure.placeholder || `{{FIGURE_${i + 1}_URL}}`
+        const placeholder =
+          figure.placeholder ||
+          getFigurePlaceholderUrl(i + 1)
         const alt = figure.alt || `Ilustracja ${i + 1}`
         content = injectFigure({
           content,
@@ -254,7 +265,10 @@ Required JSON format:
     }
 
     // If any placeholders remain (image generation failed), remove them so users don't see raw tokens.
-    content = content.replace(/\{\{FIGURE_\d+_URL\}\}/g, '').replace(/\n{3,}/g, '\n\n')
+    content = content
+      .replace(/\{\{FIGURE_\d+_URL\}\}/g, '')
+      .replace(/https?:\/\/www\.google\.com\/search\?q=%7B%7BFIGURE_\d+_URL%7D%7D/g, '')
+      .replace(/\n{3,}/g, '\n\n')
   } else if (generateImage) {
     // Fallback to DALL·E if Gemini is not configured
     try {
@@ -285,7 +299,10 @@ Required JSON format:
   }
 
   // Safety net: never show raw placeholders.
-  content = content.replace(/\{\{FIGURE_\d+_URL\}\}/g, '').replace(/\n{3,}/g, '\n\n')
+  content = content
+    .replace(/\{\{FIGURE_\d+_URL\}\}/g, '')
+    .replace(/https?:\/\/www\.google\.com\/search\?q=%7B%7BFIGURE_\d+_URL%7D%7D/g, '')
+    .replace(/\n{3,}/g, '\n\n')
 
   return {
     title: articleData.title,
@@ -308,7 +325,7 @@ export async function improveContent(
     : PROFESSIONAL_SYSTEM_PROMPT
 
   const completion = await openai.chat.completions.create({
-    model: 'gpt-4-turbo-preview',
+    model: getOpenAITextModel(),
     messages: [
       { role: 'system', content: systemPrompt },
       {

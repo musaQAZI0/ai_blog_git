@@ -12,7 +12,16 @@
       "Bash(git commit:*)",
       "Bash(rsync:*)",
       "Bash(./ \"../medical-blog-github/\")",
-      "Bash(./ \"../../medical-blog-github/\")"
+      "Bash(./ \"../../medical-blog-github/\")",
+      "Bash(tee:*)",
+      "Bash(git push:*)",
+      "Bash(public/.gitkeep)",
+      "Bash(docker:*)",
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)",
+      "Bash(node test-firebase.js:*)",
+      "Bash(git reset:*)",
+      "Bash(git restore:*)"
     ]
   }
 }

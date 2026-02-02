@@ -85,6 +85,9 @@ services:
         sync: false
       - key: FIREBASE_ADMIN_PRIVATE_KEY
         sync: false
+      # OpenAI model selection (not a secret)
+      - key: OPENAI_TEXT_MODEL
+        value: gpt-4-turbo
       - key: OPENAI_API_KEY
         sync: false
       - key: ANTHROPIC_API_KEY

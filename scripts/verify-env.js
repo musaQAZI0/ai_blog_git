@@ -76,6 +76,7 @@ const requiredEnvVars = {
 }
 
 const optionalEnvVars = [
+  'OPENAI_TEXT_MODEL',
   'OPENAI_API_KEY',
   'ANTHROPIC_API_KEY',
   'SENDGRID_API_KEY',

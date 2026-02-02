@@ -20,9 +20,8 @@ RUN npm ci
 # Copy source code
 COPY . .
 
-# Run env check during image build
-# NOTE: This will fail the Docker build unless required env vars are available at build time.
-ENV SKIP_ENV_CHECK=0
+# Skip env check during image build (Render injects env vars at runtime, not during Docker build)
+ENV SKIP_ENV_CHECK=1
 
 # Build the application
 RUN npm run build
@@ -33,6 +32,7 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
+ENV SKIP_ENV_CHECK=0
 
 # Install runtime dependencies for sharp
 RUN apk add --no-cache vips

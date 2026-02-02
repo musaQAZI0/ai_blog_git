@@ -29,9 +29,9 @@ const GOOGLE_ARTICLE: Article = {
     description: 'Jak Google AI wspiera diagnostykę chorób oczu i profilaktykę wzroku.',
     keywords: ['google', 'AI', 'wzrok', 'diagnostyka', 'profilaktyka'],
   },
-  createdAt: new Date(),
-  updatedAt: new Date(),
-  publishedAt: new Date(),
+  createdAt: new Date('2024-03-01T00:00:00.000Z'),
+  updatedAt: new Date('2024-03-01T00:00:00.000Z'),
+  publishedAt: new Date('2024-03-01T00:00:00.000Z'),
   viewCount: 0,
   tags: ['AI', 'Google', 'zdrowie oczu'],
 }

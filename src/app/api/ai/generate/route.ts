@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateArticle } from '@/lib/ai'
 import { extractTextFromMultiplePDFs } from '@/lib/ai/pdf-parser'
-import { TargetAudience } from '@/types'
+import { AIProvider, TargetAudience } from '@/types'
 
 export const dynamic = 'force-dynamic'
 
@@ -9,8 +9,11 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData()
     const files = formData.getAll('files') as File[]
-    // Content is always generated via OpenAI (ChatGPT); images/graphs via Gemini (if configured)
-    const provider = 'openai' as const
+    // Default to Gemini for text generation (can be overridden by passing provider in formData)
+    const providerRaw = (formData.get('provider') as string | null) || 'gemini'
+    const provider = (['openai', 'claude', 'gemini'].includes(providerRaw)
+      ? providerRaw
+      : 'gemini') as AIProvider
     const targetAudience = formData.get('targetAudience') as TargetAudience
 
     if (!files || files.length === 0) {

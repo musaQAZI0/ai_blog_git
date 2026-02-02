@@ -6,6 +6,7 @@ import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { Card, CardContent, CardHeader, CardTitle, Badge, Button } from '@/components/ui'
 import { getArticles } from '@/lib/firebase/articles'
 import { Article } from '@/types'
+import { formatDateShort } from '@/lib/utils'
 
 export default function AdminArticlesPage() {
   return (
@@ -72,7 +73,7 @@ function AdminArticlesContent() {
                     </p>
                     {article.publishedAt && (
                       <p className="text-xs text-muted-foreground">
-                        Published: {new Date(article.publishedAt as unknown as string).toLocaleDateString()}
+                        Published: {formatDateShort(article.publishedAt as unknown as string)}
                       </p>
                     )}
                   </div>

@@ -75,7 +75,7 @@ export interface ArticleCreateData {
 }
 
 // AI Generation Types
-export type AIProvider = 'openai' | 'claude'
+export type AIProvider = 'openai' | 'claude' | 'gemini'
 
 export interface AIGenerationRequest {
   pdfContent: string

@@ -148,14 +148,24 @@ export async function getArticleById(articleId: string): Promise<Article | null>
   } as Article
 }
 
-export async function getArticleBySlug(slug: string): Promise<Article | null> {
+export async function getArticleBySlug(
+  slug: string,
+  targetAudience?: TargetAudience
+): Promise<Article | null> {
   const firestore = await ensureDbAsync()
   // Public slug pages should only resolve published articles.
   // (Drafts are accessible by ID for the author/admin in the dashboard.)
-  const q = query(
-    collection(firestore, ARTICLES_COLLECTION),
+  const constraints = [
     where('slug', '==', slug),
     where('status', '==', 'published'),
+  ]
+  if (targetAudience) {
+    constraints.push(where('targetAudience', '==', targetAudience))
+  }
+
+  const q = query(
+    collection(firestore, ARTICLES_COLLECTION),
+    ...constraints,
     limit(1)
   )
 
@@ -188,10 +198,11 @@ export async function getArticles(options: {
     lastDoc,
   } = options
 
+  const orderField = status === 'published' ? 'publishedAt' : 'updatedAt'
   let q = query(
     collection(firestore, ARTICLES_COLLECTION),
     where('status', '==', status),
-    orderBy('publishedAt', 'desc'),
+    orderBy(orderField, 'desc'),
     limit(pageSize)
   )
 

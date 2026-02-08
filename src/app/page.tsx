@@ -17,7 +17,7 @@ export default function HomePage() {
           </p>
           <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
             Wiedza okulistyczna z troska o pacjenta
-            <span className="block text-accent">
+            <span className="block text-foreground">
               Dr hab. n. med. Janusz Skrzypecki
             </span>
           </h1>
@@ -34,21 +34,21 @@ export default function HomePage() {
               </Button>
             </div>
           <div className="mt-12 grid gap-6 sm:grid-cols-3">
-            <div className="rounded-2xl border border-muted/50 bg-card/60 px-5 py-6">
-              <p className="text-3xl font-semibold text-accent">1000+</p>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-border bg-card/80 px-5 py-6">
+              <p className="text-3xl font-semibold text-foreground">1000+</p>
+              <p className="mt-2 text-sm text-foreground">
                 Przeprowadzonych operacji
               </p>
             </div>
-            <div className="rounded-2xl border border-muted/50 bg-card/60 px-5 py-6">
-              <p className="text-3xl font-semibold text-accent">15+</p>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-border bg-card/80 px-5 py-6">
+              <p className="text-3xl font-semibold text-foreground">15+</p>
+              <p className="mt-2 text-sm text-foreground">
                 Lat doswiadczenia w chirurgii oczu
               </p>
             </div>
-            <div className="rounded-2xl border border-muted/50 bg-card/60 px-5 py-6">
-              <p className="text-3xl font-semibold text-accent">1%</p>
-              <p className="mt-2 text-sm text-muted-foreground">
+            <div className="rounded-2xl border border-border bg-card/80 px-5 py-6">
+              <p className="text-3xl font-semibold text-foreground">1%</p>
+              <p className="mt-2 text-sm text-foreground">
                 Reklamacji po zabiegach
               </p>
             </div>
@@ -159,7 +159,7 @@ export default function HomePage() {
 
           <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
             <div className="rounded-2xl border border-muted/40 bg-card/60 p-6 text-left transition hover:border-accent/40 hover:bg-card/80">
-              <div className="mb-4 inline-flex rounded-2xl bg-primary/10 p-3 text-accent">
+              <div className="mb-4 inline-flex rounded-2xl bg-foreground/10 p-3 text-foreground">
                 <BookOpen className="h-6 w-6" />
               </div>
               <h3 className="mb-2 text-lg font-semibold text-foreground">Ekspertyza medyczna</h3>
@@ -169,7 +169,7 @@ export default function HomePage() {
             </div>
 
             <div className="rounded-2xl border border-muted/40 bg-card/60 p-6 text-left transition hover:border-accent/40 hover:bg-card/80">
-              <div className="mb-4 inline-flex rounded-2xl bg-primary/10 p-3 text-accent">
+              <div className="mb-4 inline-flex rounded-2xl bg-foreground/10 p-3 text-foreground">
                 <Shield className="h-6 w-6" />
               </div>
               <h3 className="mb-2 text-lg font-semibold text-foreground">Wiarygodne zrodla</h3>
@@ -179,7 +179,7 @@ export default function HomePage() {
             </div>
 
             <div className="rounded-2xl border border-muted/40 bg-card/60 p-6 text-left transition hover:border-accent/40 hover:bg-card/80">
-              <div className="mb-4 inline-flex rounded-2xl bg-primary/10 p-3 text-accent">
+              <div className="mb-4 inline-flex rounded-2xl bg-foreground/10 p-3 text-foreground">
                 <Users className="h-6 w-6" />
               </div>
               <h3 className="mb-2 text-lg font-semibold text-foreground">Dostosowane tresci</h3>

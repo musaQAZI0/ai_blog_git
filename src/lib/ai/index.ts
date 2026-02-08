@@ -1,6 +1,7 @@
 import { generateArticleWithOpenAI, improveContent } from './openai'
 import { generateArticleWithClaude, improveContentWithClaude } from './claude'
 import { generateArticleWithGemini, improveContentWithGemini } from './gemini'
+import { normalizeAIGenerationResponse } from './normalize'
 import { AIGenerationRequest, AIGenerationResponse, AIProvider } from '@/types'
 
 export async function generateArticle(
@@ -9,12 +10,18 @@ export async function generateArticle(
   const { pdfContent, targetAudience, provider, generateImage } = request
 
   if (provider === 'openai') {
-    return generateArticleWithOpenAI(pdfContent, targetAudience, generateImage)
+    return normalizeAIGenerationResponse(
+      await generateArticleWithOpenAI(pdfContent, targetAudience, generateImage)
+    )
   }
   if (provider === 'gemini') {
-    return generateArticleWithGemini(pdfContent, targetAudience, generateImage)
+    return normalizeAIGenerationResponse(
+      await generateArticleWithGemini(pdfContent, targetAudience, generateImage)
+    )
   } else {
-    return generateArticleWithClaude(pdfContent, targetAudience)
+    return normalizeAIGenerationResponse(
+      await generateArticleWithClaude(pdfContent, targetAudience)
+    )
   }
 }
 

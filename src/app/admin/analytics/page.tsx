@@ -11,7 +11,6 @@ import {
   CardDescription,
 } from '@/components/ui'
 import { ArrowLeft, Users, FileText, Mail, TrendingUp } from 'lucide-react'
-import { getAdminStats } from '@/lib/firebase/admin'
 import { getNewsletterStats } from '@/lib/firebase/newsletter'
 
 interface Stats {
@@ -40,11 +39,12 @@ function AnalyticsContent() {
 
   const fetchStats = async () => {
     try {
-      const [adminStats, newsStats] = await Promise.all([
-        getAdminStats(),
+      const [overviewRes, newsStats] = await Promise.all([
+        fetch('/api/admin/overview').then((r) => r.json()),
         getNewsletterStats(),
       ])
-      setStats(adminStats)
+      if (!overviewRes.success) throw new Error(overviewRes.error || 'Failed to load overview')
+      setStats(overviewRes.stats)
       setNewsletterStats(newsStats)
     } catch (error) {
       console.error('Error fetching stats:', error)

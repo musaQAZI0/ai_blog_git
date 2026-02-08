@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { Article } from '@/types'
 import { getMockArticles } from '@/lib/mock-data'
 import { ArticleGrid } from '@/components/blog/ArticleGrid'
@@ -126,6 +127,12 @@ export default function PatientBlogPage() {
         <p className="mt-4 text-lg text-muted-foreground">
           Przystepne artykuly o zdrowiu oczu i profilaktyce okulistycznej
         </p>
+      </div>
+
+      <div className="mb-8 flex justify-center">
+        <Button asChild>
+          <Link href="/patient/generate">Generuj artykul</Link>
+        </Button>
       </div>
 
       {/* Search and Filter */}

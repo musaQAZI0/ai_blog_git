@@ -2,11 +2,22 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateArticle } from '@/lib/ai'
 import { extractTextFromMultiplePDFs } from '@/lib/ai/pdf-parser'
 import { AIProvider, TargetAudience } from '@/types'
+import { getRequestUser } from '@/lib/auth/server'
+import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
 
+function getClientIp(request: NextRequest): string {
+  const xff = request.headers.get('x-forwarded-for')
+  if (xff) return xff.split(',')[0]?.trim() || 'unknown'
+  return request.headers.get('x-real-ip') || 'unknown'
+}
+
 export async function POST(request: NextRequest) {
   try {
+    const user = await getRequestUser(request)
+    const ip = getClientIp(request)
+
     const formData = await request.formData()
     const files = formData.getAll('files') as File[]
     // Default to Gemini for text generation (can be overridden by passing provider in formData)
@@ -14,7 +25,18 @@ export async function POST(request: NextRequest) {
     const provider = (['openai', 'claude', 'gemini'].includes(providerRaw)
       ? providerRaw
       : 'gemini') as AIProvider
-    const targetAudience = formData.get('targetAudience') as TargetAudience
+    const requestedAudience = formData.get('targetAudience') as TargetAudience
+
+    // Enforce targetAudience by role:
+    // - guest/patient: patient only
+    // - professional: professional only
+    // - admin: can choose
+    const targetAudience: TargetAudience =
+      user.role === 'admin'
+        ? requestedAudience
+        : user.role === 'professional'
+          ? 'professional'
+          : 'patient'
 
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -28,6 +50,16 @@ export async function POST(request: NextRequest) {
         { success: false, error: 'Nieprawidlowa grupa docelowa' },
         { status: 400 }
       )
+    }
+
+    if (user.role === 'guest') {
+      const rl = rateLimit(`ai-generate:${ip}`, { limit: 10, windowMs: 60 * 60 * 1000 })
+      if (!rl.ok) {
+        return NextResponse.json(
+          { success: false, error: 'Za duzo zapytan. Sprobuj ponownie pozniej.' },
+          { status: 429 }
+        )
+      }
     }
 
     // Convert files to buffers
@@ -52,7 +84,7 @@ export async function POST(request: NextRequest) {
     const generatedContent = await generateArticle({
       pdfContent,
       targetAudience,
-      provider,
+      provider: user.role === 'guest' ? 'gemini' : provider,
       // Prefer Gemini for images/graphs; if Gemini isn't configured, OpenAI code can fall back to DALL·E.
       generateImage: true,
     })

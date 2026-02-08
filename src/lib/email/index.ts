@@ -31,11 +31,16 @@ export interface NewsletterEmailData {
 }
 
 const EMAIL_PROVIDER = process.env.EMAIL_PROVIDER || 'sendgrid' // sendgrid, mailchimp, or ses
+const EMAILS_DISABLED = process.env.DISABLE_EMAILS === '1'
 
 /**
  * Send an email using the configured provider
  */
 export async function sendEmail(options: EmailOptions): Promise<void> {
+  if (EMAILS_DISABLED) {
+    console.warn('Email sending disabled via DISABLE_EMAILS=1')
+    return
+  }
   try {
     switch (EMAIL_PROVIDER) {
       case 'sendgrid':

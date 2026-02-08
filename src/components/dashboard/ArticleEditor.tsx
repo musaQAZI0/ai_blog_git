@@ -22,6 +22,7 @@ import { Article, ArticleCreateData, TargetAudience } from '@/types'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Eye, Edit, Save, Send } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 const articleSchema = z.object({
   title: z.string().min(5, 'Tytul musi miec co najmniej 5 znakow'),
@@ -39,8 +40,13 @@ type ArticleFormData = z.infer<typeof articleSchema>
 
 interface ArticleEditorProps {
   initialData?: Partial<Article>
+  lockedTargetAudience?: TargetAudience
   onSave: (data: ArticleCreateData, publish: boolean) => Promise<void>
   loading?: boolean
+  draftButtonLabel?: string
+  publishButtonLabel?: string
+  hideDraftButton?: boolean
+  hidePublishButton?: boolean
 }
 
 const PATIENT_CATEGORIES = [
@@ -59,7 +65,16 @@ const PROFESSIONAL_CATEGORIES = [
   'Przypadki',
 ]
 
-export function ArticleEditor({ initialData, onSave, loading }: ArticleEditorProps) {
+export function ArticleEditor({
+  initialData,
+  lockedTargetAudience,
+  onSave,
+  loading,
+  draftButtonLabel,
+  publishButtonLabel,
+  hideDraftButton = false,
+  hidePublishButton = false,
+}: ArticleEditorProps) {
   const [error, setError] = useState<string | null>(null)
   const [previewMode, setPreviewMode] = useState(false)
 
@@ -76,7 +91,7 @@ export function ArticleEditor({ initialData, onSave, loading }: ArticleEditorPro
       content: initialData?.content || '',
       excerpt: initialData?.excerpt || '',
       category: initialData?.category || '',
-      targetAudience: initialData?.targetAudience || 'patient',
+      targetAudience: lockedTargetAudience || initialData?.targetAudience || 'patient',
       tags: initialData?.tags?.join(', ') || '',
       seoTitle: initialData?.seoMeta?.title || '',
       seoDescription: initialData?.seoMeta?.description || '',
@@ -86,8 +101,12 @@ export function ArticleEditor({ initialData, onSave, loading }: ArticleEditorPro
 
   const targetAudience = watch('targetAudience')
   const content = watch('content')
+  const effectiveAudience = lockedTargetAudience || (targetAudience as TargetAudience)
   const categories =
-    targetAudience === 'patient' ? PATIENT_CATEGORIES : PROFESSIONAL_CATEGORIES
+    effectiveAudience === 'patient' ? PATIENT_CATEGORIES : PROFESSIONAL_CATEGORIES
+
+  const draftLabel = draftButtonLabel || 'Zapisz wersje robocza'
+  const publishLabel = publishButtonLabel || 'Opublikuj'
 
   const handleSave = async (data: ArticleFormData, publish: boolean) => {
     setError(null)
@@ -97,7 +116,7 @@ export function ArticleEditor({ initialData, onSave, loading }: ArticleEditorPro
         content: data.content,
         excerpt: data.excerpt,
         category: data.category,
-        targetAudience: data.targetAudience as TargetAudience,
+        targetAudience: (lockedTargetAudience || data.targetAudience) as TargetAudience,
         tags: data.tags.split(',').map((t) => t.trim()).filter(Boolean),
         seoMeta: {
           title: data.seoTitle || data.title,
@@ -122,39 +141,54 @@ export function ArticleEditor({ initialData, onSave, loading }: ArticleEditorPro
         </Alert>
       )}
 
-      <Tabs defaultValue="edit" className="w-full">
-        <div className="flex items-center justify-between">
-          <TabsList>
-            <TabsTrigger value="edit">
-              <Edit className="mr-2 h-4 w-4" />
-              Edycja
-            </TabsTrigger>
-            <TabsTrigger value="preview">
-              <Eye className="mr-2 h-4 w-4" />
-              Podglad
-            </TabsTrigger>
-          </TabsList>
+      <div className="flex items-center justify-between mb-4">
+        <div className="inline-flex rounded-md border border-muted bg-muted/30 p-1">
+          <Button
+            type="button"
+            variant={previewMode ? 'ghost' : 'secondary'}
+            size="sm"
+            onClick={() => setPreviewMode(false)}
+            className="gap-2"
+          >
+            <Edit className="h-4 w-4" />
+            Edycja
+          </Button>
+          <Button
+            type="button"
+            variant={previewMode ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setPreviewMode(true)}
+            className="gap-2"
+          >
+            <Eye className="h-4 w-4" />
+            Podglad
+          </Button>
+        </div>
 
-          <div className="flex gap-2">
+        <div className="flex gap-2">
+          {!hideDraftButton && (
             <Button
               variant="outline"
               onClick={handleSubmit((data) => handleSave(data, false))}
               disabled={loading}
             >
               <Save className="mr-2 h-4 w-4" />
-              Zapisz wersje robocza
+              {draftLabel}
             </Button>
+          )}
+          {!hidePublishButton && (
             <Button
               onClick={handleSubmit((data) => handleSave(data, true))}
               disabled={loading}
             >
               <Send className="mr-2 h-4 w-4" />
-              Opublikuj
+              {publishLabel}
             </Button>
-          </div>
+          )}
         </div>
+      </div>
 
-        <TabsContent value="edit" className="space-y-6">
+      <div className={cn(previewMode ? 'hidden' : 'block', 'space-y-6')}>
           {/* Basic Info */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
@@ -173,15 +207,36 @@ export function ArticleEditor({ initialData, onSave, loading }: ArticleEditorPro
               <Label htmlFor="targetAudience" required>
                 Grupa docelowa
               </Label>
-              <Select
-                id="targetAudience"
-                options={[
-                  { value: 'patient', label: 'Pacjenci' },
-                  { value: 'professional', label: 'Specjalisci medyczni' },
-                ]}
-                error={errors.targetAudience?.message}
-                {...register('targetAudience')}
-              />
+              {lockedTargetAudience ? (
+                <>
+                  <Select
+                    id="targetAudience"
+                    disabled
+                    value={lockedTargetAudience}
+                    options={[
+                      lockedTargetAudience === 'patient'
+                        ? { value: 'patient', label: 'Pacjenci' }
+                        : { value: 'professional', label: 'Specjalisci medyczni' },
+                    ]}
+                    error={errors.targetAudience?.message}
+                  />
+                  <input
+                    type="hidden"
+                    value={lockedTargetAudience}
+                    {...register('targetAudience')}
+                  />
+                </>
+              ) : (
+                <Select
+                  id="targetAudience"
+                  options={[
+                    { value: 'patient', label: 'Pacjenci' },
+                    { value: 'professional', label: 'Specjalisci medyczni' },
+                  ]}
+                  error={errors.targetAudience?.message}
+                  {...register('targetAudience')}
+                />
+              )}
             </div>
 
             <div className="space-y-2">
@@ -277,25 +332,24 @@ export function ArticleEditor({ initialData, onSave, loading }: ArticleEditorPro
               </div>
             </div>
           </div>
-        </TabsContent>
+      </div>
 
-        <TabsContent value="preview">
-          <div className="rounded-lg border bg-background p-6">
-            <Badge className="mb-4">{watch('category') || 'Kategoria'}</Badge>
-            <h1 className="mb-4 text-3xl font-bold">
-              {watch('title') || 'Tytul artykulu'}
-            </h1>
-            <p className="mb-6 text-lg text-muted-foreground">
-              {watch('excerpt') || 'Streszczenie artykulu...'}
-            </p>
-            <div className="prose max-w-none dark:prose-invert">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                {content || '*Tutaj pojawi sie tresc artykulu...*'}
-              </ReactMarkdown>
-            </div>
+      <div className={cn(previewMode ? 'block' : 'hidden')}>
+        <div className="rounded-lg border bg-background p-6">
+          <Badge className="mb-4">{watch('category') || 'Kategoria'}</Badge>
+          <h1 className="mb-4 text-3xl font-bold">
+            {watch('title') || 'Tytul artykulu'}
+          </h1>
+          <p className="mb-6 text-lg text-muted-foreground">
+            {watch('excerpt') || 'Streszczenie artykulu...'}
+          </p>
+          <div className="prose max-w-none dark:prose-invert">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+              {content || '*Tutaj pojawi sie tresc artykulu...*'}
+            </ReactMarkdown>
           </div>
-        </TabsContent>
-      </Tabs>
+        </div>
+      </div>
     </div>
   )
 }

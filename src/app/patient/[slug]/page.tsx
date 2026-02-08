@@ -28,7 +28,7 @@ export default function PatientArticlePage() {
         } else {
           // Use Firebase
           const { getArticleBySlug } = await import('@/lib/firebase/articles')
-          fetchedArticle = await getArticleBySlug(slug)
+          fetchedArticle = await getArticleBySlug(slug, 'patient')
         }
 
         if (!fetchedArticle) {

@@ -13,7 +13,6 @@ import {
   Input,
   Select,
 } from '@/components/ui'
-import { getAllUsers, deleteUser } from '@/lib/firebase/admin'
 import { User, UserStatus } from '@/types'
 import { ArrowLeft, Search, Trash2, Edit } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -49,9 +48,11 @@ function AdminUsersContent() {
 
   const fetchUsers = async () => {
     try {
-      const allUsers = await getAllUsers()
-      setUsers(allUsers)
-      setFilteredUsers(allUsers)
+      const res = await fetch('/api/admin/users/list')
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || 'Failed to load users')
+      setUsers(json.users)
+      setFilteredUsers(json.users)
     } catch (error) {
       console.error('Error fetching users:', error)
     } finally {
@@ -63,7 +64,13 @@ function AdminUsersContent() {
     if (!confirm('Czy na pewno chcesz usunac tego uzytkownika?')) return
 
     try {
-      await deleteUser(userId)
+      const res = await fetch('/api/admin/users/delete', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ userId }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || 'Delete failed')
       fetchUsers()
     } catch (error) {
       console.error('Error deleting user:', error)

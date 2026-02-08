@@ -19,7 +19,7 @@ function ProfessionalArticleContent() {
   useEffect(() => {
     async function fetchArticle() {
       try {
-        const fetchedArticle = await getArticleBySlug(slug)
+        const fetchedArticle = await getArticleBySlug(slug, 'professional')
         if (!fetchedArticle) {
           setError('Artykul nie zostal znaleziony')
           return

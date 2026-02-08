@@ -14,10 +14,19 @@ Write in simple, accessible Polish language. Avoid medical jargon or explain it 
 Focus on being educational, reassuring, and practical.
 Format the content with clear headings, bullet points where appropriate, and easy-to-understand explanations.`
 
-const PROFESSIONAL_SYSTEM_PROMPT = `You are a medical content writer specializing in ophthalmology content for medical professionals.
-Write in technical, clinical Polish language appropriate for doctors and optometrists.
-Include relevant clinical details, research references, and professional terminology.
-Format the content with proper medical structure and evidence-based information.`
+const PROFESSIONAL_SYSTEM_PROMPT = `You are the Editor-in-Chief of a high-impact scientific journal specializing in ophthalmology.
+Your task is to write a concise editorial review of the provided article, targeted specifically at ophthalmologists and optometrists.
+Write in sophisticated, academic Polish appropriate for peer-reviewed literature.
+Adopt an authoritative, analytical, and objective tone.
+Structure the review to include:
+
+Editorial Summary: A high-level synthesis of the article's subject.
+
+Key Highlights: Extract the most important data points, specific study findings, statistical outcomes, or distinct clinical protocols found in the text.
+
+Clinical Impact: Explicitly explain why this matters for daily practice (e.g., diagnostics, treatment efficacy, patient management).
+
+Ground all claims strictly in the provided document content. If the document does not contain a detail, do not invent it.`
 
 export async function generateArticleWithClaude(
   pdfContent: string,
@@ -27,16 +36,21 @@ export async function generateArticleWithClaude(
     ? PATIENT_SYSTEM_PROMPT
     : PROFESSIONAL_SYSTEM_PROMPT
 
-  const userPrompt = `Based on the following medical document content, create a blog article in Polish.
-Target word count: ~600 words for the main content (aim for 560-650).
+  const userPrompt = `Based on the following medical document content, create a blog article/review in Polish.
+Target word count: ~400 words for the main content (aim for 380-450).
+IMPORTANT: word count refers ONLY to the "content" field (the markdown article body), excluding title, excerpt, SEO meta, tags/categories, and excluding URLs/placeholders.
 
-Document content:
-${pdfContent}
+Document content: ${pdfContent}
 
-Please provide the output in the following JSON format (respond with only the JSON, no additional text):
+IMPORTANT:
+- Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
+- Include up to 3 figures (mix of medical illustration and/or chart/graph if the PDF contains numerical data).
+- In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D.
+
+Required JSON format:
 {
   "title": "Article title",
-  "content": "Full article content in markdown format",
+  "content": "Full article content in markdown format (must include placeholders like https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D where images should appear)",
   "excerpt": "A brief 2-3 sentence summary (max 160 characters)",
   "seoMeta": {
     "title": "SEO optimized title (max 60 characters)",
@@ -44,7 +58,18 @@ Please provide the output in the following JSON format (respond with only the JS
     "keywords": ["keyword1", "keyword2", "keyword3"]
   },
   "suggestedTags": ["tag1", "tag2"],
-  "suggestedCategory": "Category name"
+  "suggestedCategory": "Category name",
+  "coverImagePrompt": "A short prompt for a cover image relevant to the article (no text on image).",
+  "figures": [
+    {
+      "id": "figure_1",
+      "type": "illustration|chart",
+      "alt": "Alt text in Polish",
+      "caption": "Short caption in Polish",
+      "placeholder": "https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D",
+      "prompt": "Image generation prompt in English. If chart, include exact data and style instructions."
+    }
+  ]
 }`
 
   const anthropic = getAnthropicClient()

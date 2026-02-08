@@ -33,6 +33,9 @@ const nextConfig = {
     serverActions: {
       bodySizeLimit: '10mb',
     },
+    // Use worker_threads instead of spawning child processes for build workers.
+    // Helps in environments where process spawning is restricted (EPERM spawn).
+    workerThreads: true,
   },
   async headers() {
     return [

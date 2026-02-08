@@ -1,14 +1,29 @@
 import type { Metadata } from 'next'
-import { Inter } from 'next/font/google'
+import { IBM_Plex_Mono, Manrope } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
 import { Header } from '@/components/layout/Header'
 import { Footer } from '@/components/layout/Footer'
 import { CookieConsent } from '@/components/gdpr/CookieConsent'
 
-const inter = Inter({ subsets: ['latin', 'latin-ext'] })
+const manrope = Manrope({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-sans',
+  display: 'swap',
+})
+
+const ibmPlexMono = IBM_Plex_Mono({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-mono',
+  display: 'swap',
+  weight: ['400', '500', '600'],
+})
 
 export const metadata: Metadata = {
+  other: {
+    // Prevent auto-translate from mutating React-managed DOM in dev.
+    google: 'notranslate',
+  },
   title: {
     default: 'Blog Okulistyczny | Dr Skrzypecki',
     template: '%s | Dr Skrzypecki Blog',
@@ -41,8 +56,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pl" suppressHydrationWarning>
-      <body className={inter.className}>
+    <html lang="pl" suppressHydrationWarning translate="no">
+      <body className={`${manrope.variable} ${ibmPlexMono.variable}`} translate="no">
         <AuthProvider>
           <div className="flex min-h-screen flex-col">
             <Header />

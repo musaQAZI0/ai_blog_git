@@ -14,8 +14,39 @@ export function generateSlug(text: string): string {
   })
 }
 
-export function formatDate(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
+function toValidDate(input: unknown): Date | null {
+  if (!input) return null
+
+  if (input instanceof Date) {
+    return Number.isNaN(input.getTime()) ? null : input
+  }
+
+  if (typeof input === 'string' || typeof input === 'number') {
+    const d = new Date(input)
+    return Number.isNaN(d.getTime()) ? null : d
+  }
+
+  if (typeof input === 'object') {
+    const maybe = input as { toDate?: () => Date; seconds?: number; _seconds?: number; nanoseconds?: number; _nanoseconds?: number }
+    if (typeof maybe.toDate === 'function') {
+      const d = maybe.toDate()
+      return Number.isNaN(d.getTime()) ? null : d
+    }
+
+    const seconds = typeof maybe.seconds === 'number' ? maybe.seconds : typeof maybe._seconds === 'number' ? maybe._seconds : null
+    const nanos = typeof maybe.nanoseconds === 'number' ? maybe.nanoseconds : typeof maybe._nanoseconds === 'number' ? maybe._nanoseconds : 0
+    if (seconds !== null) {
+      const d = new Date(seconds * 1000 + Math.floor(nanos / 1e6))
+      return Number.isNaN(d.getTime()) ? null : d
+    }
+  }
+
+  return null
+}
+
+export function formatDate(date: Date | string | unknown): string {
+  const d = toValidDate(date)
+  if (!d) return '-'
   return new Intl.DateTimeFormat('pl-PL', {
     year: 'numeric',
     month: 'long',
@@ -24,8 +55,9 @@ export function formatDate(date: Date | string): string {
   }).format(d)
 }
 
-export function formatDateShort(date: Date | string): string {
-  const d = typeof date === 'string' ? new Date(date) : date
+export function formatDateShort(date: Date | string | unknown): string {
+  const d = toValidDate(date)
+  if (!d) return '-'
   return new Intl.DateTimeFormat('pl-PL', {
     year: 'numeric',
     month: 'short',

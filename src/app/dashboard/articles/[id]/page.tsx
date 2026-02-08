@@ -9,11 +9,13 @@ import { Alert, AlertDescription, Button } from '@/components/ui'
 import { getArticleById, updateArticle, publishArticle } from '@/lib/firebase/articles'
 import { Article, ArticleCreateData } from '@/types'
 import { ArrowLeft, Loader2 } from 'lucide-react'
+import { useAuth } from '@/context/AuthContext'
 
 function DashboardArticleEditContent() {
   const params = useParams<{ id: string }>()
   const router = useRouter()
   const articleId = useMemo(() => params?.id, [params])
+  const { user } = useAuth()
 
   const [article, setArticle] = useState<Article | null>(null)
   const [loading, setLoading] = useState(true)
@@ -93,7 +95,12 @@ function DashboardArticleEditContent() {
           Ladowanie...
         </div>
       ) : !article ? null : (
-        <ArticleEditor initialData={article} onSave={handleSave} loading={saving} />
+        <ArticleEditor
+          initialData={article}
+          lockedTargetAudience={user?.role === 'admin' ? undefined : article.targetAudience}
+          onSave={handleSave}
+          loading={saving}
+        />
       )}
     </div>
   )
@@ -106,4 +113,3 @@ export default function DashboardArticleEditPage() {
     </ProtectedRoute>
   )
 }
-

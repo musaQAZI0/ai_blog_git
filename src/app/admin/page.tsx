@@ -13,12 +13,6 @@ import {
   Alert,
   AlertDescription,
 } from '@/components/ui'
-import {
-  getPendingApprovals,
-  approveUser,
-  rejectUser,
-  getAdminStats,
-} from '@/lib/firebase/admin'
 import { PendingApproval } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import {
@@ -51,12 +45,11 @@ function AdminDashboardContent() {
 
   const fetchData = async () => {
     try {
-      const [approvals, adminStats] = await Promise.all([
-        getPendingApprovals(),
-        getAdminStats(),
-      ])
-      setPendingApprovals(approvals.filter((a) => !a.reviewedAt))
-      setStats(adminStats)
+      const res = await fetch('/api/admin/overview')
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || 'Failed to load overview')
+      setPendingApprovals((json.pending as PendingApproval[]).filter((a: PendingApproval) => !a.reviewedAt))
+      setStats(json.stats)
     } catch (error) {
       console.error('Error fetching admin data:', error)
     } finally {
@@ -64,12 +57,23 @@ function AdminDashboardContent() {
     }
   }
 
-  const handleApprove = async (userId: string) => {
+  const handleApprove = async (approval: PendingApproval) => {
     if (!user) return
-    setActionLoading(userId)
+    setActionLoading(approval.userId)
     setMessage(null)
     try {
-      await approveUser(userId, user.id)
+      const res = await fetch('/api/admin/users/approve', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          userId: approval.userId,
+          reviewerId: user.id,
+          userEmail: approval.userData.email,
+          userName: approval.userData.name,
+        }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || 'Approval failed')
       setMessage({ type: 'success', text: 'Uzytkownik zostal zatwierdzony' })
       fetchData()
     } catch (error) {
@@ -79,12 +83,23 @@ function AdminDashboardContent() {
     }
   }
 
-  const handleReject = async (userId: string) => {
+  const handleReject = async (approval: PendingApproval) => {
     if (!user) return
-    setActionLoading(userId)
+    setActionLoading(approval.userId)
     setMessage(null)
     try {
-      await rejectUser(userId, user.id)
+      const res = await fetch('/api/admin/users/reject', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          userId: approval.userId,
+          reviewerId: user.id,
+          userEmail: approval.userData.email,
+          userName: approval.userData.name,
+        }),
+      })
+      const json = await res.json()
+      if (!json.success) throw new Error(json.error || 'Reject failed')
       setMessage({ type: 'success', text: 'Uzytkownik zostal odrzucony' })
       fetchData()
     } catch (error) {
@@ -264,7 +279,7 @@ function AdminDashboardContent() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => handleReject(approval.userId)}
+                      onClick={() => handleReject(approval)}
                       disabled={actionLoading === approval.userId}
                     >
                       <XCircle className="mr-1 h-4 w-4" />
@@ -272,7 +287,7 @@ function AdminDashboardContent() {
                     </Button>
                     <Button
                       size="sm"
-                      onClick={() => handleApprove(approval.userId)}
+                      onClick={() => handleApprove(approval)}
                       disabled={actionLoading === approval.userId}
                     >
                       <CheckCircle className="mr-1 h-4 w-4" />

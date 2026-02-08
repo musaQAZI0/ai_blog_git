@@ -29,7 +29,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       {/* Demo mode banner */}
       {isDemoMode && (
         <div className="bg-yellow-100 px-4 py-1 text-center text-xs text-yellow-800">
@@ -37,11 +37,11 @@ export function Header() {
         </div>
       )}
 
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-8">
           <Link href="/" className="flex items-center gap-2">
-            <span className="text-xl font-bold text-primary">Skrzypecki</span>
-            <span className="text-xl font-light">Blog</span>
+            <span className="text-lg font-semibold tracking-tight text-foreground">Skrzypecki</span>
+            <span className="text-lg font-light text-foreground">Blog</span>
           </Link>
 
           <div className="hidden md:flex md:gap-x-6">
@@ -50,9 +50,9 @@ export function Header() {
                 key={item.name}
                 href={item.href}
                 className={cn(
-                  'text-sm font-medium transition-colors hover:text-primary',
+                  'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
                   pathname === item.href
-                    ? 'text-primary'
+                    ? 'text-foreground'
                     : 'text-muted-foreground'
                 )}
               >
@@ -69,20 +69,20 @@ export function Header() {
                 <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 rounded-full bg-muted p-2 hover:bg-muted/80"
+                    className="flex items-center gap-2 rounded-full bg-muted p-2 text-foreground/80 hover:bg-muted/70"
                   >
                     <User className="h-5 w-5" />
                   </button>
 
                   {userMenuOpen && (
-                    <div className="absolute right-0 mt-2 w-48 rounded-md border bg-background py-1 shadow-lg">
-                      <div className="border-b px-4 py-2">
+                    <div className="absolute right-0 mt-2 w-52 rounded-xl border border-border bg-card py-1 shadow-[0_16px_40px_-24px_rgba(0,0,0,0.2)]">
+                      <div className="border-b border-border/70 px-4 py-2">
                         <p className="text-sm font-medium">{user.name}</p>
                         <p className="text-xs text-muted-foreground">{user.email}</p>
                       </div>
                       <Link
                         href="/dashboard"
-                        className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted"
+                        className="flex items-center gap-2 px-4 py-2 text-sm text-foreground/80 hover:bg-muted"
                         onClick={() => setUserMenuOpen(false)}
                       >
                         <Settings className="h-4 w-4" />
@@ -91,7 +91,7 @@ export function Header() {
                       {user.role === 'admin' && (
                         <Link
                           href="/admin"
-                          className="flex items-center gap-2 px-4 py-2 text-sm hover:bg-muted"
+                          className="flex items-center gap-2 px-4 py-2 text-sm text-foreground/80 hover:bg-muted"
                           onClick={() => setUserMenuOpen(false)}
                         >
                           <Settings className="h-4 w-4" />
@@ -110,10 +110,10 @@ export function Header() {
                 </div>
               ) : (
                 <div className="hidden md:flex md:gap-2">
-                  <Button variant="ghost" asChild>
+                  <Button variant="ghost" className="rounded-full" asChild>
                     <Link href="/login">Zaloguj</Link>
                   </Button>
-                  <Button asChild>
+                  <Button className="rounded-full bg-foreground text-background hover:bg-foreground/80" asChild>
                     <Link href="/register">Rejestracja</Link>
                   </Button>
                 </div>
@@ -136,8 +136,8 @@ export function Header() {
 
       {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden">
-          <div className="space-y-1 px-4 pb-4">
+        <div className="md:hidden border-t border-border bg-background/95">
+          <div className="space-y-1 px-4 pb-4 pt-3">
             {navigation.map((item) => (
               <Link
                 key={item.name}
@@ -145,7 +145,7 @@ export function Header() {
                 className={cn(
                   'block rounded-md px-3 py-2 text-base font-medium',
                   pathname === item.href
-                    ? 'bg-muted text-primary'
+                    ? 'bg-muted text-foreground'
                     : 'text-muted-foreground hover:bg-muted'
                 )}
                 onClick={() => setMobileMenuOpen(false)}
@@ -155,10 +155,10 @@ export function Header() {
             ))}
             {!user && (
               <div className="flex gap-2 pt-4">
-                <Button variant="ghost" className="flex-1" asChild>
+                <Button variant="ghost" className="flex-1 rounded-full" asChild>
                   <Link href="/login">Zaloguj</Link>
                 </Button>
-                <Button className="flex-1" asChild>
+                <Button className="flex-1 rounded-full bg-foreground text-background hover:bg-foreground/80" asChild>
                   <Link href="/register">Rejestracja</Link>
                 </Button>
               </div>

@@ -36,6 +36,20 @@ export async function generateArticleWithClaude(
     ? PATIENT_SYSTEM_PROMPT
     : PROFESSIONAL_SYSTEM_PROMPT
 
+  const audienceInstructions =
+    targetAudience === 'professional'
+      ? `AudienceInstructions (professional):
+- In "content" use EXACT section headings in this order:
+  ## Streszczenie redakcyjne
+  ## Kluczowe informacje
+  ## Znaczenie kliniczne
+- Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
+`
+      : `AudienceInstructions (patient):
+- Keep language simple and reassuring.
+- Explain any unavoidable medical terms briefly.
+`
+
   const userPrompt = `Based on the following medical document content, create a blog article/review in Polish.
 Target word count: ~400 words for the main content (aim for 380-450).
 IMPORTANT: word count refers ONLY to the "content" field (the markdown article body), excluding title, excerpt, SEO meta, tags/categories, and excluding URLs/placeholders.
@@ -46,6 +60,7 @@ IMPORTANT:
 - Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
 - Include up to 3 figures (mix of medical illustration and/or chart/graph if the PDF contains numerical data).
 - In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D.
+${audienceInstructions}
 
 Required JSON format:
 {

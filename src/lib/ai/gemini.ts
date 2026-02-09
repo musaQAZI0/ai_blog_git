@@ -212,7 +212,10 @@ export async function generateArticleWithGemini(
   const audienceInstructions =
     targetAudience === 'professional'
       ? `AudienceInstructions (professional):
-- Use headings aligned with: **Streszczenie redakcyjne**, **Kluczowe informacje**, **Znaczenie kliniczne**.
+- In "content" use EXACT section headings in this order:
+  ## Streszczenie redakcyjne
+  ## Kluczowe informacje
+  ## Znaczenie kliniczne
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
 `
       : `AudienceInstructions (patient):
@@ -423,6 +426,12 @@ Required JSON format:
       }
     }
   }
+
+  // Safety net: remove any leftover figure placeholders so users don't see them.
+  content = content
+    .replace(/\{\{FIGURE_\d+_URL\}\}/g, '')
+    .replace(/https?:\/\/www\.google\.com\/search\?q=%7B%7BFIGURE_\d+_URL%7D%7D/g, '')
+    .replace(/\n{3,}/g, '\n\n')
 
   // Avoid forcing length with raw PDF text. If slightly short, keep as-is.
 

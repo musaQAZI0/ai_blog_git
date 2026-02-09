@@ -50,7 +50,10 @@ export async function generateArticleWithOpenAI(
   const audienceInstructions =
     targetAudience === 'professional'
       ? `AudienceInstructions (professional):
-- Use headings aligned with: **Streszczenie redakcyjne**, **Kluczowe informacje**, **Znaczenie kliniczne**.
+- In "content" use EXACT section headings in this order:
+  ## Streszczenie redakcyjne
+  ## Kluczowe informacje
+  ## Znaczenie kliniczne
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
 `
       : `AudienceInstructions (patient):

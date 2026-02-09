@@ -277,6 +277,14 @@ export function normalizeAIGenerationResponse(
   // If SEO fields still contain JSON blobs, unwrap once more.
   seoMeta = normalizeSeoMeta(seoMeta)
 
+  if (content) {
+    content = content
+      .replace(/\{\{FIGURE_\d+_URL\}\}/g, '')
+      .replace(/https?:\/\/www\.google\.com\/search\?q=%7B%7BFIGURE_\d+_URL%7D%7D/g, '')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim()
+  }
+
   return {
     ...response,
     title,

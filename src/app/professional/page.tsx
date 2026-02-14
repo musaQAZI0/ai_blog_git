@@ -154,7 +154,7 @@ function ProfessionalBlogContent() {
             />
             <div className="ml-auto flex items-center gap-2 pr-2 text-black/70">
               <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
-                <DialogTrigger asChild>
+                <DialogTrigger>
                   <Button variant="ghost" size="sm" className="gap-2 hover:text-black">
                     <SlidersHorizontal className="h-4 w-4" />
                     Filtr
@@ -194,7 +194,7 @@ function ProfessionalBlogContent() {
               </Dialog>
 
               <Dialog open={sortOpen} onOpenChange={setSortOpen}>
-                <DialogTrigger asChild>
+                <DialogTrigger>
                   <Button variant="ghost" size="sm" className="gap-2 hover:text-black">
                     <ArrowUpDown className="h-4 w-4" />
                     Sortuj

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
       email,
       userId: userId || null,
       subscribedAt: serverTimestamp(),
-      confirmedAt: null,
+      confirmedAt: serverTimestamp(),
       unsubscribedAt: null,
       preferences: {
         frequency: 'weekly',
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Zapisano do newslettera. Sprawdz email, aby potwierdzic subskrypcje.',
+      message: 'Zapisano do newslettera.',
     })
   } catch (error) {
     console.error('Newsletter subscription error:', error)

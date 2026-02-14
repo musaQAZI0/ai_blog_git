@@ -1,18 +1,24 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { Button, Input, Alert, AlertDescription } from '@/components/ui'
 import { Mail } from 'lucide-react'
 
 interface NewsletterFormProps {
   variant?: 'inline' | 'card'
+  defaultEmail?: string
 }
 
-export function NewsletterForm({ variant = 'inline' }: NewsletterFormProps) {
+export function NewsletterForm({ variant = 'inline', defaultEmail }: NewsletterFormProps) {
   const [email, setEmail] = useState('')
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!defaultEmail) return
+    setEmail((prev) => (prev ? prev : defaultEmail))
+  }, [defaultEmail])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -43,8 +49,7 @@ export function NewsletterForm({ variant = 'inline' }: NewsletterFormProps) {
     return (
       <Alert variant="success">
         <AlertDescription>
-          Dziekujemy za zapisanie sie do newslettera! Sprawdz swoja skrzynke email,
-          aby potwierdzic subskrypcje.
+          Dziekujemy za zapisanie sie do newslettera!
         </AlertDescription>
       </Alert>
     )

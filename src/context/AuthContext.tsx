@@ -44,7 +44,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (cancelled) return
 
       if (!configured) {
-        console.log('[auth] demo mode enabled (Firebase not configured)')
         setIsDemoMode(true)
         setLoading(false)
         return
@@ -59,7 +58,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
-        console.log('[auth] onAuthStateChanged', { uid: fbUser?.uid || null })
         setFirebaseUser(fbUser)
 
         if (fbUser && db) {
@@ -67,7 +65,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             const userDoc = await getDoc(doc(db, 'users', fbUser.uid))
             if (userDoc.exists()) {
               const userData = userDoc.data()
-              console.log('[auth] user doc loaded', { status: userData.status, role: userData.role })
               setUser({
                 id: userDoc.id,
                 ...userData,
@@ -76,7 +73,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 gdprConsentDate: userData.gdprConsentDate?.toDate(),
               } as User)
             } else {
-              console.log('[auth] user doc missing for uid', fbUser.uid)
               setUser(null)
             }
           } catch (error) {

@@ -1,0 +1,4 @@
+- Move the existing patient/professional CTA buttons from their current section to the hero section of the landing page in src/app/page.tsx.
+- Insert the CTA block directly beneath the hero heading, keeping current Button + Link composition and Tailwind styles; center and add responsive gap.
+- No copy or route changes; only repositioning within page.tsx.
+- Verify desktop/mobile layout and click-through to both blog sections.

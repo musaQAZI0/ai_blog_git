@@ -277,12 +277,50 @@ export function normalizeAIGenerationResponse(
   // If SEO fields still contain JSON blobs, unwrap once more.
   seoMeta = normalizeSeoMeta(seoMeta)
 
+  const isJsonish = (value: string) =>
+    value.trim().startsWith('{') ||
+    value.includes('{"title"') ||
+    value.includes('"content"') ||
+    value.includes('"excerpt"')
+
   if (content) {
     content = content
       .replace(/\{\{FIGURE_\d+_URL\}\}/g, '')
       .replace(/https?:\/\/www\.google\.com\/search\?q=%7B%7BFIGURE_\d+_URL%7D%7D/g, '')
       .replace(/\n{3,}/g, '\n\n')
       .trim()
+  }
+
+  if (excerpt) {
+    if (isJsonish(excerpt)) {
+      excerpt = ''
+    }
+  }
+
+  if (!excerpt && content) {
+    const plain = content
+      .replace(/[#*_>`\-\[\]\(\)]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+    excerpt = plain.slice(0, 160)
+  }
+
+  if (seoMeta.title && isJsonish(seoMeta.title)) {
+    seoMeta.title = ''
+  }
+  if (seoMeta.description && isJsonish(seoMeta.description)) {
+    seoMeta.description = ''
+  }
+
+  if (!seoMeta.title) {
+    seoMeta.title = title.slice(0, 60)
+  }
+  if (!seoMeta.description) {
+    seoMeta.description = excerpt.slice(0, 160)
+  }
+
+  if ((!seoMeta.keywords || seoMeta.keywords.length === 0) && suggestedTags.length) {
+    seoMeta.keywords = suggestedTags.slice(0, 5)
   }
 
   return {

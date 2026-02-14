@@ -4,7 +4,7 @@
 
 @layer base {
   :root {
-    --background: 40 11% 97%;
+    --background: 0 0% 100%;
     --foreground: 0 0% 9%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 9%;
@@ -15,7 +15,7 @@
     --secondary: 40 6% 94%;
     --secondary-foreground: 0 0% 12%;
     --muted: 40 6% 94%;
-    --muted-foreground: 0 0% 45%;
+    --muted-foreground: 0 0% 0%;
     --accent: 40 6% 92%;
     --accent-foreground: 0 0% 12%;
     --destructive: 0 78% 55%;
@@ -27,7 +27,7 @@
   }
 
   .dark {
-    --background: 40 11% 97%;
+    --background: 0 0% 100%;
     --foreground: 0 0% 9%;
     --card: 0 0% 100%;
     --card-foreground: 0 0% 9%;
@@ -38,7 +38,7 @@
     --secondary: 40 6% 94%;
     --secondary-foreground: 0 0% 12%;
     --muted: 40 6% 94%;
-    --muted-foreground: 0 0% 45%;
+    --muted-foreground: 0 0% 0%;
     --accent: 40 6% 92%;
     --accent-foreground: 0 0% 12%;
     --destructive: 0 78% 55%;
@@ -53,13 +53,13 @@
   * {
     @apply border-border;
   }
+  html {
+    scrollbar-gutter: stable;
+  }
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
-    background-image:
-      radial-gradient(circle at 16% 10%, hsla(0, 0%, 100%, 0.85), transparent 34%),
-      radial-gradient(circle at 82% 6%, hsla(40, 14%, 98%, 0.9), transparent 30%),
-      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+    background-image: none;
   }
 }
 
@@ -84,7 +84,7 @@
 }
 
 .prose code {
-  @apply rounded bg-muted px-1 py-0.5 font-mono text-sm;
+  @apply rounded bg-muted px-1 py-0.5 font-sans text-sm;
 }
 
 .prose pre {
@@ -98,10 +98,6 @@
 .prose ul,
 .prose ol {
   @apply ml-4;
-}
-
-.prose li {
-  @apply my-1;
 }
 
 .prose img {
@@ -163,4 +159,26 @@
 
 .select-dark option:disabled {
   color: hsl(var(--muted-foreground));
+}
+
+.sidebar-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #888888 transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: #888888;
+  border-radius: 9999px;
+}
+
+.sidebar-scroll::-webkit-scrollbar-thumb:hover {
+  background-color: #666666;
 }

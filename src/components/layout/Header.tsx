@@ -2,23 +2,20 @@
 
 import React, { useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
 import { Menu, X, User, LogOut, Settings } from 'lucide-react'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
-import { cn } from '@/lib/utils'
+
+const siteNav = [
+  { label: 'Start', href: '/' },
+  { label: 'Blog dla Pacjentow', href: '/patient' },
+  { label: 'Blog dla Specjalistow', href: '/professional' },
+]
 
 export function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
-  const pathname = usePathname()
   const { user, loading, isDemoMode } = useAuth()
-
-  const navigation = [
-    { name: 'Start', href: '/' },
-    { name: 'Blog dla Pacjentow', href: '/patient' },
-    { name: 'Blog dla Specjalistow', href: '/professional' },
-  ]
 
   const handleSignOut = async () => {
     if (!isDemoMode) {
@@ -26,10 +23,11 @@ export function Header() {
       await signOut()
     }
     setUserMenuOpen(false)
+    setMobileMenuOpen(false)
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/80 bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full bg-white">
       {/* Demo mode banner */}
       {isDemoMode && (
         <div className="bg-yellow-100 px-4 py-1 text-center text-xs text-yellow-800">
@@ -37,29 +35,21 @@ export function Header() {
         </div>
       )}
 
-      <nav className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2">
-            <span className="text-lg font-semibold tracking-tight text-foreground">Skrzypecki</span>
-            <span className="text-lg font-light text-foreground">Blog</span>
+      <nav className="flex w-full items-center justify-between px-0 py-4">
+        <div className="flex items-center">
+          {!loading && (
+            <button
+              className="mr-3 sm:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              aria-label={mobileMenuOpen ? 'Zamknij menu' : 'Otworz menu'}
+              aria-expanded={mobileMenuOpen}
+            >
+              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+            </button>
+          )}
+          <Link href="/" className="flex items-center">
+            <span className="text-2xl font-semibold tracking-tight text-black">Skrzypecki Blog</span>
           </Link>
-
-          <div className="hidden md:flex md:gap-x-6">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'text-sm font-medium text-muted-foreground transition-colors hover:text-foreground',
-                  pathname === item.href
-                    ? 'text-foreground'
-                    : 'text-muted-foreground'
-                )}
-              >
-                {item.name}
-              </Link>
-            ))}
-          </div>
         </div>
 
         <div className="flex items-center gap-4">
@@ -69,7 +59,7 @@ export function Header() {
                 <div className="relative">
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
-                    className="flex items-center gap-2 rounded-full bg-muted p-2 text-foreground/80 hover:bg-muted/70"
+                    className="flex items-center gap-2 rounded-full border border-black/10 bg-white p-2 text-black/80 hover:bg-black/5"
                   >
                     <User className="h-5 w-5" />
                   </button>
@@ -110,59 +100,79 @@ export function Header() {
                 </div>
               ) : (
                 <div className="hidden md:flex md:gap-2">
-                  <Button variant="ghost" className="rounded-full" asChild>
+                  <Button variant="ghost" className="rounded-full text-black" asChild>
                     <Link href="/login">Zaloguj</Link>
                   </Button>
-                  <Button className="rounded-full bg-foreground text-background hover:bg-foreground/80" asChild>
+                  <Button className="rounded-full bg-black text-white hover:bg-black/80" asChild>
                     <Link href="/register">Rejestracja</Link>
                   </Button>
                 </div>
               )}
             </>
           )}
-
-          <button
-            className="md:hidden"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-          >
-            {mobileMenuOpen ? (
-              <X className="h-6 w-6" />
-            ) : (
-              <Menu className="h-6 w-6" />
-            )}
-          </button>
         </div>
       </nav>
 
-      {/* Mobile menu */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-border bg-background/95">
-          <div className="space-y-1 px-4 pb-4 pt-3">
-            {navigation.map((item) => (
-              <Link
-                key={item.name}
-                href={item.href}
-                className={cn(
-                  'block rounded-md px-3 py-2 text-base font-medium',
-                  pathname === item.href
-                    ? 'bg-muted text-foreground'
-                    : 'text-muted-foreground hover:bg-muted'
-                )}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {item.name}
-              </Link>
-            ))}
-            {!user && (
-              <div className="flex gap-2 pt-4">
-                <Button variant="ghost" className="flex-1 rounded-full" asChild>
-                  <Link href="/login">Zaloguj</Link>
-                </Button>
-                <Button className="flex-1 rounded-full bg-foreground text-background hover:bg-foreground/80" asChild>
-                  <Link href="/register">Rejestracja</Link>
-                </Button>
+        <div className="fixed inset-0 z-50 sm:hidden">
+          <div className="absolute inset-0 bg-black/30" onClick={() => setMobileMenuOpen(false)} aria-hidden />
+          <div role="dialog" aria-modal="true" className="absolute left-0 top-0 h-full w-full bg-white shadow-xl">
+            <div className="flex items-center justify-between border-b border-border px-4 py-4">
+              <span className="text-base font-semibold text-black">Menu</span>
+              <button onClick={() => setMobileMenuOpen(false)} aria-label="Zamknij menu">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <nav className="px-4 py-4">
+              <div className="space-y-3 text-sm text-black/70">
+                {siteNav.map((item) => (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className="block text-black/80 transition-colors hover:text-black"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
               </div>
-            )}
+            </nav>
+
+            <div className="border-t border-border px-4 py-4">
+              {user ? (
+                <div className="space-y-2">
+                  <Button variant="outline" className="w-full" asChild>
+                    <Link href="/dashboard" onClick={() => setMobileMenuOpen(false)}>
+                      Panel
+                    </Link>
+                  </Button>
+                  {user.role === 'admin' && (
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href="/admin" onClick={() => setMobileMenuOpen(false)}>
+                        Admin
+                      </Link>
+                    </Button>
+                  )}
+                  <Button variant="destructive" className="w-full" onClick={handleSignOut}>
+                    Wyloguj
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Button variant="ghost" className="flex-1 rounded-full" asChild>
+                    <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                      Zaloguj
+                    </Link>
+                  </Button>
+                  <Button className="flex-1 rounded-full bg-foreground text-background hover:bg-foreground/80" asChild>
+                    <Link href="/register" onClick={() => setMobileMenuOpen(false)}>
+                      Rejestracja
+                    </Link>
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

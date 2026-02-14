@@ -29,7 +29,7 @@ export function SearchBar({
   }, [onSearch])
 
   return (
-    <form onSubmit={handleSubmit} className="relative flex gap-2">
+    <form onSubmit={handleSubmit} className="relative flex w-full max-w-xl items-center gap-2">
       <div className="relative flex-1">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
@@ -37,7 +37,7 @@ export function SearchBar({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder={placeholder}
-          className="pl-10 pr-10"
+          className="h-9 border-black pl-9 pr-9 text-sm focus-visible:ring-black/50"
         />
         {query && (
           <button
@@ -49,7 +49,9 @@ export function SearchBar({
           </button>
         )}
       </div>
-      <Button type="submit">Szukaj</Button>
+      <Button type="submit" className="h-9 rounded-full px-4 text-sm">
+        Szukaj
+      </Button>
     </form>
   )
 }

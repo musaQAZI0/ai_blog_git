@@ -261,7 +261,7 @@ export function ArticleEditor({
             <Textarea
               id="content"
               placeholder="Wprowadz tresc artykulu w formacie Markdown..."
-              className="min-h-[400px] font-mono"
+              className="min-h-[400px] font-sans"
               error={errors.content?.message}
               {...register('content')}
             />

@@ -15,9 +15,9 @@ export function ArticleCard({ article, basePath = '/blog' }: ArticleCardProps) {
 
   return (
     <Link href={`${basePath}/${article.slug}`}>
-      <Card className="group h-full overflow-hidden transition-all hover:shadow-lg">
-        {article.coverImage && (
-          <div className="relative aspect-[16/9] overflow-hidden">
+      <Card className="group h-full overflow-hidden rounded-2xl border border-black transition-all hover:shadow-lg">
+        <div className="relative aspect-[1/1] overflow-hidden bg-[#f2f2f2]">
+          {article.coverImage ? (
             <Image
               src={article.coverImage}
               alt={article.title}
@@ -25,27 +25,30 @@ export function ArticleCard({ article, basePath = '/blog' }: ArticleCardProps) {
               sizes="(max-width: 1024px) 100vw, (max-width: 1280px) 50vw, 33vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
-          </div>
-        )}
+          ) : (
+            <div className="absolute inset-0 bg-[#f2f2f2]" />
+          )}
+        </div>
         <CardContent className="p-5">
-          <div className="mb-3 flex items-center gap-2">
+          <div className="mb-3 flex flex-wrap items-center gap-2 text-xs uppercase tracking-wide">
             <Badge variant="secondary">{article.category}</Badge>
-            {article.tags.slice(0, 2).map((tag) => (
-              <Badge key={tag} variant="outline" className="text-xs">
-                {tag}
-              </Badge>
-            ))}
+            {Array.isArray(article.tags) &&
+              article.tags.filter(Boolean).slice(0, 2).map((tag) => (
+                <Badge key={tag} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
           </div>
 
-          <h3 className="mb-2 text-lg font-semibold leading-tight transition-colors group-hover:text-primary">
+          <h3 className="mb-2 text-lg font-semibold leading-tight text-black">
             {article.title}
           </h3>
 
-          <p className="mb-4 text-sm text-muted-foreground">
+          <p className="mb-4 text-sm text-black">
             {truncateText(article.excerpt, 120)}
           </p>
 
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-xs text-black/70">
             <span>{formatDate(article.publishedAt || article.createdAt)}</span>
             <div className="flex items-center gap-3">
               <span className="flex items-center gap-1">

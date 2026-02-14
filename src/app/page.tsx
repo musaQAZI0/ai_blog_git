@@ -1,195 +1,91 @@
 import Link from 'next/link'
-import { Button, Card, CardContent } from '@/components/ui'
-import { Users, Stethoscope, BookOpen, Shield, ArrowRight } from 'lucide-react'
+import { Button } from '@/components/ui'
+import { BookOpen, Users } from 'lucide-react'
+import { AudienceExplorer } from '@/components/home/AudienceExplorer'
+import { ContentFormats } from '@/components/home/ContentFormats'
+import { AiPublishingPipeline } from '@/components/home/AiPublishingPipeline'
 
 export default function HomePage() {
   return (
-    <div className="flex flex-col bg-background text-foreground">
-      {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-primary/20 via-background/85 to-background py-20 sm:py-32">
-        <div className="pointer-events-none absolute inset-0">
-          <div className="absolute -top-16 right-12 hidden h-72 w-72 rounded-full bg-primary/30 blur-[120px] lg:block" />
-          <div className="absolute bottom-0 left-[-10%] h-72 w-72 rounded-full bg-accent/30 blur-[120px]" />
-        </div>
-        <div className="relative z-10 mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-xs uppercase tracking-[0.5em] text-muted-foreground/70">
-            Blog okularny
+    <section className="mx-auto max-w-[980px] text-left">
+      <p className="text-xs font-medium uppercase tracking-[0.3em] text-black/60">AI-powered medical blog</p>
+      <h1 className="mt-4 font-serif text-5xl font-semibold leading-[1.05] tracking-tight text-black sm:text-6xl">
+        Ophthalmology content for patients and medical professionals
+      </h1>
+      <p className="mt-5 max-w-3xl text-base text-black/70">
+        Choose a reading path: patient-friendly education or verified professional content. The publishing workflow is AI-assisted: upload one or more PDFs, generate SEO-ready drafts with images, then review before publishing.
+      </p>
+
+      <div className="mt-10 grid gap-5 sm:grid-cols-2">
+        <div className="rounded-2xl border border-black bg-white p-5">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-black">
+              <BookOpen className="h-4 w-4" />
+              Medical professional blog
+            </div>
+            <span className="rounded-full bg-black px-3 py-1 text-xs font-medium text-white">Polecane</span>
+          </div>
+          <p className="mt-3 text-sm text-black/70">
+            Login required. Register as a doctor or other medical professional and provide a PWZ / professional registration number.
           </p>
-          <h1 className="mt-6 text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
-            Wiedza okulistyczna z troska o pacjenta
-            <span className="block text-foreground">
-              Dr hab. n. med. Janusz Skrzypecki
-            </span>
-          </h1>
-          <p className="mt-6 text-lg text-muted-foreground sm:text-xl">
-            Profesjonalna platforma edukacyjna z zakresu okulistyki. Wybierz swoja
-            sciezke, aby uzyskac dostep do specjalistycznych tresci.
+          <ul className="mt-4 space-y-2 text-sm text-black/70">
+            <li>Clinical summaries, research highlights, practical algorithms</li>
+            <li>Tracked access for the professional area</li>
+            <li>AI-assisted publishing from PDFs with SEO + images</li>
+          </ul>
+          <div className="mt-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button className="h-10 rounded-full bg-black px-6 text-white hover:bg-black/80" asChild>
+                <Link href="/professional">Open pro blog</Link>
+              </Button>
+              <Button variant="outline" className="h-10 rounded-full border-2 border-black px-6" asChild>
+                <Link href="/login">Login</Link>
+              </Button>
+              <Button variant="outline" className="h-10 rounded-full border-2 border-black px-6" asChild>
+                <Link href="/register">Register</Link>
+              </Button>
+            </div>
+          </div>
+        </div>
+
+        <div className="rounded-2xl border border-black/10 bg-white p-5">
+          <div className="flex items-center gap-2 text-sm font-medium text-black">
+            <Users className="h-4 w-4" />
+            Patient blog
+          </div>
+          <p className="mt-3 text-sm text-black/70">
+            Simple, practical, and safety-first articles about eye health.
           </p>
-            <div className="mt-10 flex flex-wrap justify-center gap-3">
-              <Button className="px-8 text-sm shadow-2xl" asChild>
-                <Link href="/patient">Przejdz do tresci dla pacjentow</Link>
+          <ul className="mt-4 space-y-2 text-sm text-black/70">
+            <li>Clear definitions and what it means for you</li>
+            <li>Search and filters to find topics fast</li>
+            <li>Optional AI draft generation from PDFs</li>
+          </ul>
+          <div className="mt-5">
+            <div className="flex flex-wrap items-center gap-3">
+              <Button variant="outline" className="h-10 rounded-full border-2 border-black px-6" asChild>
+                <Link href="/patient">Browse patient blog</Link>
               </Button>
-              <Button variant="outline" className="px-8 text-sm text-foreground" asChild>
-                <Link href="/professional">Logowanie specjalistow</Link>
+              <Button className="h-10 rounded-full bg-black px-6 text-white hover:bg-black/80" asChild>
+                <Link href="/patient/generate">Generate article</Link>
               </Button>
             </div>
-          <div className="mt-12 grid gap-6 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border bg-card/80 px-5 py-6">
-              <p className="text-3xl font-semibold text-foreground">1000+</p>
-              <p className="mt-2 text-sm text-foreground">
-                Przeprowadzonych operacji
-              </p>
-            </div>
-            <div className="rounded-2xl border border-border bg-card/80 px-5 py-6">
-              <p className="text-3xl font-semibold text-foreground">15+</p>
-              <p className="mt-2 text-sm text-foreground">
-                Lat doswiadczenia w chirurgii oczu
-              </p>
-            </div>
-            <div className="rounded-2xl border border-border bg-card/80 px-5 py-6">
-              <p className="text-3xl font-semibold text-foreground">1%</p>
-              <p className="mt-2 text-sm text-foreground">
-                Reklamacji po zabiegach
-              </p>
-            </div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Audience Selection */}
-      <section className="py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl">
-              Wybierz swoja sciezke
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Nasze tresci sa dostosowane do Twoich potrzeb
-            </p>
-          </div>
+      <div className="mt-10">
+        <AudienceExplorer />
+      </div>
 
-          <div className="mt-12 grid gap-8 md:grid-cols-2">
-            {/* Patient Path */}
-            <Card className="group relative overflow-hidden rounded-[2rem] border border-muted/40 bg-card/60 transition-all hover:border-accent/40 hover:shadow-2xl">
-              <div className="absolute inset-0 bg-gradient-to-br from-accent/30 via-transparent to-transparent opacity-80" />
-              <CardContent className="relative z-10 p-8">
-                <div className="mb-6 inline-flex rounded-2xl bg-accent/10 p-3 text-accent">
-                  <Users className="h-8 w-8" />
-                </div>
-                <h3 className="mb-3 text-2xl font-bold tracking-tight">Dla Pacjentow</h3>
-                <p className="mb-6 text-muted-foreground">
-                  Przystepne artykuly o zdrowiu oczu, schorzeniach okulistycznych
-                  i profilaktyce. Bez koniecznosci rejestracji.
-                </p>
-                <ul className="mb-6 space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                    Artykuly edukacyjne
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-primary" />
-                    Porady profilaktyczne
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-primary" />
-                    Bez rejestracji
-                  </li>
-                </ul>
-                <Button asChild variant="outline" className="w-full">
-                  <Link href="/patient">
-                    Przejdz do bloga
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
+      <div className="mt-6">
+        <AiPublishingPipeline />
+      </div>
 
-            {/* Professional Path */}
-            <Card className="group relative overflow-hidden rounded-[2rem] border border-primary/40 bg-card/80 shadow-2xl transition-all hover:border-primary/60 hover:shadow-[0_20px_60px_-20px_rgba(0,0,0,0.45)] md:-translate-y-1 md:scale-[1.02]">
-              <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-accent/10 to-transparent opacity-90" />
-              <CardContent className="relative z-10 p-8">
-                <span className="mb-4 inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                  Priorytet
-                </span>
-                <div className="mb-6 inline-flex rounded-2xl bg-primary/10 p-3 text-primary">
-                  <Stethoscope className="h-8 w-8" />
-                </div>
-                <h3 className="mb-3 text-2xl font-bold tracking-tight">Dla Specjalistow</h3>
-                <p className="mb-6 text-muted-foreground">
-                  Specjalistyczne tresci dla lekarzy, optometrystow i innych
-                  profesjonalistow medycznych. Wymaga weryfikacji.
-                </p>
-                <ul className="mb-6 space-y-2 text-sm">
-                  <li className="flex items-center gap-2">
-                    <BookOpen className="h-4 w-4 text-primary" />
-                    Artykuly kliniczne
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-primary" />
-                    Weryfikowane konta
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Users className="h-4 w-4 text-primary" />
-                    Spolecznosc specjalistow
-                  </li>
-                </ul>
-                <Button asChild className="w-full bg-primary text-primary-foreground shadow-lg hover:bg-primary/90">
-                  <Link href="/professional">
-                    Zaloguj sie
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Link>
-                </Button>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
+      <div className="mt-6">
+        <ContentFormats />
+      </div>
 
-      {/* Features Section */}
-      <section className="border-t border-muted/60 bg-background/40 py-16 sm:py-24">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <h2 className="text-2xl font-bold sm:text-3xl">Dlaczego nasz blog?</h2>
-            <p className="mt-4 text-sm text-muted-foreground">
-              Zaufane zrodlo informacji dla pacjentow i specjalistow - wszystkie
-              tresci tworzone sa w oparciu o doswiadczenie kliniczne i najnowsze
-              wytyczne.
-            </p>
-          </div>
-
-          <div className="mt-12 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-            <div className="rounded-2xl border border-muted/40 bg-card/60 p-6 text-left transition hover:border-accent/40 hover:bg-card/80">
-              <div className="mb-4 inline-flex rounded-2xl bg-foreground/10 p-3 text-foreground">
-                <BookOpen className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-lg font-semibold text-foreground">Ekspertyza medyczna</h3>
-              <p className="text-sm text-muted-foreground">
-                Tresci tworzone przez doswiadczonego specjaliste okulistyki.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-muted/40 bg-card/60 p-6 text-left transition hover:border-accent/40 hover:bg-card/80">
-              <div className="mb-4 inline-flex rounded-2xl bg-foreground/10 p-3 text-foreground">
-                <Shield className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-lg font-semibold text-foreground">Wiarygodne zrodla</h3>
-              <p className="text-sm text-muted-foreground">
-                Artykuly oparte na aktualnych badaniach i wytycznych medycznych.
-              </p>
-            </div>
-
-            <div className="rounded-2xl border border-muted/40 bg-card/60 p-6 text-left transition hover:border-accent/40 hover:bg-card/80">
-              <div className="mb-4 inline-flex rounded-2xl bg-foreground/10 p-3 text-foreground">
-                <Users className="h-6 w-6" />
-              </div>
-              <h3 className="mb-2 text-lg font-semibold text-foreground">Dostosowane tresci</h3>
-              <p className="text-sm text-muted-foreground">
-                Osobne sciezki dla pacjentow i specjalistow medycznych.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-    </div>
+    </section>
   )
 }

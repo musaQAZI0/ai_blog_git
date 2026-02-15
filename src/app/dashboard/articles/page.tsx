@@ -201,7 +201,7 @@ function DashboardArticlesContent() {
 
 export default function DashboardArticlesPage() {
   return (
-    <ProtectedRoute requireApproved>
+    <ProtectedRoute requireAdmin requireApproved={false}>
       <DashboardArticlesContent />
     </ProtectedRoute>
   )

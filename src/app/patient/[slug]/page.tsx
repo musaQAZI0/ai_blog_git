@@ -6,7 +6,6 @@ import { Article } from '@/types'
 import { getMockArticleBySlug } from '@/lib/mock-data'
 import { ArticleView } from '@/components/blog/ArticleView'
 import { Skeleton } from '@/components/ui'
-import { NewsletterForm } from '@/components/blog/NewsletterForm'
 import { useAuth } from '@/context/AuthContext'
 
 export default function PatientArticlePage() {
@@ -88,16 +87,8 @@ export default function PatientArticlePage() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="grid gap-8 lg:grid-cols-4">
-        <div className="lg:col-span-3">
-          <ArticleView article={article} backPath="/patient" />
-        </div>
-
-        <aside className="space-y-6">
-          <NewsletterForm variant="card" />
-        </aside>
-      </div>
+    <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+      <ArticleView article={article} backPath="/patient" />
     </div>
   )
 }

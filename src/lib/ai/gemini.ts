@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { AIGenerationResponse, TargetAudience } from '@/types'
-import { generateAndUploadImagen } from '@/lib/ai/gemini-imagen'
+import { generateAndUploadImagen, type ImagenPurpose } from '@/lib/ai/gemini-imagen'
 import { findCoverImageUrl } from '@/lib/images/cover-search'
 
 function getGeminiClient() {
@@ -40,7 +40,7 @@ async function listAvailableTextModels(apiKey: string): Promise<string[]> {
     const text = await res.text().catch(() => '')
     throw new Error(
       `[gemini] ListModels failed (${res.status}): ${text || res.statusText}. ` +
-        `Verify your GEMINI_API_KEY is a Google AI Studio/Generative Language key and that the API is enabled for the project.`
+      `Verify your GEMINI_API_KEY is a Google AI Studio/Generative Language key and that the API is enabled for the project.`
     )
   }
 
@@ -58,24 +58,24 @@ function pickFallbackModel(available: string[], preferred: 'pro' | 'flash'): str
   const candidates =
     preferred === 'flash'
       ? [
-          'gemini-3-flash-preview',
-          'gemini-2.5-flash',
-          'gemini-2.0-flash',
-          'gemini-flash-latest',
-          'gemini-2.5-flash-lite',
-          'gemini-flash-lite-latest',
-          'gemini-2.0-flash-lite',
-          'gemini-2.0-flash-lite-001',
-          'gemini-pro-latest',
-        ]
+        'gemini-3-flash-preview',
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemini-flash-latest',
+        'gemini-2.5-flash-lite',
+        'gemini-flash-lite-latest',
+        'gemini-2.0-flash-lite',
+        'gemini-2.0-flash-lite-001',
+        'gemini-pro-latest',
+      ]
       : [
-          'gemini-3-pro-preview',
-          'gemini-2.5-pro',
-          'gemini-pro-latest',
-          'gemini-2.5-flash',
-          'gemini-2.0-flash',
-          'gemini-flash-latest',
-        ]
+        'gemini-3-pro-preview',
+        'gemini-2.5-pro',
+        'gemini-pro-latest',
+        'gemini-2.5-flash',
+        'gemini-2.0-flash',
+        'gemini-flash-latest',
+      ]
 
   for (const c of candidates) {
     if (normalized.has(c)) return c
@@ -121,7 +121,7 @@ async function generateContentWithFallback(options: {
   if (!fallback) {
     throw new Error(
       `No Gemini text models available for generateContent for this API key. ` +
-        `Set GEMINI_TEXT_MODEL to one of the models returned by ListModels.`
+      `Set GEMINI_TEXT_MODEL to one of the models returned by ListModels.`
     )
   }
 
@@ -129,10 +129,32 @@ async function generateContentWithFallback(options: {
   return await tryGenerate(fallback)
 }
 
+const PATIENT_CATEGORIES = [
+  'Zdrowie oczu',
+  'Choroby',
+  'Leczenie',
+  'Profilaktyka',
+  'Soczewki',
+  'Diagnostyka',
+  'Chirurgia',
+]
+
+const PROFESSIONAL_CATEGORIES = [
+  'Kliniczna',
+  'Badania',
+  'Techniki operacyjne',
+  'Farmakologia',
+  'Przypadki',
+  'Diagnostyka',
+  'Wytyczne',
+]
+
 const PATIENT_SYSTEM_PROMPT = `You are a medical content writer specializing in ophthalmology content for patients.
 Write in simple, accessible Polish language. Avoid medical jargon or explain it when necessary.
 Focus on being educational, reassuring, and practical.
-Format the content with clear headings, bullet points where appropriate, and easy-to-understand explanations.`
+Format the content with clear headings, bullet points where appropriate, and easy-to-understand explanations.
+Every article MUST be complete — never stop mid-sentence or mid-paragraph.
+You MUST fill in ALL JSON fields completely. Empty arrays or generic placeholder values are NOT acceptable.`
 
 const PROFESSIONAL_SYSTEM_PROMPT = `You are the Editor-in-Chief of a high-impact scientific journal specializing in ophthalmology.
 Your task is to write a concise editorial review of the provided article, targeted specifically at ophthalmologists and optometrists.
@@ -209,6 +231,8 @@ export async function generateArticleWithGemini(
     ? PATIENT_SYSTEM_PROMPT
     : PROFESSIONAL_SYSTEM_PROMPT
 
+  const validCategories = targetAudience === 'patient' ? PATIENT_CATEGORIES : PROFESSIONAL_CATEGORIES
+
   const audienceInstructions =
     targetAudience === 'professional'
       ? `AudienceInstructions (professional):
@@ -217,10 +241,13 @@ export async function generateArticleWithGemini(
   ## Kluczowe informacje
   ## Znaczenie kliniczne
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
+- For "suggestedCategory", pick the BEST match from: ${validCategories.join(', ')}.
 `
       : `AudienceInstructions (patient):
 - Keep language simple and reassuring.
 - Explain any unavoidable medical terms briefly.
+- Use ## headings to break the article into 3-5 clear sections.
+- For "suggestedCategory", pick the BEST match from: ${validCategories.join(', ')}.
 `
 
   const normalizedPdfContent = normalizePdfContent(pdfContent)
@@ -231,33 +258,40 @@ IMPORTANT: word count refers ONLY to the "content" field (the markdown article b
 
 Document content: ${normalizedPdfContent}
 
-IMPORTANT:
-- Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
-- Include up to 3 figures (mix of medical illustration and/or chart/graph if the PDF contains numerical data).
-- In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. ${getFigurePlaceholderUrl(1)}.
+CRITICAL RULES — you MUST follow ALL of these:
+1. Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
+2. The "content" field MUST be a COMPLETE article — never stop mid-sentence or mid-paragraph.
+3. Include 1-3 figures (medical illustrations or charts if the PDF has numerical data). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
+4. "seoMeta.title" MUST be max 60 characters — write a SHORT, keyword-rich title, NOT the full article title.
+5. "seoMeta.description" MUST be max 160 characters — write a unique meta description that summarizes the article differently from the excerpt.
+6. "seoMeta.keywords" MUST contain 3-5 relevant Polish keywords (e.g. ["zaćma", "soczewka wewnątrzgałkowa", "operacja oka"]). NEVER return an empty array.
+7. "suggestedTags" MUST contain 2-4 specific Polish tags relevant to the article topic. NEVER return an empty array.
+8. "suggestedCategory" MUST be one of: ${validCategories.join(', ')}. NEVER use "General".
+9. "excerpt" must be exactly 2-3 sentences, max 160 characters, in Polish — a genuine summary, NOT a copy of the first paragraph.
+10. "coverImagePrompt" must be a detailed English prompt for an AI image generator (no text in image).
 ${audienceInstructions}
 
 Required JSON format:
 {
-  "title": "Article title",
-  "content": "Full article content in markdown format (must include placeholders like ${getFigurePlaceholderUrl(1)} where images should appear)",
-  "excerpt": "A brief 2-3 sentence summary (max 160 characters)",
+  "title": "Descriptive article title in Polish",
+  "content": "Full COMPLETE article in markdown (380-450 words, with ## headings, bullet points, and figure placeholders like ${getFigurePlaceholderUrl(1)})",
+  "excerpt": "2-3 sentence summary, max 160 characters",
   "seoMeta": {
-    "title": "SEO optimized title (max 60 characters)",
-    "description": "SEO meta description (max 160 characters)",
+    "title": "Short SEO title, max 60 chars",
+    "description": "Unique meta description, max 160 chars",
     "keywords": ["keyword1", "keyword2", "keyword3"]
   },
-  "suggestedTags": ["tag1", "tag2"],
-  "suggestedCategory": "Category name",
-  "coverImagePrompt": "A short prompt for a cover image relevant to the article (no text on image).",
+  "suggestedTags": ["tag1", "tag2", "tag3"],
+  "suggestedCategory": "One of: ${validCategories.join(' | ')}",
+  "coverImagePrompt": "Detailed English prompt for cover image, no text in image",
   "figures": [
     {
       "id": "figure_1",
-      "type": "illustration|chart",
+      "type": "illustration or chart",
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "${getFigurePlaceholderUrl(1)}",
-      "prompt": "Image generation prompt in English. If chart, include exact data and style instructions."
+      "prompt": "Detailed English image generation prompt. If chart, include exact data and style."
     }
   ]
 }`
@@ -270,8 +304,8 @@ Required JSON format:
     prefer,
     prompt: userPrompt,
     generationConfig: {
-      temperature: 0.6,
-      maxOutputTokens: 4096,
+      temperature: 0.5,
+      maxOutputTokens: 8192,
       responseMimeType: 'application/json',
     },
   })
@@ -370,16 +404,85 @@ Required JSON format:
     excerpt = buildExcerpt(content)
   }
 
+  // ── Post-processing: validate and fix output quality ──
+
+  // Fix SEO meta
+  const seoMeta = articleData.seoMeta || {}
+  let seoTitle: string = typeof seoMeta.title === 'string' ? seoMeta.title : ''
+  let seoDescription: string = typeof seoMeta.description === 'string' ? seoMeta.description : ''
+  let seoKeywords: string[] = Array.isArray(seoMeta.keywords) ? seoMeta.keywords.filter(Boolean) : []
+
+  // Enforce SEO title max 60 chars — truncate at last word boundary if needed
+  if (!seoTitle || seoTitle.length < 10) {
+    seoTitle = title.slice(0, 60)
+  }
+  if (seoTitle.length > 60) {
+    seoTitle = seoTitle.slice(0, 57).replace(/\s+\S*$/, '') + '...'
+  }
+
+  // Enforce SEO description max 160 chars
+  if (!seoDescription || seoDescription.length < 20 || seoDescription === excerpt) {
+    // Generate a unique description from mid-content
+    const plainContent = content.replace(/[#*_>`\-\[\]\(\)]/g, ' ').replace(/\s+/g, ' ').trim()
+    const sentences = plainContent.split(/[.!?]/).filter((s) => s.trim().length > 20)
+    seoDescription = sentences.length > 1
+      ? (sentences[1].trim() + '.').slice(0, 160)
+      : plainContent.slice(50, 210).replace(/\s+\S*$/, '') + '...'
+  }
+  if (seoDescription.length > 160) {
+    seoDescription = seoDescription.slice(0, 157).replace(/\s+\S*$/, '') + '...'
+  }
+
+  // Enforce keywords — extract from content if empty
+  if (seoKeywords.length === 0) {
+    const ophthalmologyTerms = [
+      'zaćma', 'jaskra', 'glaukoma', 'rogówka', 'soczewka', 'siatkówka', 'AMD',
+      'krótkowzroczność', 'astygmatyzm', 'suche oko', 'okulistyka', 'operacja',
+      'wzrok', 'oko', 'oczy', 'widzenie', 'badanie', 'leczenie', 'diagnostyka',
+      'chirurgia', 'laserowa', 'ciśnienie', 'wewnątrzgałkowe', 'refrakcja'
+    ]
+    const contentLower = content.toLowerCase()
+    seoKeywords = ophthalmologyTerms.filter((term) => contentLower.includes(term.toLowerCase())).slice(0, 5)
+    if (seoKeywords.length < 2) {
+      seoKeywords = ['okulistyka', 'zdrowie oczu', title.split(' ').slice(0, 2).join(' ')]
+    }
+  }
+
+  // Enforce suggestedTags
+  let suggestedTags: string[] = Array.isArray(articleData.suggestedTags)
+    ? articleData.suggestedTags.filter(Boolean)
+    : []
+  if (suggestedTags.length === 0) {
+    suggestedTags = seoKeywords.slice(0, 3)
+  }
+
+  // Enforce suggestedCategory — map to valid category or find best match
+  const allowedCategories = targetAudience === 'patient' ? PATIENT_CATEGORIES : PROFESSIONAL_CATEGORIES
+  let suggestedCategory: string = articleData.suggestedCategory || ''
+  if (!suggestedCategory || suggestedCategory === 'General' || !allowedCategories.includes(suggestedCategory)) {
+    // Try to find the best matching category from content
+    const contentLower = content.toLowerCase() + ' ' + title.toLowerCase()
+    const categoryScores = allowedCategories.map((cat) => ({
+      cat,
+      score: contentLower.split(cat.toLowerCase()).length - 1,
+    }))
+    categoryScores.sort((a, b) => b.score - a.score)
+    suggestedCategory = categoryScores[0].score > 0 ? categoryScores[0].cat : allowedCategories[0]
+  }
+
+  // ── Image generation ──
+
   if (generateImage && canUseGeminiImages) {
     try {
       const coverPrompt: string =
         articleData.coverImagePrompt ||
-        `Professional medical illustration related to ophthalmology for an article titled "${articleData.title}". Clean, modern medical aesthetic. No text in the image.`
+        `Professional medical illustration related to ophthalmology for an article titled "${title}". Clean, modern medical aesthetic. No text in the image.`
 
       generatedImageUrl = await generateAndUploadImagen(
         coverPrompt,
         'cover',
-        'ai-cover'
+        'ai-cover',
+        'cover'
       )
     } catch (error) {
       console.error('Gemini cover image generation failed:', error)
@@ -391,8 +494,8 @@ Required JSON format:
     try {
       coverFallbackUrl = await findCoverImageUrl({
         title,
-        category: articleData.suggestedCategory,
-        tags: Array.isArray(articleData.suggestedTags) ? articleData.suggestedTags : [],
+        category: suggestedCategory,
+        tags: suggestedTags,
         targetAudience,
       })
       if (coverFallbackUrl) generatedImageUrl = coverFallbackUrl
@@ -406,23 +509,32 @@ Required JSON format:
     const figure = limitedFigures[i]
     if (!figure?.prompt) continue
 
+    // Pick the right Imagen model based on figure type
+    const figurePurpose: ImagenPurpose =
+      (figure as any).type === 'chart' ? 'chart' : 'illustration'
+
     try {
       const url = await generateAndUploadImagen(
         figure.prompt,
         figure.id || `figure-${i + 1}`,
-        'ai-figure'
+        'ai-figure',
+        figurePurpose
       )
 
       const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
+      const alt = figure.alt || figure.caption || `Rycina ${i + 1}`
+      const captionLine = figure.caption ? `\n\n*${figure.caption}*` : ''
+      const markdownImage = `![${alt}](${url})${captionLine}`
+
       if (content.includes(placeholder)) {
-        content = content.split(placeholder).join(url)
+        content = content.split(placeholder).join(markdownImage)
       }
     } catch (error) {
       console.error('Gemini figure generation failed:', error)
-      // Replace placeholder with cover fallback if available.
       const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
       if (coverFallbackUrl && content.includes(placeholder)) {
-        content = content.split(placeholder).join(coverFallbackUrl)
+        const alt = figure.alt || figure.caption || `Rycina ${i + 1}`
+        content = content.split(placeholder).join(`![${alt}](${coverFallbackUrl})`)
       }
     }
   }
@@ -433,19 +545,17 @@ Required JSON format:
     .replace(/https?:\/\/www\.google\.com\/search\?q=%7B%7BFIGURE_\d+_URL%7D%7D/g, '')
     .replace(/\n{3,}/g, '\n\n')
 
-  // Avoid forcing length with raw PDF text. If slightly short, keep as-is.
-
   return {
     title,
     content,
     excerpt,
-    seoMeta: articleData.seoMeta || {
-      title,
-      description: excerpt || '',
-      keywords: [],
+    seoMeta: {
+      title: seoTitle,
+      description: seoDescription,
+      keywords: seoKeywords,
     },
-    suggestedTags: articleData.suggestedTags || [],
-    suggestedCategory: articleData.suggestedCategory || 'General',
+    suggestedTags,
+    suggestedCategory,
     generatedImageUrl,
   }
 }

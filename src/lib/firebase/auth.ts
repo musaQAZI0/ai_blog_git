@@ -50,7 +50,7 @@ export async function registerUser(data: UserRegistrationData): Promise<{ user: 
       otherProfessionalType: data.otherProfessionalType,
       registrationNumber: data.registrationNumber,
       specialization: data.specialization,
-      status: 'pending' as UserStatus,
+      status: 'approved' as UserStatus,
       createdAt: new Date(),
       updatedAt: new Date(),
       newsletterSubscribed: data.newsletterConsent,
@@ -65,12 +65,6 @@ export async function registerUser(data: UserRegistrationData): Promise<{ user: 
       gdprConsentDate: serverTimestamp(),
     })
 
-    // Create pending approval document
-    await setDoc(doc(firestore, 'pendingApprovals', firebaseUser.uid), {
-      userId: firebaseUser.uid,
-      userData,
-      submittedAt: serverTimestamp(),
-    })
 
     return { user: firebaseUser }
   } catch (error: unknown) {
@@ -102,7 +96,7 @@ export async function signIn(email: string, password: string): Promise<{ user: F
         email,
         name: defaultName,
         role: isAdminEmail ? 'admin' : 'professional',
-        status: (isAdminEmail ? 'approved' : 'pending'),
+        status: 'approved',
         createdAt: new Date(),
         updatedAt: new Date(),
         newsletterSubscribed: false,
@@ -117,13 +111,7 @@ export async function signIn(email: string, password: string): Promise<{ user: F
         gdprConsentDate: serverTimestamp(),
       })
 
-      if (!isAdminEmail) {
-        await setDoc(doc(firestore, 'pendingApprovals', userCredential.user.uid), {
-          userId: userCredential.user.uid,
-          userData: newUserData,
-          submittedAt: serverTimestamp(),
-        })
-      }
+
 
       console.log('[auth] user doc auto-created', {
         role: newUserData.role,
@@ -148,10 +136,6 @@ export async function signIn(email: string, password: string): Promise<{ user: F
       }
 
       console.log('[auth] user doc found', { status: userData.status, role: userData.role })
-      if (userData.status === 'pending') {
-        await firebaseSignOut(firebaseAuth)
-        return { user: null, error: 'Twoje konto oczekuje na weryfikacjÄ™. Skontaktujemy siÄ™ z TobÄ… po zatwierdzeniu.' }
-      }
       if (userData.status === 'rejected') {
         await firebaseSignOut(firebaseAuth)
         return { user: null, error: 'Twoje konto zostaÅ‚o odrzucone. Skontaktuj siÄ™ z administratorem.' }
@@ -201,7 +185,7 @@ export async function getCurrentUser(): Promise<User | null> {
 export function onAuthChange(callback: (user: FirebaseUser | null) => void): () => void {
   if (!isFirebaseConfigured || !auth) {
     // Return no-op unsubscribe function in demo mode
-    return () => {}
+    return () => { }
   }
   return onAuthStateChanged(auth, callback)
 }

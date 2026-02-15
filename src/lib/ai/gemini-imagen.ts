@@ -9,14 +9,32 @@ type ImagenPrediction = {
   }
 }
 
-function getImagenConfig() {
+/**
+ * Purpose-based model selection:
+ *  - cover / illustration → Imagen 4 Ultra (highest quality)
+ *  - chart / graph        → Imagen 4 standard (good accuracy, faster)
+ *  - fallback             → Imagen 4 Fast
+ *
+ * The env-var GEMINI_IMAGEN_MODEL always wins when set.
+ */
+export type ImagenPurpose = 'cover' | 'illustration' | 'chart'
+
+const MODEL_BY_PURPOSE: Record<ImagenPurpose, string> = {
+  cover: 'imagen-4.0-ultra-generate-001',
+  illustration: 'imagen-4.0-ultra-generate-001',
+  chart: 'imagen-4.0-generate-001',
+}
+
+const FALLBACK_MODEL = 'imagen-4.0-fast-generate-001'
+
+function getImagenConfig(purpose: ImagenPurpose = 'illustration') {
   const apiKey = process.env.GEMINI_API_KEY
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY is not configured')
   }
 
-  // Use a model that exists for most keys (Imagen 4, per ListModels).
-  const model = process.env.GEMINI_IMAGEN_MODEL || 'imagen-4.0-fast-generate-001'
+  // Env-var override takes priority; otherwise pick model by purpose.
+  const model = process.env.GEMINI_IMAGEN_MODEL || MODEL_BY_PURPOSE[purpose] || FALLBACK_MODEL
   return { apiKey, model }
 }
 
@@ -48,8 +66,13 @@ function extensionFromMime(mimeType: string): string {
   return 'png'
 }
 
-export async function generateImagenBuffer(prompt: string): Promise<{ buffer: Buffer; mimeType: string }> {
-  const { apiKey, model } = getImagenConfig()
+export async function generateImagenBuffer(
+  prompt: string,
+  purpose: ImagenPurpose = 'illustration'
+): Promise<{ buffer: Buffer; mimeType: string }> {
+  const { apiKey, model } = getImagenConfig(purpose)
+
+  console.log(`[imagen] Generating image with model "${model}" (purpose: ${purpose})`)
 
   const tryPredict = async (modelName: string) => {
     const response = await fetch(
@@ -82,13 +105,12 @@ export async function generateImagenBuffer(prompt: string): Promise<{ buffer: Bu
   try {
     return await tryPredict(model)
   } catch (error) {
-    // If user configured an unavailable model (common: imagen-3.*), retry with a known-good fallback.
-    const fallbackModel = 'imagen-4.0-fast-generate-001'
-    if (model !== fallbackModel) {
+    // If the chosen model is unavailable, retry with the fast fallback.
+    if (model !== FALLBACK_MODEL) {
       console.warn(
-        `Gemini model "${model}" failed. Retrying with "${fallbackModel}".`
+        `[imagen] Model "${model}" failed. Retrying with fallback "${FALLBACK_MODEL}".`
       )
-      return tryPredict(fallbackModel)
+      return tryPredict(FALLBACK_MODEL)
     }
     throw error
   }
@@ -97,9 +119,10 @@ export async function generateImagenBuffer(prompt: string): Promise<{ buffer: Bu
 export async function generateAndUploadImagen(
   prompt: string,
   originalName: string,
-  folderPrefix: string = 'ai'
+  folderPrefix: string = 'ai',
+  purpose: ImagenPurpose = 'illustration'
 ): Promise<string> {
-  const { buffer, mimeType } = await generateImagenBuffer(prompt)
+  const { buffer, mimeType } = await generateImagenBuffer(prompt, purpose)
   const ext = extensionFromMime(mimeType)
   const fileName = generateFileName(`${originalName}.${ext}`, folderPrefix)
 

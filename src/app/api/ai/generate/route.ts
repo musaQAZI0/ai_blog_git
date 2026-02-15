@@ -18,6 +18,13 @@ export async function POST(request: NextRequest) {
     const user = await getRequestUser(request)
     const ip = getClientIp(request)
 
+    if (user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: user.role === 'guest' ? 401 : 403 }
+      )
+    }
+
     const formData = await request.formData()
     const files = formData.getAll('files') as File[]
     // Default to Gemini for text generation (can be overridden by passing provider in formData)
@@ -27,16 +34,7 @@ export async function POST(request: NextRequest) {
       : 'gemini') as AIProvider
     const requestedAudience = formData.get('targetAudience') as TargetAudience
 
-    // Enforce targetAudience by role:
-    // - guest/patient: patient only
-    // - professional: professional only
-    // - admin: can choose
-    const targetAudience: TargetAudience =
-      user.role === 'admin'
-        ? requestedAudience
-        : user.role === 'professional'
-          ? 'professional'
-          : 'patient'
+    const targetAudience: TargetAudience = requestedAudience
 
     if (!files || files.length === 0) {
       return NextResponse.json(
@@ -52,14 +50,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (user.role === 'guest') {
-      const rl = rateLimit(`ai-generate:${ip}`, { limit: 10, windowMs: 60 * 60 * 1000 })
-      if (!rl.ok) {
-        return NextResponse.json(
-          { success: false, error: 'Za duzo zapytan. Sprobuj ponownie pozniej.' },
-          { status: 429 }
-        )
-      }
+    const rl = rateLimit(`ai-generate:${ip}`, { limit: 60, windowMs: 60 * 60 * 1000 })
+    if (!rl.ok) {
+      return NextResponse.json(
+        { success: false, error: 'Za duzo zapytan. Sprobuj ponownie pozniej.' },
+        { status: 429 }
+      )
     }
 
     // Convert files to buffers
@@ -84,7 +80,7 @@ export async function POST(request: NextRequest) {
     const generatedContent = await generateArticle({
       pdfContent,
       targetAudience,
-      provider: user.role === 'guest' ? 'gemini' : provider,
+      provider,
       // Prefer Gemini for images/graphs; if Gemini isn't configured, OpenAI code can fall back to DALL·E.
       generateImage: true,
     })

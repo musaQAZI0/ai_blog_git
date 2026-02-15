@@ -1,6 +1,7 @@
 'use client'
 
 import React from 'react'
+import { cn } from '@/lib/utils'
 
 interface CategoryFilterProps {
   categories: string[]
@@ -14,13 +15,16 @@ export function CategoryFilter({
   onSelect,
 }: CategoryFilterProps) {
   return (
-    <div className="flex flex-wrap items-center gap-4 text-sm">
+    <div className="flex flex-wrap items-center gap-1.5">
       <button
         type="button"
         onClick={() => onSelect(null)}
-        className={`transition-colors ${
-          selectedCategory === null ? 'text-black' : 'text-black/60 hover:text-black'
-        }`}
+        className={cn(
+          'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+          selectedCategory === null
+            ? 'bg-black text-white'
+            : 'bg-black/[0.04] text-black/50 hover:bg-black/[0.08] hover:text-black/70'
+        )}
       >
         Wszystkie
       </button>
@@ -29,9 +33,12 @@ export function CategoryFilter({
           key={category}
           type="button"
           onClick={() => onSelect(category)}
-          className={`transition-colors ${
-            selectedCategory === category ? 'text-black' : 'text-black/60 hover:text-black'
-          }`}
+          className={cn(
+            'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+            selectedCategory === category
+              ? 'bg-black text-white'
+              : 'bg-black/[0.04] text-black/50 hover:bg-black/[0.08] hover:text-black/70'
+          )}
         >
           {category}
         </button>

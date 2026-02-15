@@ -1,7 +1,6 @@
 'use client'
 
 import React, { useState, useCallback } from 'react'
-import { Input, Button } from '@/components/ui'
 import { Search, X } from 'lucide-react'
 
 interface SearchBarProps {
@@ -29,29 +28,24 @@ export function SearchBar({
   }, [onSearch])
 
   return (
-    <form onSubmit={handleSubmit} className="relative flex w-full max-w-xl items-center gap-2">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <Input
-          type="text"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder={placeholder}
-          className="h-9 border-black pl-9 pr-9 text-sm focus-visible:ring-black/50"
-        />
-        {query && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
-      </div>
-      <Button type="submit" className="h-9 rounded-full px-4 text-sm">
-        Szukaj
-      </Button>
+    <form onSubmit={handleSubmit} className="relative w-full max-w-sm">
+      <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/25" />
+      <input
+        type="text"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder={placeholder}
+        className="h-9 w-full rounded-lg border border-black/[0.08] bg-white pl-9 pr-9 text-sm text-black placeholder:text-black/30 outline-none transition-colors focus:border-black/20 focus:ring-0"
+      />
+      {query && (
+        <button
+          type="button"
+          onClick={handleClear}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-black/30 hover:text-black/60"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      )}
     </form>
   )
 }

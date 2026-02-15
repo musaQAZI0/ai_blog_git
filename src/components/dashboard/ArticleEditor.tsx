@@ -189,149 +189,149 @@ export function ArticleEditor({
       </div>
 
       <div className={cn(previewMode ? 'hidden' : 'block', 'space-y-6')}>
-          {/* Basic Info */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="title" required>
-                Tytul artykulu
-              </Label>
-              <Input
-                id="title"
-                placeholder="Wprowadz tytul artykulu"
-                error={errors.title?.message}
-                {...register('title')}
-              />
-            </div>
+        {/* Basic Info */}
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div className="space-y-2 sm:col-span-2">
+            <Label htmlFor="title" required>
+              Tytul artykulu
+            </Label>
+            <Input
+              id="title"
+              placeholder="Wprowadz tytul artykulu"
+              error={errors.title?.message}
+              {...register('title')}
+            />
+          </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="targetAudience" required>
-                Grupa docelowa
-              </Label>
-              {lockedTargetAudience ? (
-                <>
-                  <Select
-                    id="targetAudience"
-                    disabled
-                    value={lockedTargetAudience}
-                    options={[
-                      lockedTargetAudience === 'patient'
-                        ? { value: 'patient', label: 'Pacjenci' }
-                        : { value: 'professional', label: 'Specjalisci medyczni' },
-                    ]}
-                    error={errors.targetAudience?.message}
-                  />
-                  <input
-                    type="hidden"
-                    value={lockedTargetAudience}
-                    {...register('targetAudience')}
-                  />
-                </>
-              ) : (
+          <div className="space-y-2">
+            <Label htmlFor="targetAudience" required>
+              Grupa docelowa
+            </Label>
+            {lockedTargetAudience ? (
+              <>
                 <Select
                   id="targetAudience"
+                  disabled
+                  value={lockedTargetAudience}
                   options={[
-                    { value: 'patient', label: 'Pacjenci' },
-                    { value: 'professional', label: 'Specjalisci medyczni' },
+                    lockedTargetAudience === 'patient'
+                      ? { value: 'patient', label: 'Pacjenci' }
+                      : { value: 'professional', label: 'Specjalisci medyczni' },
                   ]}
                   error={errors.targetAudience?.message}
+                />
+                <input
+                  type="hidden"
+                  value={lockedTargetAudience}
                   {...register('targetAudience')}
                 />
-              )}
+              </>
+            ) : (
+              <Select
+                id="targetAudience"
+                options={[
+                  { value: 'patient', label: 'Pacjenci' },
+                  { value: 'professional', label: 'Specjalisci medyczni' },
+                ]}
+                error={errors.targetAudience?.message}
+                {...register('targetAudience')}
+              />
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="category" required>
+              Kategoria
+            </Label>
+            <Select
+              id="category"
+              options={categories.map((c) => ({ value: c, label: c }))}
+              placeholder="Wybierz kategorie"
+              error={errors.category?.message}
+              {...register('category')}
+            />
+          </div>
+        </div>
+
+        {/* Content */}
+        <div className="space-y-2">
+          <Label htmlFor="content" required>
+            Tresc artykulu (Markdown)
+          </Label>
+          <Textarea
+            id="content"
+            placeholder="Wprowadz tresc artykulu w formacie Markdown..."
+            className="min-h-[400px] font-sans"
+            error={errors.content?.message}
+            {...register('content')}
+          />
+        </div>
+
+        {/* Excerpt */}
+        <div className="space-y-2">
+          <Label htmlFor="excerpt" required>
+            Streszczenie
+          </Label>
+          <Textarea
+            id="excerpt"
+            placeholder="Krotkie streszczenie artykulu (wyswietlane na listach)"
+            className="min-h-[80px]"
+            error={errors.excerpt?.message}
+            {...register('excerpt')}
+          />
+        </div>
+
+        {/* Tags */}
+        <div className="space-y-2">
+          <Label htmlFor="tags">Tagi (oddzielone przecinkami)</Label>
+          <Input
+            id="tags"
+            placeholder="np. okulistyka, zaćma, leczenie"
+            error={errors.tags?.message}
+            {...register('tags')}
+          />
+        </div>
+
+        {/* SEO */}
+        <div className="rounded-lg border bg-muted/50 p-4">
+          <h3 className="mb-4 font-semibold">Ustawienia SEO</h3>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="seoTitle">Tytul SEO (maks. 60 znakow)</Label>
+              <Input
+                id="seoTitle"
+                placeholder="Tytul dla wyszukiwarek"
+                error={errors.seoTitle?.message}
+                {...register('seoTitle')}
+              />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="category" required>
-                Kategoria
+              <Label htmlFor="seoDescription">
+                Opis SEO (maks. 160 znakow)
               </Label>
-              <Select
-                id="category"
-                options={categories.map((c) => ({ value: c, label: c }))}
-                placeholder="Wybierz kategorie"
-                error={errors.category?.message}
-                {...register('category')}
+              <Textarea
+                id="seoDescription"
+                placeholder="Opis dla wyszukiwarek"
+                className="min-h-[60px]"
+                error={errors.seoDescription?.message}
+                {...register('seoDescription')}
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="seoKeywords">
+                Slowa kluczowe (oddzielone przecinkami)
+              </Label>
+              <Input
+                id="seoKeywords"
+                placeholder="np. okulistyka, oczy, zdrowie"
+                error={errors.seoKeywords?.message}
+                {...register('seoKeywords')}
               />
             </div>
           </div>
-
-          {/* Content */}
-          <div className="space-y-2">
-            <Label htmlFor="content" required>
-              Tresc artykulu (Markdown)
-            </Label>
-            <Textarea
-              id="content"
-              placeholder="Wprowadz tresc artykulu w formacie Markdown..."
-              className="min-h-[400px] font-sans"
-              error={errors.content?.message}
-              {...register('content')}
-            />
-          </div>
-
-          {/* Excerpt */}
-          <div className="space-y-2">
-            <Label htmlFor="excerpt" required>
-              Streszczenie
-            </Label>
-            <Textarea
-              id="excerpt"
-              placeholder="Krotkie streszczenie artykulu (wyswietlane na listach)"
-              className="min-h-[80px]"
-              error={errors.excerpt?.message}
-              {...register('excerpt')}
-            />
-          </div>
-
-          {/* Tags */}
-          <div className="space-y-2">
-            <Label htmlFor="tags">Tagi (oddzielone przecinkami)</Label>
-            <Input
-              id="tags"
-              placeholder="np. okulistyka, zaćma, leczenie"
-              error={errors.tags?.message}
-              {...register('tags')}
-            />
-          </div>
-
-          {/* SEO */}
-          <div className="rounded-lg border bg-muted/50 p-4">
-            <h3 className="mb-4 font-semibold">Ustawienia SEO</h3>
-            <div className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="seoTitle">Tytul SEO (maks. 60 znakow)</Label>
-                <Input
-                  id="seoTitle"
-                  placeholder="Tytul dla wyszukiwarek"
-                  error={errors.seoTitle?.message}
-                  {...register('seoTitle')}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="seoDescription">
-                  Opis SEO (maks. 160 znakow)
-                </Label>
-                <Textarea
-                  id="seoDescription"
-                  placeholder="Opis dla wyszukiwarek"
-                  className="min-h-[60px]"
-                  error={errors.seoDescription?.message}
-                  {...register('seoDescription')}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="seoKeywords">
-                  Slowa kluczowe (oddzielone przecinkami)
-                </Label>
-                <Input
-                  id="seoKeywords"
-                  placeholder="np. okulistyka, oczy, zdrowie"
-                  error={errors.seoKeywords?.message}
-                  {...register('seoKeywords')}
-                />
-              </div>
-            </div>
-          </div>
+        </div>
       </div>
 
       <div className={cn(previewMode ? 'block' : 'hidden')}>
@@ -343,7 +343,7 @@ export function ArticleEditor({
           <p className="mb-6 text-lg text-muted-foreground">
             {watch('excerpt') || 'Streszczenie artykulu...'}
           </p>
-          <div className="prose max-w-none dark:prose-invert">
+          <div className="prose prose-lg max-w-none dark:prose-invert">
             <ReactMarkdown remarkPlugins={[remarkGfm]}>
               {content || '*Tutaj pojawi sie tresc artykulu...*'}
             </ReactMarkdown>

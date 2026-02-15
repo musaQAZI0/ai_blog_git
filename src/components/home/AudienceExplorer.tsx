@@ -37,7 +37,7 @@ export function AudienceExplorer() {
       <div className="mb-5">
         <h2 className="text-xl font-semibold tracking-tight text-black">Choose your path</h2>
         <p className="mt-2 max-w-2xl text-sm text-black/70">
-          Pick the patient or medical professional section. The professional area requires login and specialist registration.
+          Pick the patient or medical professional section. The professional area requires login and specialist registration. Articles are published by administrators.
         </p>
       </div>
 
@@ -101,9 +101,6 @@ export function AudienceExplorer() {
                         <Button asChild className="h-10 rounded-full bg-black px-5 text-white hover:bg-black/80">
                           <Link href="/patient">Browse patient blog</Link>
                         </Button>
-                        <Button asChild variant="outline" className="h-10 rounded-full border-2 border-black px-5">
-                          <Link href="/patient/generate">Generate patient article</Link>
-                        </Button>
                       </>
                     ) : (
                       <>
@@ -119,7 +116,7 @@ export function AudienceExplorer() {
                 </div>
 
                 <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-5">
-                  <p className="text-sm font-semibold text-black">Typowa struktura artykulu</p>
+                  <p className="text-sm font-semibold text-black">Typical article structure</p>
                   <ul className="mt-3 space-y-2 text-sm text-black/70">
                     {copy.points.map((point) => (
                       <li key={point} className="flex gap-2">

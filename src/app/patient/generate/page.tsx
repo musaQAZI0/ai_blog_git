@@ -3,6 +3,8 @@
 import React, { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
+import { useAuth } from '@/context/AuthContext'
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { PDFUploader } from '@/components/dashboard/PDFUploader'
 import { ArticleEditor } from '@/components/dashboard/ArticleEditor'
 import {
@@ -21,6 +23,7 @@ import { normalizeAIGenerationResponse } from '@/lib/ai/normalize'
 
 export default function PatientGeneratePage() {
   const router = useRouter()
+  const { firebaseUser } = useAuth()
   const [step, setStep] = useState<'upload' | 'edit'>('upload')
   const [files, setFiles] = useState<File[]>([])
   const [generating, setGenerating] = useState(false)
@@ -48,8 +51,11 @@ export default function PatientGeneratePage() {
       formData.append('targetAudience', 'patient')
       formData.append('provider', 'gemini')
 
+      const idToken = await firebaseUser?.getIdToken?.()
+
       const response = await fetch('/api/ai/generate', {
         method: 'POST',
+        headers: idToken ? { authorization: `Bearer ${idToken}` } : undefined,
         body: formData,
       })
 
@@ -109,7 +115,8 @@ export default function PatientGeneratePage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+    <ProtectedRoute requireAdmin requireApproved={false}>
+      <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
       <div className="mb-10">
         <Link
           href="/patient"
@@ -215,6 +222,7 @@ export default function PatientGeneratePage() {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </ProtectedRoute>
   )
 }

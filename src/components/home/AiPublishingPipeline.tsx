@@ -10,23 +10,19 @@ const PIPELINES: Record<PipelineKey, { title: string; lead: string; steps: strin
   patient: {
     title: 'Patient blog pipeline',
     lead: 'Clear, safe, and practical articles for patients — optimized for SEO and readability.',
-    steps: ['Upload one or more PDFs', 'AI extracts key points and structure', 'Draft article + SEO meta', 'Generate a cover image', 'Review and publish'],
+    steps: ['Admin uploads one or more PDFs', 'AI extracts key points and structure', 'Draft article + SEO meta', 'Generate a cover image', 'Editorial review and publish'],
     outputs: ['Patient-friendly language', 'SEO title, description, keywords', 'Suggested sections (symptoms, when to seek help, next steps)', 'Cover image ready for sharing'],
-    cta: [
-      { label: 'Browse patient blog', href: '/patient' },
-      { label: 'Generate patient article', href: '/patient/generate' },
-    ],
+    cta: [{ label: 'Browse patient blog', href: '/patient' }],
   },
   professional: {
     title: 'Medical professional pipeline',
     lead: 'Verified access for clinicians and medical professionals, with tracked usage and editorial workflow.',
-    steps: ['Login / register (PWZ / registration number)', 'Upload one or more PDFs', 'AI generates clinical draft + SEO meta', 'Generate a cover image', 'Edit, approve, and publish'],
+    steps: ['Verified users login / register (PWZ / registration number)', 'Admins upload PDFs and generate drafts', 'AI generates clinical draft + SEO meta', 'Generate a cover image', 'Editorial review, approve, and publish'],
     outputs: ['Clinician-grade structure and tone', 'Evidence-focused summaries and key numbers', 'SEO-ready metadata', 'Tracked access for the professional area'],
     cta: [
       { label: 'Login', href: '/login' },
       { label: 'Register', href: '/register' },
       { label: 'Open pro blog', href: '/professional' },
-      { label: 'Open editor', href: '/dashboard/create' },
     ],
   },
 }
@@ -50,7 +46,7 @@ export function AiPublishingPipeline() {
       <div className="mb-5">
         <h2 className="text-xl font-semibold tracking-tight text-black">AI-powered publishing</h2>
         <p className="mt-2 max-w-3xl text-sm text-black/70">
-          The blog has two content pipelines: one for patients and one for verified medical professionals. Upload PDFs, generate SEO-ready drafts, add images, then review before publishing.
+          The blog has two content pipelines: one for patients and one for verified medical professionals. Article generation is admin-only; PDFs are used to generate drafts with SEO and images, then reviewed before publishing.
         </p>
       </div>
 
@@ -96,9 +92,9 @@ export function AiPublishingPipeline() {
                       <Button
                         key={action.href}
                         asChild
-                        variant={action.href === '/patient/generate' || action.href === '/dashboard/create' ? 'default' : 'outline'}
+                        variant={action.href === '/login' ? 'default' : 'outline'}
                         className={
-                          action.href === '/patient/generate' || action.href === '/dashboard/create'
+                          action.href === '/login'
                             ? 'h-10 rounded-full bg-black px-5 text-white hover:bg-black/80'
                             : 'h-10 rounded-full border-2 border-black px-5'
                         }

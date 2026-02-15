@@ -25,8 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '/'
   const withSidebar = shouldShowSidebar(pathname)
 
-  if (!withSidebar)
-  {
+  if (!withSidebar) {
     return (
       <>
         <main className="flex-1">{children}</main>
@@ -37,11 +36,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex flex-1 flex-col">
-      <div className="w-full flex-1 sm:flex sm:gap-0">
-        <aside className="hidden w-52 flex-shrink-0 self-start sm:sticky sm:top-32 sm:flex sm:h-[calc(100vh-8rem)] sm:flex-col sm:pr-3">
-          <div className="h-8 sm:h-12" />
-          <nav className="sidebar-scroll flex-1 overflow-y-auto pr-2 text-sm text-black/70">
-            <div className="space-y-5 pb-2">
+      <div className="w-full flex-1 sm:flex">
+        {/* Sidebar */}
+        <aside className="hidden w-56 flex-shrink-0 self-start sm:sticky sm:top-20 sm:flex sm:h-[calc(100vh-5rem)] sm:flex-col sm:border-r sm:border-black/[0.06]">
+          <nav className="flex-1 overflow-y-auto px-4 pt-8 pb-6">
+            <div className="space-y-1">
               {SIDE_NAV.map((item) => {
                 const isActive =
                   item.href === '/'
@@ -53,10 +52,16 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                     key={item.label}
                     href={item.href}
                     className={cn(
-                      'block rounded-md px-2 py-1 text-[15px] text-black/75 transition-colors hover:text-black',
-                      isActive && 'bg-black/5 font-semibold text-black'
+                      'group relative block rounded-lg px-3 py-2 text-[14px] transition-all duration-150',
+                      isActive
+                        ? 'font-semibold text-black'
+                        : 'text-black/45 hover:text-black/80'
                     )}
                   >
+                    {/* Active indicator — left bar like OpenAI */}
+                    {isActive && (
+                      <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-black" />
+                    )}
                     {item.label}
                   </Link>
                 )
@@ -65,19 +70,12 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
         </aside>
 
-        <div className="hidden w-px flex-shrink-0 flex-col sm:sticky sm:top-32 sm:flex sm:h-[calc(100vh-8rem)]">
-          <div className="h-8 sm:h-12" />
-          <div className="w-px flex-1 bg-black" />
-        </div>
-
-        <div className="flex min-w-0 flex-1 flex-col pb-0 pr-3 sm:pl-6 sm:pr-0">
-          <div className="h-8 sm:h-12" />
-          <main className="flex-1 pb-20">{children}</main>
-          <div className="mt-12">
-            <Footer
-              wrapperClassName="-mr-3 pr-3 sm:mr-0 sm:pr-0 sm:-ml-[25px] sm:pl-[25px]"
-            />
+        {/* Main content */}
+        <div className="flex min-w-0 flex-1 flex-col">
+          <div className="pt-8 sm:pl-8 sm:pr-4">
+            <main className="flex-1 pb-20">{children}</main>
           </div>
+          <Footer containerClassName="sm:pl-8 sm:pr-4" />
         </div>
       </div>
     </div>

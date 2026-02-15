@@ -108,7 +108,7 @@ function DashboardArticleEditContent() {
 
 export default function DashboardArticleEditPage() {
   return (
-    <ProtectedRoute requireApproved>
+    <ProtectedRoute requireAdmin requireApproved={false}>
       <DashboardArticleEditContent />
     </ProtectedRoute>
   )

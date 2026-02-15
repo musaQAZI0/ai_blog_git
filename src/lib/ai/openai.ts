@@ -1,6 +1,6 @@
 import OpenAI from 'openai'
 import { AIGenerationResponse, TargetAudience } from '@/types'
-import { generateAndUploadImagen } from '@/lib/ai/gemini-imagen'
+import { generateAndUploadImagen, type ImagenPurpose } from '@/lib/ai/gemini-imagen'
 import { findCoverImageUrl } from '@/lib/images/cover-search'
 
 function getOpenAIClient() {
@@ -22,7 +22,9 @@ function getFigurePlaceholderUrl(index: number) {
 const PATIENT_SYSTEM_PROMPT = `You are a medical content writer specializing in ophthalmology content for patients.
 Write in simple, accessible Polish language. Avoid medical jargon or explain it when necessary.
 Focus on being educational, reassuring, and practical.
-Format the content with clear headings, bullet points where appropriate, and easy-to-understand explanations.`
+Format the content with clear headings, bullet points where appropriate, and easy-to-understand explanations.
+Every article MUST be complete — never stop mid-sentence or mid-paragraph.
+You MUST fill in ALL JSON fields completely. Empty arrays or generic placeholder values are NOT acceptable.`
 
 const PROFESSIONAL_SYSTEM_PROMPT = `You are the Editor-in-Chief of a high-impact scientific journal specializing in ophthalmology.
 Your task is to write a concise editorial review of the provided article, targeted specifically at ophthalmologists and optometrists.
@@ -232,7 +234,8 @@ Required JSON format:
       generatedImageUrl = await generateAndUploadImagen(
         coverPrompt,
         'cover',
-        'ai-cover'
+        'ai-cover',
+        'cover'
       )
     } catch (error) {
       console.error('Gemini cover image generation failed:', error)
@@ -244,11 +247,16 @@ Required JSON format:
       const figure = limitedFigures[i]
       if (!figure?.prompt) continue
 
+      // Pick the right Imagen model based on figure type
+      const figurePurpose: ImagenPurpose =
+        figure.type === 'chart' ? 'chart' : 'illustration'
+
       try {
         const url = await generateAndUploadImagen(
           figure.prompt,
           figure.id || `figure-${i + 1}`,
-          'ai-figure'
+          'ai-figure',
+          figurePurpose
         )
 
         const placeholder =

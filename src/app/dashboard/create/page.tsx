@@ -257,7 +257,7 @@ function CreateArticleContent() {
 
 export default function CreateArticlePage() {
   return (
-    <ProtectedRoute requireApproved>
+    <ProtectedRoute requireAdmin requireApproved={false}>
       <CreateArticleContent />
     </ProtectedRoute>
   )

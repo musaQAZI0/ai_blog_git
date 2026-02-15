@@ -112,8 +112,8 @@ export function RegisterForm() {
       <div className="text-center">
         <Alert variant="success">
           <AlertDescription>
-            Rejestracja przebiegla pomyslnie! Twoje konto oczekuje na weryfikacje.
-            Otrzymasz email po zatwierdzeniu konta przez administratora.
+            Rejestracja przebiegla pomyslnie! Twoje konto jest aktywne.
+            Mozesz sie teraz zalogowac.
           </AlertDescription>
         </Alert>
         <Button

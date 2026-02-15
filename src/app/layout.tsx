@@ -47,7 +47,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pl" suppressHydrationWarning>
-      <body className={`${poppins.variable} font-sans antialiased`}>
+      <body className={`${poppins.variable} font-sans antialiased`} suppressHydrationWarning>
         <AuthProvider>
           <div className="flex min-h-screen flex-col">
             <Header />

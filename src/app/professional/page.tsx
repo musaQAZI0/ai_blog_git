@@ -1,26 +1,16 @@
 'use client'
 
 import React, { useEffect, useState, useCallback } from 'react'
-import Link from 'next/link'
 import { Article } from '@/types'
 import { getArticles, searchArticles } from '@/lib/firebase/articles'
 import { ArticleGrid } from '@/components/blog/ArticleGrid'
 import { SearchBar } from '@/components/blog/SearchBar'
 import { CategoryFilter } from '@/components/blog/CategoryFilter'
 import { NewsletterForm } from '@/components/blog/NewsletterForm'
-import {
-  Button,
-  Alert,
-  AlertDescription,
-  Dialog,
-  DialogTrigger,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui'
+import { Button } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-import { ArrowUpDown, ChevronDown, SlidersHorizontal } from 'lucide-react'
+import { ArrowUpDown } from 'lucide-react'
 
 const CATEGORIES = [
   'Kliniczna',
@@ -30,13 +20,14 @@ const CATEGORIES = [
   'Przypadki',
 ]
 
-const SIDE_NAV = [
-  { label: 'Start', href: '/' },
-  { label: 'Blog dla Pacjentow', href: '/patient' },
-  { label: 'Blog dla Specjalistow', href: '/professional' },
-]
-
 type SortOption = 'newest' | 'oldest' | 'az' | 'za'
+
+const SORT_LABELS: Record<SortOption, string> = {
+  newest: 'Najnowsze',
+  oldest: 'Najstarsze',
+  az: 'A–Z',
+  za: 'Z–A',
+}
 
 function toMillis(input: unknown): number {
   if (!input) return 0
@@ -57,18 +48,10 @@ function toMillis(input: unknown): number {
 
 function sortArticles(list: Article[], sort: SortOption): Article[] {
   const copy = [...list]
-
-  if (sort === 'az') {
-    return copy.sort((a, b) => a.title.localeCompare(b.title))
-  }
-  if (sort === 'za') {
-    return copy.sort((a, b) => b.title.localeCompare(a.title))
-  }
-
+  if (sort === 'az') return copy.sort((a, b) => a.title.localeCompare(b.title))
+  if (sort === 'za') return copy.sort((a, b) => b.title.localeCompare(a.title))
   const getTime = (a: Article) => toMillis(a.publishedAt ?? a.createdAt)
-  if (sort === 'oldest') {
-    return copy.sort((a, b) => getTime(a) - getTime(b))
-  }
+  if (sort === 'oldest') return copy.sort((a, b) => getTime(a) - getTime(b))
   return copy.sort((a, b) => getTime(b) - getTime(a))
 }
 
@@ -77,8 +60,6 @@ function ProfessionalBlogContent() {
   const [loading, setLoading] = useState(true)
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
-  const [filterOpen, setFilterOpen] = useState(false)
-  const [sortOpen, setSortOpen] = useState(false)
   const [sortOption, setSortOption] = useState<SortOption>('newest')
   const { user } = useAuth()
 
@@ -120,154 +101,83 @@ function ProfessionalBlogContent() {
     setSearchQuery('')
   }
 
-  return (
-    <div className="w-full px-0 py-12">
-      <div className="flex-1">
-          {user && (
-            <Alert variant="info" className="mb-6">
-              <AlertDescription>
-                Witaj, {user?.name}! Jestes zalogowany jako{' '}
-                {user?.professionalType === 'lekarz'
-                  ? 'Lekarz'
-                  : user?.professionalType === 'optometrysta'
-                  ? 'Optometrysta'
-                  : 'Specjalista'}
-                .
-              </AlertDescription>
-            </Alert>
-          )}
+  const cycleSortOption = () => {
+    const options: SortOption[] = ['newest', 'oldest', 'az', 'za']
+    const currentIndex = options.indexOf(sortOption)
+    setSortOption(options[(currentIndex + 1) % options.length])
+  }
 
-          {/* Header */}
-          <div className="mb-10">
-            <p className="text-xs uppercase tracking-[0.3em] text-black/60">Blog</p>
-            <h1 className="mt-3 text-4xl font-semibold text-black">Wszystkie</h1>
-            <p className="mt-3 text-base text-black/70">
-              Artykuly kliniczne, badania i przypadki dla profesjonalistow
+  return (
+    <div className="mx-auto max-w-[980px] py-8">
+      {/* Header */}
+      <div className="pb-8">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
+              Blog dla Specjalistów
+            </p>
+            <h1 className="mt-4 text-[clamp(1.75rem,4vw,2.5rem)] font-semibold leading-[1.1] tracking-tight text-black">
+              Artykuly kliniczne
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-relaxed text-black/50">
+              Podsumowania kliniczne, badania i przypadki dla profesjonalistow medycznych.
             </p>
           </div>
-
-          <div className="mb-8 flex flex-wrap items-center gap-4">
-            <CategoryFilter
-              categories={CATEGORIES}
-              selectedCategory={selectedCategory}
-              onSelect={handleCategorySelect}
-            />
-            <div className="ml-auto flex items-center gap-2 pr-2 text-black/70">
-              <Dialog open={filterOpen} onOpenChange={setFilterOpen}>
-                <DialogTrigger>
-                  <Button variant="ghost" size="sm" className="gap-2 hover:text-black">
-                    <SlidersHorizontal className="h-4 w-4" />
-                    Filtr
-                    <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Filtruj</DialogTitle>
-                  </DialogHeader>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant={selectedCategory === null ? 'default' : 'outline'}
-                      onClick={() => {
-                        handleCategorySelect(null)
-                        setFilterOpen(false)
-                      }}
-                    >
-                      Wszystkie
-                    </Button>
-                    {CATEGORIES.map((cat) => (
-                      <Button
-                        key={cat}
-                        size="sm"
-                        variant={selectedCategory === cat ? 'default' : 'outline'}
-                        onClick={() => {
-                          handleCategorySelect(cat)
-                          setFilterOpen(false)
-                        }}
-                      >
-                        {cat}
-                      </Button>
-                    ))}
-                  </div>
-                </DialogContent>
-              </Dialog>
-
-              <Dialog open={sortOpen} onOpenChange={setSortOpen}>
-                <DialogTrigger>
-                  <Button variant="ghost" size="sm" className="gap-2 hover:text-black">
-                    <ArrowUpDown className="h-4 w-4" />
-                    Sortuj
-                    <ChevronDown className="ml-1 h-3 w-3 opacity-60" />
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="sm:max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>Sortuj</DialogTitle>
-                  </DialogHeader>
-                  <div className="grid gap-2">
-                    <Button
-                      variant={sortOption === 'newest' ? 'default' : 'outline'}
-                      onClick={() => {
-                        setSortOption('newest')
-                        setSortOpen(false)
-                      }}
-                    >
-                      Najnowsze
-                    </Button>
-                    <Button
-                      variant={sortOption === 'oldest' ? 'default' : 'outline'}
-                      onClick={() => {
-                        setSortOption('oldest')
-                        setSortOpen(false)
-                      }}
-                    >
-                      Najstarsze
-                    </Button>
-                    <Button
-                      variant={sortOption === 'az' ? 'default' : 'outline'}
-                      onClick={() => {
-                        setSortOption('az')
-                        setSortOpen(false)
-                      }}
-                    >
-                      A–Z
-                    </Button>
-                    <Button
-                      variant={sortOption === 'za' ? 'default' : 'outline'}
-                      onClick={() => {
-                        setSortOption('za')
-                        setSortOpen(false)
-                      }}
-                    >
-                      Z–A
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </div>
-          </div>
-
-          <div className="mb-6">
-            <SearchBar onSearch={handleSearch} />
-          </div>
-
-          <ArticleGrid
-            articles={articles}
-            loading={loading}
-            basePath="/professional"
-          />
-
-          <div className="mt-10 max-w-lg">
-            <NewsletterForm variant="card" />
-          </div>
-
-          {!loading && articles.length > 0 && (
-            <div className="mt-10 flex justify-center">
-              <Button variant="outline">Zaladuj wiecej</Button>
+          {user && (
+            <div className="hidden shrink-0 items-center gap-2 rounded-full bg-black/[0.03] px-3 py-1.5 sm:flex">
+              <span className="h-2 w-2 rounded-full bg-emerald-500" />
+              <span className="text-xs text-black/50">{user.name}</span>
             </div>
           )}
+        </div>
       </div>
+
+      {/* Toolbar */}
+      <div className="border-t border-black/[0.06] pt-6 pb-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <CategoryFilter
+            categories={CATEGORIES}
+            selectedCategory={selectedCategory}
+            onSelect={handleCategorySelect}
+          />
+          <div className="flex items-center gap-3">
+            <SearchBar onSearch={handleSearch} />
+            <button
+              type="button"
+              onClick={cycleSortOption}
+              className="flex items-center gap-1.5 rounded-lg border border-black/[0.08] px-3 py-1.5 text-xs text-black/40 transition-colors hover:border-black/15 hover:text-black/60"
+            >
+              <ArrowUpDown className="h-3 w-3" />
+              {SORT_LABELS[sortOption]}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Articles */}
+      <ArticleGrid
+        articles={articles}
+        loading={loading}
+        basePath="/professional"
+      />
+
+      {/* Newsletter */}
+      <div className="mt-14 border-t border-black/[0.06] pt-10">
+        <div className="max-w-lg">
+          <NewsletterForm variant="card" />
+        </div>
+      </div>
+
+      {!loading && articles.length > 0 && (
+        <div className="mt-12 flex justify-center">
+          <Button
+            variant="outline"
+            className="h-10 rounded-full border-black/[0.1] px-6 text-xs font-medium text-black/50 hover:border-black/20 hover:text-black"
+          >
+            Zaladuj wiecej
+          </Button>
+        </div>
+      )}
     </div>
   )
 }

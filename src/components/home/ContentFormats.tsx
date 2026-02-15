@@ -2,7 +2,7 @@
 
 import React from 'react'
 import { cn } from '@/lib/utils'
-import { ChevronDown } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 
 type FormatKey = 'explainers' | 'clinical' | 'research' | 'checklists'
 
@@ -10,7 +10,7 @@ const FORMATS: Array<{ key: FormatKey; title: string; lead: string; details: str
   {
     key: 'explainers',
     title: 'Patient explainers',
-    lead: 'Plain-language articles focused on symptoms, treatment, and next steps.',
+    lead: 'Plain-language articles on symptoms, treatment, and next steps.',
     details: ['What is urgent vs normal', 'At-home care and monitoring', 'How to prepare for a visit'],
   },
   {
@@ -22,7 +22,7 @@ const FORMATS: Array<{ key: FormatKey; title: string; lead: string; details: str
   {
     key: 'research',
     title: 'Research highlights',
-    lead: 'What’s new in the literature and how to interpret it.',
+    lead: "What's new in the literature and how to interpret it.",
     details: ['Key numbers', 'Limitations and bias', 'Practical takeaways'],
   },
   {
@@ -34,18 +34,21 @@ const FORMATS: Array<{ key: FormatKey; title: string; lead: string; details: str
 ]
 
 export function ContentFormats() {
-  const [openKey, setOpenKey] = React.useState<FormatKey | null>('explainers')
+  const [openKey, setOpenKey] = React.useState<FormatKey | null>(null)
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-white p-6">
-      <div className="mb-5">
-        <h2 className="text-xl font-semibold tracking-tight text-black">Content types</h2>
-        <p className="mt-2 max-w-2xl text-sm text-black/70">
-          Click a card to see what the format includes.
-        </p>
-      </div>
+    <div>
+      <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
+        Content types
+      </p>
+      <h2 className="mt-4 text-2xl font-semibold tracking-tight text-black sm:text-3xl">
+        What you'll find here.
+      </h2>
+      <p className="mt-3 max-w-2xl text-sm leading-relaxed text-black/50">
+        Articles are structured around these formats for quick, clear reading.
+      </p>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="mt-8 space-y-2">
         {FORMATS.map((format) => {
           const isOpen = openKey === format.key
 
@@ -55,29 +58,39 @@ export function ContentFormats() {
               type="button"
               onClick={() => setOpenKey((prev) => (prev === format.key ? null : format.key))}
               className={cn(
-                'text-left rounded-2xl border border-black/10 bg-white p-5 transition-colors hover:bg-black/[0.02]',
-                isOpen && 'border-black/20'
+                'w-full text-left rounded-xl border px-5 py-4 transition-all duration-200',
+                isOpen
+                  ? 'border-black/15 bg-white shadow-[0_1px_8px_-3px_rgba(0,0,0,0.06)]'
+                  : 'border-black/[0.06] bg-white hover:border-black/12 hover:bg-black/[0.01]'
               )}
             >
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <p className="text-base font-semibold text-black">{format.title}</p>
-                  <p className="mt-2 text-sm text-black/70">{format.lead}</p>
+              <div className="flex items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <ChevronRight
+                    className={cn(
+                      'h-3.5 w-3.5 flex-shrink-0 text-black/25 transition-transform duration-200',
+                      isOpen && 'rotate-90 text-black/50'
+                    )}
+                  />
+                  <span className="text-sm font-semibold text-black">{format.title}</span>
                 </div>
-                <ChevronDown
-                  className={cn('mt-1 h-4 w-4 flex-shrink-0 text-black/70 transition-transform', isOpen && 'rotate-180')}
-                />
+                <span className="hidden text-xs text-black/35 sm:block">{format.lead}</span>
               </div>
 
+              {/* Mobile lead */}
+              <p className="mt-1.5 pl-[26px] text-xs text-black/40 sm:hidden">{format.lead}</p>
+
               {isOpen && (
-                <ul className="mt-4 space-y-2 text-sm text-black/70">
-                  {format.details.map((line) => (
-                    <li key={line} className="flex gap-2">
-                      <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-black" />
-                      <span>{line}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="mt-3 border-t border-black/[0.04] pt-3 pl-[26px]">
+                  <ul className="space-y-1.5">
+                    {format.details.map((line) => (
+                      <li key={line} className="flex items-center gap-2 text-sm text-black/55">
+                        <span className="h-1 w-1 flex-shrink-0 rounded-full bg-black/20" />
+                        {line}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </button>
           )

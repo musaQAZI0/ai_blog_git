@@ -25,7 +25,7 @@ export async function generateMedicalImage(
     `No text, watermarks, or logos in the image. Medical and professional appearance.`
 
   try {
-    const imageUrl = await generateAndUploadImagen(finalPrompt, title, 'ai-thumbnail')
+    const imageUrl = await generateAndUploadImagen(finalPrompt, title, 'ai-thumbnail', 'illustration')
     return imageUrl
   } catch (error) {
     console.error('Gemini image generation failed:', error)
@@ -116,7 +116,7 @@ export async function downloadImage(url: string): Promise<Buffer> {
 }
 
 /**
- * Generate image from DALL-E and process it
+ * Generate image using Gemini Imagen and process it
  */
 export async function generateAndProcessImage(
   title: string,

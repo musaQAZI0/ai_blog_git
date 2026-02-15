@@ -2,7 +2,6 @@
 
 import { Article } from '@/types'
 import { ArticleCard } from './ArticleCard'
-import { Skeleton } from '@/components/ui'
 
 interface ArticleGridProps {
   articles: Article[]
@@ -13,13 +12,15 @@ interface ArticleGridProps {
 export function ArticleGrid({ articles, loading, basePath }: ArticleGridProps) {
   if (loading) {
     return (
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, i) => (
-          <div key={i} className="space-y-3">
-            <Skeleton className="aspect-[16/9] w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-1/2" />
+          <div key={i} className="animate-pulse">
+            <div className="aspect-[16/10] rounded-xl bg-black/[0.04]" />
+            <div className="pt-4 space-y-2.5">
+              <div className="h-3 w-24 rounded bg-black/[0.04]" />
+              <div className="h-4 w-3/4 rounded bg-black/[0.06]" />
+              <div className="h-3 w-full rounded bg-black/[0.04]" />
+            </div>
           </div>
         ))}
       </div>
@@ -28,14 +29,14 @@ export function ArticleGrid({ articles, loading, basePath }: ArticleGridProps) {
 
   if (articles.length === 0) {
     return (
-      <div className="py-12 text-center">
-        <p className="text-muted-foreground">Brak artykulow do wyswietlenia.</p>
+      <div className="py-16 text-center">
+        <p className="text-sm text-black/35">Brak artykulow do wyswietlenia.</p>
       </div>
     )
   }
 
   return (
-    <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="grid gap-x-6 gap-y-10 sm:grid-cols-2 lg:grid-cols-3">
       {articles.map((article) => (
         <ArticleCard key={article.id} article={article} basePath={basePath} />
       ))}

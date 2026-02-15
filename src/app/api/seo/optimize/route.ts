@@ -1,10 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { autoOptimizeSEO, generateSEOReport, generateMedicalArticleSchema } from '@/lib/seo'
+import { getRequestUser } from '@/lib/auth/server'
 
 export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    const user = await getRequestUser(request)
+    if (user.role !== 'admin') {
+      return NextResponse.json(
+        { success: false, error: 'Forbidden' },
+        { status: user.role === 'guest' ? 401 : 403 }
+      )
+    }
+
     const { title, content, currentMeta, author, publishedDate, modifiedDate, imageUrl } =
       await request.json()
 

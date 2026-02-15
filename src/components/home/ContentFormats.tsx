@@ -42,7 +42,7 @@ export function ContentFormats() {
         Content types
       </p>
       <h2 className="mt-4 text-2xl font-semibold tracking-tight text-black sm:text-3xl">
-        What you'll find here.
+        What you&apos;ll find here.
       </h2>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-black/50">
         Articles are structured around these formats for quick, clear reading.

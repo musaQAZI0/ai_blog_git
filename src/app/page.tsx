@@ -1,222 +1,213 @@
 import Link from 'next/link'
-import { Button } from '@/components/ui'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, BookOpen, Microscope, ShieldCheck, Stethoscope } from 'lucide-react'
 import { ContentFormats } from '@/components/home/ContentFormats'
+import { Button } from '@/components/ui'
+
+const PATHS = [
+  {
+    title: 'Patient blog',
+    description:
+      'Clear, practical articles about eye symptoms, treatments, prevention, and when to seek urgent care.',
+    href: '/patient',
+    cta: 'Browse patient articles',
+    tags: ['No login required', 'Simple language', 'Action-oriented'],
+    tone: 'light',
+  },
+  {
+    title: 'Professional blog',
+    description:
+      'Clinical summaries, research highlights, and decision support content for verified medical professionals.',
+    href: '/professional',
+    cta: 'Open professional area',
+    tags: ['Login required', 'Verified registration', 'Clinical focus'],
+    tone: 'dark',
+  },
+] as const
+
+const TRUST_ITEMS = [
+  {
+    title: 'Evidence-based content',
+    description: 'Articles are built around research-backed recommendations and practical interpretation.',
+    icon: Microscope,
+  },
+  {
+    title: 'Clinical perspective',
+    description: 'Written with real patient and specialist workflows in mind for fast, useful reading.',
+    icon: Stethoscope,
+  },
+  {
+    title: 'Safety-first structure',
+    description: 'Every topic prioritizes warning signs, next steps, and clear escalation guidance.',
+    icon: ShieldCheck,
+  },
+] as const
+
+const AUTHOR_HIGHLIGHTS = [
+  'Ophthalmologist and eye surgeon with international training',
+  'Academic and evidence-focused clinical educator',
+  'Focus on cataract, glaucoma, dry eye, and retinal disease care',
+] as const
 
 export default function HomePage() {
   return (
-    <section className="mx-auto max-w-[980px]">
-      {/* ── Hero ── */}
-      <div className="pb-12">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
-          Ophthalmology · Education · Evidence
-        </p>
-        <h1 className="mt-5 text-[clamp(2rem,5vw,3.25rem)] font-semibold leading-[1.1] tracking-tight text-black">
-          Evidence-based ophthalmology,{' '}
-          <span className="text-black/35">for patients and professionals.</span>
-        </h1>
-        <p className="mt-5 max-w-2xl text-base leading-relaxed text-black/55">
-          A platform by Dr hab. n. med. Janusz Skrzypecki — ophthalmologist, eye surgeon, and
-          researcher trained at Columbia University, Manchester, and Heidelberg.
-        </p>
-
-        <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Button asChild className="h-11 rounded-full bg-black px-6 text-sm text-white hover:bg-black/80">
-            <Link href="/patient">Browse articles</Link>
-          </Button>
-          <Button asChild variant="ghost" className="h-11 rounded-full px-6 text-sm text-black/60 hover:text-black">
-            <Link href="https://skrzypecki.pl" target="_blank" rel="noopener noreferrer">
-              About the author <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      {/* ── Divider ── */}
-      <div className="border-t border-black/[0.06]" />
-
-      {/* ── Two Paths ── */}
-      <div className="py-12">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
-          Choose your path
-        </p>
-        <h2 className="mt-4 text-2xl font-semibold tracking-tight text-black sm:text-3xl">
-          Two blogs, one platform.
-        </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-black/50">
-          Pick the section that fits your background. The professional area requires login and
-          specialist verification.
-        </p>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-2">
-          {/* Patient Card */}
-          <Link
-            href="/patient"
-            className="group flex flex-col justify-between rounded-2xl border border-black/[0.08] bg-white p-6 transition-all duration-200 hover:border-black/20 hover:shadow-[0_2px_20px_-6px_rgba(0,0,0,0.08)]"
-          >
-            <div>
-              <div className="flex items-center gap-2.5">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-black/[0.04] text-sm">
-                  👁
-                </span>
-                <span className="text-sm font-semibold text-black">Patient blog</span>
-              </div>
-              <p className="mt-4 text-sm leading-relaxed text-black/55">
-                Clear, practical articles about eye health — symptoms, treatments, and when to see a
-                doctor. No login required.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {['Cataract', 'Glaucoma', 'Dry eye', 'AMD'].map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-black/[0.04] px-2.5 py-0.5 text-xs text-black/50"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="mt-6 flex items-center text-sm font-medium text-black/40 transition-colors group-hover:text-black">
-              Browse articles
-              <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-            </div>
-          </Link>
-
-          {/* Professional Card */}
-          <Link
-            href="/professional"
-            className="group flex flex-col justify-between rounded-2xl border border-black bg-black p-6 text-white transition-all duration-200 hover:shadow-[0_2px_24px_-6px_rgba(0,0,0,0.25)]"
-          >
-            <div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-sm">
-                    🩺
-                  </span>
-                  <span className="text-sm font-semibold text-white">Professional blog</span>
-                </div>
-                <span className="rounded-full bg-white/15 px-2.5 py-0.5 text-[11px] font-medium text-white/80">
-                  Login required
-                </span>
-              </div>
-              <p className="mt-4 text-sm leading-relaxed text-white/60">
-                Clinical summaries, research highlights, and decision algorithms. Verified access
-                for doctors and medical specialists.
-              </p>
-              <div className="mt-4 flex flex-wrap gap-1.5">
-                {['Algorithms', 'Research', 'Cases', 'Surgery'].map((tag) => (
-                  <span
-                    key={tag}
-                    className="rounded-full bg-white/10 px-2.5 py-0.5 text-xs text-white/50"
-                  >
-                    {tag}
-                  </span>
-                ))}
-              </div>
-            </div>
-            <div className="mt-6 flex items-center gap-4">
-              <span className="text-sm font-medium text-white/50 transition-colors group-hover:text-white">
-                Open pro blog
-                <ArrowRight className="ml-1.5 inline h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-              </span>
-            </div>
-          </Link>
-        </div>
-
-        {/* Registration note */}
-        <div className="mt-4 flex items-start gap-2 rounded-xl bg-black/[0.02] px-4 py-3">
-          <span className="mt-0.5 text-xs text-black/30">ℹ</span>
-          <p className="text-xs leading-relaxed text-black/40">
-            Professional registration requires a PWZ or equivalent number.{' '}
-            <Link href="/register" className="text-black/60 underline underline-offset-2 hover:text-black">
-              Register here
-            </Link>{' '}
-            or{' '}
-            <Link href="/login" className="text-black/60 underline underline-offset-2 hover:text-black">
-              log in
-            </Link>
-            .
+    <section className="mx-auto w-full max-w-6xl px-4 pb-16 sm:px-6 lg:px-8">
+      <div className="rounded-3xl border border-black/[0.08] bg-gradient-to-b from-black/[0.03] to-white p-6 sm:p-8 lg:p-10">
+        <div className="max-w-3xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-black/45">
+            Ophthalmology education platform
           </p>
+          <h1 className="mt-4 text-[clamp(1.95rem,6vw,3.35rem)] font-semibold leading-[1.08] tracking-tight text-black">
+            Clear eye-care guidance for patients and medical professionals.
+          </h1>
+          <p className="mt-4 max-w-2xl text-sm leading-relaxed text-black/65 sm:text-base">
+            Learn from evidence-based ophthalmology content created by Dr hab. n. med. Janusz
+            Skrzypecki. The platform is organized for fast reading, safer decisions, and better
+            follow-up actions.
+          </p>
+
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Button asChild className="h-11 rounded-full bg-black px-6 text-sm text-white hover:bg-black/85">
+              <Link href="/patient">Start reading</Link>
+            </Button>
+            <Button
+              asChild
+              variant="outline"
+              className="h-11 rounded-full border-black/20 px-6 text-sm text-black hover:bg-black/[0.03]"
+            >
+              <Link href="https://skrzypecki.pl" target="_blank" rel="noopener noreferrer">
+                About the author
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+              </Link>
+            </Button>
+          </div>
         </div>
       </div>
 
-      {/* ── Divider ── */}
-      <div className="border-t border-black/[0.06]" />
+      <div className="mt-10">
+        <div className="mb-5 flex items-center gap-2 text-black/45">
+          <BookOpen className="h-4 w-4" />
+          <p className="text-xs font-semibold uppercase tracking-[0.2em]">Choose your path</p>
+        </div>
 
-      {/* ── About ── */}
-      <div className="py-12">
-        <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
-          About the author
-        </p>
-        <h2 className="mt-4 text-2xl font-semibold tracking-tight text-black sm:text-3xl">
-          Dr hab. n. med. Janusz Skrzypecki
-        </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-black/55">
-          Ophthalmologist and eye surgeon with a clinical and academic background including training
-          in New York (Columbia University), Manchester, and Heidelberg.
-        </p>
-
-        <div className="mt-8 grid gap-px overflow-hidden rounded-xl border border-black/[0.08] bg-black/[0.04] sm:grid-cols-3">
-          {[
-            {
-              title: 'Clinical focus',
-              items: [
-                'Cataract diagnosis and surgery',
-                'Myopia control in children',
-                'Dry eye, glaucoma, macular diseases',
-              ],
-            },
-            {
-              title: 'Research & education',
-              items: [
-                'International ophthalmology journals',
-                'Evidence-based clinical training',
-                'Polish Ophthalmological Society, AAO',
-              ],
-            },
-            {
-              title: 'Highlights',
-              items: [
-                'Top national specialization exam result',
-                'Habilitation in medical sciences',
-                'Warsaw Medical University — with honors',
-              ],
-            },
-          ].map((col) => (
-            <div key={col.title} className="bg-white p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.1em] text-black/35">
-                {col.title}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {PATHS.map((path) => (
+            <Link
+              key={path.title}
+              href={path.href}
+              className={
+                path.tone === 'dark'
+                  ? 'group rounded-2xl border border-black bg-black p-6 text-white transition-all hover:-translate-y-0.5 hover:shadow-[0_10px_30px_-16px_rgba(0,0,0,0.55)]'
+                  : 'group rounded-2xl border border-black/[0.08] bg-white p-6 transition-all hover:-translate-y-0.5 hover:border-black/20 hover:shadow-[0_10px_30px_-16px_rgba(0,0,0,0.22)]'
+              }
+            >
+              <p
+                className={
+                  path.tone === 'dark' ? 'text-sm font-semibold text-white' : 'text-sm font-semibold text-black'
+                }
+              >
+                {path.title}
               </p>
-              <ul className="mt-3 space-y-2">
-                {col.items.map((item) => (
-                  <li key={item} className="text-sm leading-relaxed text-black/60">
-                    {item}
-                  </li>
+              <p
+                className={
+                  path.tone === 'dark'
+                    ? 'mt-3 text-sm leading-relaxed text-white/70'
+                    : 'mt-3 text-sm leading-relaxed text-black/65'
+                }
+              >
+                {path.description}
+              </p>
+
+              <div className="mt-4 flex flex-wrap gap-2">
+                {path.tags.map((tag) => (
+                  <span
+                    key={tag}
+                    className={
+                      path.tone === 'dark'
+                        ? 'rounded-full bg-white/10 px-2.5 py-1 text-[11px] text-white/75'
+                        : 'rounded-full bg-black/[0.05] px-2.5 py-1 text-[11px] text-black/55'
+                    }
+                  >
+                    {tag}
+                  </span>
                 ))}
-              </ul>
-            </div>
+              </div>
+
+              <div
+                className={
+                  path.tone === 'dark'
+                    ? 'mt-5 inline-flex items-center text-sm font-medium text-white/80 transition-colors group-hover:text-white'
+                    : 'mt-5 inline-flex items-center text-sm font-medium text-black/55 transition-colors group-hover:text-black'
+                }
+              >
+                {path.cta}
+                <ArrowRight className="ml-1.5 h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
+              </div>
+            </Link>
           ))}
         </div>
+      </div>
 
-        <div className="mt-5 flex flex-wrap items-center gap-3">
-          <Button asChild variant="ghost" className="h-9 rounded-full px-4 text-sm text-black/50 hover:text-black">
+      <div className="mt-10 grid gap-4 md:grid-cols-3">
+        {TRUST_ITEMS.map((item) => {
+          const Icon = item.icon
+          return (
+            <div key={item.title} className="rounded-2xl border border-black/[0.08] bg-white p-5">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.05]">
+                <Icon className="h-4 w-4 text-black/70" />
+              </span>
+              <p className="mt-4 text-sm font-semibold text-black">{item.title}</p>
+              <p className="mt-2 text-sm leading-relaxed text-black/60">{item.description}</p>
+            </div>
+          )
+        })}
+      </div>
+
+      <div className="mt-10 rounded-2xl border border-black/[0.08] bg-white p-6 sm:p-8">
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-black/40">
+          About the author
+        </p>
+        <h2 className="mt-3 text-2xl font-semibold tracking-tight text-black sm:text-3xl">
+          Dr hab. n. med. Janusz Skrzypecki
+        </h2>
+        <p className="mt-3 max-w-3xl text-sm leading-relaxed text-black/65 sm:text-base">
+          Ophthalmologist and eye surgeon with international training in New York, Manchester, and
+          Heidelberg, focused on practical and evidence-based eye care education.
+        </p>
+
+        <ul className="mt-5 space-y-2">
+          {AUTHOR_HIGHLIGHTS.map((item) => (
+            <li key={item} className="flex gap-2.5 text-sm text-black/65">
+              <span className="mt-2 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-black/40" />
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center">
+          <Button
+            asChild
+            variant="ghost"
+            className="h-9 justify-start rounded-full px-4 text-sm text-black/60 hover:text-black"
+          >
             <Link href="https://skrzypecki.pl" target="_blank" rel="noopener noreferrer">
-              skrzypecki.pl <ArrowRight className="ml-1 h-3 w-3" />
+              skrzypecki.pl
+              <ArrowRight className="ml-1 h-3 w-3" />
             </Link>
           </Button>
-          <Button asChild variant="ghost" className="h-9 rounded-full px-4 text-sm text-black/50 hover:text-black">
+          <Button
+            asChild
+            variant="ghost"
+            className="h-9 justify-start rounded-full px-4 text-sm text-black/60 hover:text-black"
+          >
             <Link href="https://okulistykaakademicka.pl" target="_blank" rel="noopener noreferrer">
-              okulistykaakademicka.pl <ArrowRight className="ml-1 h-3 w-3" />
+              okulistykaakademicka.pl
+              <ArrowRight className="ml-1 h-3 w-3" />
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* ── Divider ── */}
-      <div className="border-t border-black/[0.06]" />
-
-      {/* ── Content Formats ── */}
-      <div className="py-12">
+      <div className="mt-10 rounded-2xl border border-black/[0.08] bg-white p-6 sm:p-8">
         <ContentFormats />
       </div>
     </section>

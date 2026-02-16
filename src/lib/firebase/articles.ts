@@ -15,7 +15,7 @@ import {
   increment,
   DocumentSnapshot,
 } from 'firebase/firestore'
-import { db, ensureFirebaseInitialized, isFirebaseConfigured } from './config.client'
+import { auth, db, ensureFirebaseInitialized, isFirebaseConfigured } from './config.client'
 import { Article, ArticleCreateData, TargetAudience, ArticleStatus } from '@/types'
 import { generateSlug } from '@/lib/utils'
 
@@ -63,6 +63,27 @@ function ensureDb() {
 async function ensureDbAsync() {
   await ensureFirebaseInitialized()
   return ensureDb()
+}
+
+async function syncPublishedPatientArticle(articleId: string): Promise<void> {
+  if (typeof window === 'undefined') return
+  const user = auth?.currentUser
+  if (!user) return
+
+  const token = await user.getIdToken()
+  const response = await fetch('/api/integrations/wordpress/sync', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ articleId }),
+  })
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as { error?: string } | null
+    throw new Error(payload?.error || `WordPress sync failed with status ${response.status}`)
+  }
 }
 
 export async function createArticle(
@@ -118,6 +139,16 @@ export async function publishArticle(articleId: string): Promise<void> {
     publishedAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   })
+
+  try {
+    const snap = await getDoc(articleRef)
+    const targetAudience = snap.data()?.targetAudience
+    if (targetAudience === 'patient') {
+      await syncPublishedPatientArticle(articleId)
+    }
+  } catch (error) {
+    console.warn('Failed to sync patient article to WordPress:', error)
+  }
 }
 
 export async function unpublishArticle(articleId: string): Promise<void> {

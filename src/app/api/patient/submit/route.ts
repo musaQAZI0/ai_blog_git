@@ -5,6 +5,10 @@ import { ArticleCreateData } from '@/types'
 import { generateSlug } from '@/lib/utils'
 import { getAdminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin'
 import { rateLimit } from '@/lib/rate-limit'
+import {
+  syncPatientArticleToWordPress,
+  WordPressPatientSyncResult,
+} from '@/lib/integrations/wordpress.server'
 
 export const dynamic = 'force-dynamic'
 
@@ -16,6 +20,20 @@ function getClientIp(request: NextRequest): string {
 
 function isNonEmptyString(value: unknown, min = 1): value is string {
   return typeof value === 'string' && value.trim().length >= min
+}
+
+function buildWordPressSyncUpdate(syncResult: WordPressPatientSyncResult): Record<string, unknown> {
+  return {
+    wordpressSync: {
+      status: syncResult.success ? 'success' : syncResult.skipped ? 'skipped' : 'failed',
+      attemptedAt: FieldValue.serverTimestamp(),
+      ...(syncResult.reason ? { reason: syncResult.reason } : {}),
+      ...(syncResult.action ? { action: syncResult.action } : {}),
+      ...(typeof syncResult.postId === 'number' ? { postId: syncResult.postId } : {}),
+      ...(syncResult.postUrl ? { postUrl: syncResult.postUrl } : {}),
+      ...(syncResult.error ? { error: syncResult.error } : {}),
+    },
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -98,7 +116,31 @@ export async function POST(request: NextRequest) {
 
     const docRef = await db.collection('articles').add(articleDoc)
 
-    return NextResponse.json({ success: true, id: docRef.id, slug, status: autoPublish ? 'published' : 'draft' })
+    let wordpressSync: WordPressPatientSyncResult | undefined
+
+    if (autoPublish) {
+      wordpressSync = await syncPatientArticleToWordPress({
+        id: docRef.id,
+        title: body.title,
+        slug,
+        content: body.content,
+        excerpt: body.excerpt,
+      })
+
+      try {
+        await docRef.update(buildWordPressSyncUpdate(wordpressSync))
+      } catch (syncPersistError) {
+        console.error('WordPress sync metadata persist error:', syncPersistError)
+      }
+    }
+
+    return NextResponse.json({
+      success: true,
+      id: docRef.id,
+      slug,
+      status: autoPublish ? 'published' : 'draft',
+      ...(wordpressSync ? { wordpressSync } : {}),
+    })
   } catch (error) {
     console.error('Patient submit error:', error)
     return NextResponse.json(

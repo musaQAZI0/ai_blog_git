@@ -157,18 +157,28 @@ Every article MUST be complete — never stop mid-sentence or mid-paragraph.
 You MUST fill in ALL JSON fields completely. Empty arrays or generic placeholder values are NOT acceptable.`
 
 const PROFESSIONAL_SYSTEM_PROMPT = `You are the Editor-in-Chief of a high-impact scientific journal specializing in ophthalmology.
-Your task is to write a concise editorial review of the provided article, targeted specifically at ophthalmologists and optometrists.
-Write in sophisticated, academic Polish appropriate for peer-reviewed literature.
-Adopt an authoritative, analytical, and objective tone.
-Structure the review to include:
+Your task is to extract the **pure essence** of the provided article for a rapid-fire briefing designated for busy ophthalmologists and optometrists.
 
-Editorial Summary: A high-level synthesis of the article's subject.
+**Strict Constraints:**
+1.  **Zero Fluff:** Eliminate all introductory phrases, transitional sentences, and meta-commentary (e.g., avoid "The authors conclude that...", "It is important to note..."). Go straight to the facts.
+2.  **Maximum Density:** Use an economy of words. Prioritize data, p-values, specific anatomical structures, and exact drug dosages over descriptive prose.
+3.  **Length:** Do not expand the content. If the source is short, the output must be short. Quality is measured by information density, not word count.
+4.  **Language:** Write in **ultra-precise, academic Polish**. Use professional terminology exclusively.
 
-Key Highlights: Extract the most important data points, specific study findings, statistical outcomes, or distinct clinical protocols found in the text.
+**Structure:**
 
-Clinical Impact: Explicitly explain why this matters for daily practice (e.g., diagnostics, treatment efficacy, patient management).
+**1. Core Thesis (Synteza):**
+Provide exactly 1-2 complex sentences summarizing the primary discovery or argument. No generalizations.
 
-Ground all claims strictly in the provided document content. If the document does not contain a detail, do not invent it.`
+**2. Data & Findings (Kluczowe Dane):**
+Use a bulleted list to present the hard evidence.
+* Focus strictly on statistical outcomes, specific clinical protocols, or concrete physiological changes.
+* Ignore general background information unless critical for context.
+
+**3. Practice Directive (Implikacje Kliniczne):**
+In 1-2 sentences, state the direct actionable application for clinical practice (e.g., "Change first-line therapy to X", "Monitor Y parameter"). If there is no direct application, state "Research relevance only."
+
+Ground all claims strictly in the provided document. Do not hallucinate data.`
 
 function extractJsonObject(text: string): string {
   const trimmed = (text || '').trim()
@@ -311,8 +321,14 @@ Required JSON format:
   })
 
   const responseText = result.response.text()
+  console.log('[gemini] Raw response length:', responseText.length)
+  console.log('[gemini] Raw response (first 500 chars):', responseText.slice(0, 500))
   const jsonStr = extractJsonObject(responseText)
+  console.log('[gemini] Extracted JSON length:', jsonStr.length)
   const articleData = safeParseJsonObject(jsonStr) || {}
+  console.log('[gemini] Parsed keys:', Object.keys(articleData))
+  console.log('[gemini] Content length:', (articleData.content || '').length)
+  console.log('[gemini] Title:', articleData.title)
 
   let generatedImageUrl: string | undefined
   let content: string = typeof articleData.content === 'string' ? articleData.content : ''

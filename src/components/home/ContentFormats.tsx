@@ -9,27 +9,27 @@ type FormatKey = 'explainers' | 'clinical' | 'research' | 'checklists'
 const FORMATS: Array<{ key: FormatKey; title: string; lead: string; details: string[] }> = [
   {
     key: 'explainers',
-    title: 'Patient explainers',
-    lead: 'Plain-language articles on symptoms, treatment, and next steps.',
-    details: ['What is urgent vs normal', 'At-home care and monitoring', 'How to prepare for a visit'],
+    title: 'Artykuly dla pacjentow',
+    lead: 'Proste omowienia objawow, leczenia i kolejnych krokow.',
+    details: ['Co jest pilne, a co standardowe', 'Domowa opieka i obserwacja', 'Jak przygotowac sie do wizyty'],
   },
   {
     key: 'clinical',
-    title: 'Clinical summaries',
-    lead: 'Structured notes for clinicians and medical professionals.',
-    details: ['Decision pathways', 'Treatment outlines', 'Red flags and differential'],
+    title: 'Podsumowania kliniczne',
+    lead: 'Ustrukturyzowane materialy dla lekarzy i specjalistow medycznych.',
+    details: ['Sciezki decyzyjne', 'Schematy leczenia', 'Objawy alarmowe i diagnostyka roznicowa'],
   },
   {
     key: 'research',
-    title: 'Research highlights',
-    lead: "What's new in the literature and how to interpret it.",
-    details: ['Key numbers', 'Limitations and bias', 'Practical takeaways'],
+    title: 'Przeglad badan',
+    lead: 'Najwazniejsze nowosci z literatury i ich praktyczna interpretacja.',
+    details: ['Kluczowe liczby', 'Ograniczenia badan i ryzyko bledow', 'Wnioski do codziennej praktyki'],
   },
   {
     key: 'checklists',
-    title: 'Checklists & workflows',
-    lead: 'Actionable lists you can use immediately.',
-    details: ['Pre-procedure preparation', 'Aftercare expectations', 'Follow-up questions'],
+    title: 'Checklisty i workflow',
+    lead: 'Listy kontrolne, ktore mozna od razu wdrozyc.',
+    details: ['Przygotowanie do zabiegu', 'Zalecenia po leczeniu', 'Pytania kontrolne na kolejna wizyte'],
   },
 ]
 
@@ -39,13 +39,13 @@ export function ContentFormats() {
   return (
     <div>
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
-        Content types
+        Typy tresci
       </p>
       <h2 className="mt-4 text-2xl font-semibold tracking-tight text-black sm:text-3xl">
-        What you&apos;ll find here.
+        Co znajdziesz na blogu.
       </h2>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-black/50">
-        Articles are structured around these formats for quick, clear reading.
+        Artykuly sa uporzadkowane wedlug ponizszych formatow, aby ulatwic szybkie i czytelne przegladanie.
       </p>
 
       <div className="mt-8 space-y-2">

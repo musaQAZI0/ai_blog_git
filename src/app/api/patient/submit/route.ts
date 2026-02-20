@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
     const rl = rateLimit(`patient-submit:${ip}`, { limit: 5, windowMs: 60 * 60 * 1000 })
     if (!rl.ok) {
       return NextResponse.json(
-        { success: false, error: 'Za duzo prob. Sprobuj ponownie pozniej.' },
+        { success: false, error: 'Za duzo prob. Spróbuj ponownie pozniej.' },
         { status: 429 }
       )
     }
@@ -57,18 +57,14 @@ export async function POST(request: NextRequest) {
     const body = (await request.json()) as Partial<ArticleCreateData>
 
     if (!isNonEmptyString(body.title, 5)) {
-      return NextResponse.json({ success: false, error: 'Nieprawidlowy tytul' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Nieprawidłowy tytuł' }, { status: 400 })
     }
     if (!isNonEmptyString(body.content, 100)) {
-      return NextResponse.json({ success: false, error: 'Nieprawidlowa tresc' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Nieprawidłowa treść' }, { status: 400 })
     }
     if (!isNonEmptyString(body.excerpt, 20)) {
-      return NextResponse.json({ success: false, error: 'Nieprawidlowe streszczenie' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Nieprawidłowe streszczenie' }, { status: 400 })
     }
-    if (!isNonEmptyString(body.category, 1)) {
-      return NextResponse.json({ success: false, error: 'Wybierz kategorie' }, { status: 400 })
-    }
-
     const seoMeta = body.seoMeta
     if (
       !seoMeta ||
@@ -76,7 +72,7 @@ export async function POST(request: NextRequest) {
       !isNonEmptyString(seoMeta.description, 1) ||
       !Array.isArray(seoMeta.keywords)
     ) {
-      return NextResponse.json({ success: false, error: 'Nieprawidlowe SEO meta' }, { status: 400 })
+      return NextResponse.json({ success: false, error: 'Nieprawidłowe SEO meta' }, { status: 400 })
     }
 
     const baseSlug = generateSlug(body.title)
@@ -90,7 +86,7 @@ export async function POST(request: NextRequest) {
       slug,
       content: body.content,
       excerpt: body.excerpt,
-      category: body.category,
+      category: 'patient',
       targetAudience: 'patient',
       authorId: 'guest',
       authorName: 'Guest Patient',

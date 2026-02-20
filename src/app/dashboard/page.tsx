@@ -50,7 +50,7 @@ function DashboardContent() {
       {/* Header */}
       <div className="mb-8 flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Panel uzytkownika</h1>
+          <h1 className="text-3xl font-bold">Panel użytkownika</h1>
           <p className="mt-1 text-muted-foreground">Witaj, {user?.name}</p>
         </div>
         {isAdmin ? (
@@ -118,7 +118,7 @@ function DashboardContent() {
                   </div>
                   <div>
                     <h3 className="font-semibold">Utworz artykul z AI</h3>
-                    <p className="text-sm text-muted-foreground">Wgraj PDF i wygeneruj tresc</p>
+                    <p className="text-sm text-muted-foreground">Wgraj PDF i wygeneruj treść</p>
                   </div>
                 </CardContent>
               </Card>
@@ -132,7 +132,7 @@ function DashboardContent() {
                   </div>
                   <div>
                     <h3 className="font-semibold">Moje artykuly</h3>
-                    <p className="text-sm text-muted-foreground">Zarzadzaj swoimi artykulami</p>
+                    <p className="text-sm text-muted-foreground">Zarządzaj swoimi artykulami</p>
                   </div>
                 </CardContent>
               </Card>
@@ -141,7 +141,7 @@ function DashboardContent() {
         ) : (
           <Card className="sm:col-span-2 lg:col-span-2">
             <CardContent className="p-6">
-              <h3 className="font-semibold">Dostep tylko do czytania</h3>
+              <h3 className="font-semibold">Dostęp tylko do czytania</h3>
               <p className="mt-1 text-sm text-muted-foreground">
                 Tworzenie i edycja artykulow jest dostepne tylko dla administratora.
               </p>
@@ -158,7 +158,7 @@ function DashboardContent() {
               <div>
                 <h3 className="font-semibold">Ustawienia</h3>
                 <p className="text-sm text-muted-foreground">
-                  Zarzadzaj kontem i preferencjami
+                  Zarządzaj kontem i preferencjami
                 </p>
               </div>
             </CardContent>

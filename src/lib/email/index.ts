@@ -253,7 +253,7 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<voi
           <div class="content">
             <p>Witaj ${name},</p>
             <p>Dziękujemy za rejestrację na portalu <strong>www.skrzypecki.pl</strong>.</p>
-            <p>Twoje konto oczekuje na weryfikację przez nasz zespół. Otrzymasz powiadomienie email, gdy Twoje konto zostanie zatwierdzone.</p>
+            <p>Twoje konto oczekuje na weryfikację przez nasz zespół. Otrzymasz powiadomienie e-mail, gdy Twoje konto zostanie zatwierdzone.</p>
             <p>Proces weryfikacji zwykle trwa 24-48 godzin.</p>
             <p>Jeśli masz jakiekolwiek pytania, skontaktuj się z nami pod adresem ${process.env.ADMIN_EMAIL}.</p>
             <p>Pozdrawiamy,<br>Zespół Skrzypecki.pl</p>

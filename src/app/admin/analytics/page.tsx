@@ -175,7 +175,7 @@ function AnalyticsContent() {
               </p>
             </div>
             <div className="rounded-lg border p-4">
-              <h3 className="font-medium">Konwersje</h3>
+              <h3 className="font-medium">Konwersj?</h3>
               <p className="text-sm text-muted-foreground">
                 Monitoruj rejestracje i subskrypcje newslettera
               </p>

@@ -31,7 +31,7 @@ function DashboardArticleEditContent() {
         const existing = await getArticleById(articleId)
         setArticle(existing)
         if (!existing) {
-          setError('Nie znaleziono artykulu.')
+          setError('Nie znaleziono artykułu.')
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Wystapil blad')
@@ -54,7 +54,7 @@ function DashboardArticleEditContent() {
       }
       router.push('/dashboard/articles')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Blad zapisu artykulu')
+      setError(err instanceof Error ? err.message : 'Błąd zapisu artykułu')
     } finally {
       setSaving(false)
     }
@@ -74,7 +74,7 @@ function DashboardArticleEditContent() {
           <div>
             <h1 className="text-3xl font-bold">Edytuj artykul</h1>
             <p className="mt-1 text-muted-foreground">
-              Zaktualizuj tresc i opublikuj, gdy bedzie gotowy
+              Zaktualizuj treść i opublikuj, gdy będzie gotowy
             </p>
           </div>
           <Button variant="outline" asChild>

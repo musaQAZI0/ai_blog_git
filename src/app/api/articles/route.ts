@@ -9,13 +9,11 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const targetAudience = searchParams.get('targetAudience') as TargetAudience | null
     const status = searchParams.get('status') as ArticleStatus | null
-    const category = searchParams.get('category')
     const pageSize = parseInt(searchParams.get('pageSize') || '12')
 
     const { articles } = await getArticles({
       targetAudience: targetAudience || undefined,
       status: status || 'published',
-      category: category || undefined,
       pageSize: Math.min(pageSize, 50),
     })
 

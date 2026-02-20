@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchArticles, getSearchSuggestions } from '@/lib/search'
 import { TargetAudience } from '@/types'
-import { trackSearch } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
 
@@ -10,7 +9,6 @@ export async function GET(request: NextRequest) {
     const searchParams = request.nextUrl.searchParams
     const query = searchParams.get('q')
     const targetAudience = searchParams.get('audience') as TargetAudience | null
-    const category = searchParams.get('category')
     const tags = searchParams.get('tags')?.split(',')
     const limit = parseInt(searchParams.get('limit') || '20', 10)
     const suggestions = searchParams.get('suggestions') === 'true'
@@ -42,7 +40,6 @@ export async function GET(request: NextRequest) {
     const results = await searchArticles({
       query,
       targetAudience: targetAudience || undefined,
-      category: category || undefined,
       tags,
       limit,
     })
@@ -54,21 +51,7 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         query,
-        results: results.map((r) => ({
-          article: {
-            id: r.article.id,
-            title: r.article.title,
-            slug: r.article.slug,
-            excerpt: r.article.excerpt,
-            coverImage: r.article.coverImage,
-            category: r.article.category,
-            tags: r.article.tags,
-            publishedAt: r.article.publishedAt,
-            targetAudience: r.article.targetAudience,
-          },
-          score: r.score,
-          highlights: r.highlights,
-        })),
+        results,
         totalResults: results.length,
       },
     })

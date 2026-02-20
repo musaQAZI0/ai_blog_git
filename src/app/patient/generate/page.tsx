@@ -61,7 +61,7 @@ export default function PatientGeneratePage() {
 
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        throw new Error(payload?.error || 'Blad generowania artykulu')
+        throw new Error(payload?.error || 'Błąd generowania artykułu')
       }
 
       const payloadData = normalizeAIGenerationResponse(payload.data as AIGenerationResponse)
@@ -101,7 +101,7 @@ export default function PatientGeneratePage() {
 
       const payload = await response.json().catch(() => null)
       if (!response.ok) {
-        throw new Error(payload?.error || 'Blad zapisu')
+        throw new Error(payload?.error || 'Błąd zapisu')
       }
 
       setSubmitted(true)
@@ -134,7 +134,7 @@ export default function PatientGeneratePage() {
       <Alert variant="default" className="mb-6 border-border bg-muted/70 text-foreground">
         <AlertDescription>
           Wygenerowany tekst ma charakter informacyjny i nie stanowi porady medycznej.
-          Przed publikacja moze zostac przekazany do weryfikacji.
+          Przed publikacja może zostac przekazany do weryfikacji.
         </AlertDescription>
       </Alert>
 
@@ -147,7 +147,7 @@ export default function PatientGeneratePage() {
       {submitted && (
         <Alert variant="success" className="mb-6">
           <AlertDescription>
-            Dziekujemy! Artykul zostal wyslany do weryfikacji.
+            Dziekujemy! Artykuł został wyslany do weryfikacji.
           </AlertDescription>
         </Alert>
       )}
@@ -197,7 +197,7 @@ export default function PatientGeneratePage() {
               Krok 2: Popraw i wyslij
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Przejrzyj tresc i wyslij do weryfikacji (bez rejestracji).
+              Przejrzyj treść i wyslij do weryfikacji (bez rejestracji).
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -207,7 +207,6 @@ export default function PatientGeneratePage() {
                 title: generatedContent.title,
                 content: generatedContent.content,
                 excerpt: generatedContent.excerpt,
-                category: generatedContent.suggestedCategory,
                 targetAudience: 'patient',
                 tags: generatedContent.suggestedTags,
                 seoMeta: generatedContent.seoMeta,

@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
 
     if (!email || !validateEmail(email)) {
       return NextResponse.json(
-        { success: false, error: 'Nieprawidlowy adres email' },
+        { success: false, error: 'Nieprawidłowy adres email' },
         { status: 400 }
       )
     }
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Newsletter subscription error:', error)
     return NextResponse.json(
-      { success: false, error: 'Blad zapisu do newslettera' },
+      { success: false, error: 'Błąd zapisu do newslettera' },
       { status: 500 }
     )
   }

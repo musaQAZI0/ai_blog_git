@@ -79,27 +79,6 @@
       "collectionGroup": "articles",
       "queryScope": "COLLECTION",
       "fields": [
-        { "fieldPath": "status", "mode": "ASCENDING" },
-        { "fieldPath": "category", "mode": "ASCENDING" },
-        { "fieldPath": "publishedAt", "mode": "DESCENDING" },
-        { "fieldPath": "__name__", "mode": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "articles",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "status", "mode": "ASCENDING" },
-        { "fieldPath": "targetAudience", "mode": "ASCENDING" },
-        { "fieldPath": "category", "mode": "ASCENDING" },
-        { "fieldPath": "publishedAt", "mode": "DESCENDING" },
-        { "fieldPath": "__name__", "mode": "DESCENDING" }
-      ]
-    },
-    {
-      "collectionGroup": "articles",
-      "queryScope": "COLLECTION",
-      "fields": [
         { "fieldPath": "authorId", "mode": "ASCENDING" },
         { "fieldPath": "createdAt", "mode": "DESCENDING" },
         { "fieldPath": "__name__", "mode": "DESCENDING" }

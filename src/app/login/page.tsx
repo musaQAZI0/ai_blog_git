@@ -14,7 +14,7 @@ export default function LoginPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Witaj ponownie</CardTitle>
           <CardDescription>
-            Zaloguj sie do swojego konta specjalisty
+            Zaloguj sie do swójego konta specjalisty
           </CardDescription>
         </CardHeader>
         <CardContent>

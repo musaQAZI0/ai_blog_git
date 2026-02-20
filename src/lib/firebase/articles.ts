@@ -96,6 +96,7 @@ export async function createArticle(
 
   const articleData = removeUndefinedDeep({
     ...data,
+    category: data.category || data.targetAudience,
     slug,
     authorId,
     authorName,
@@ -216,7 +217,6 @@ export async function getArticleBySlug(
 export async function getArticles(options: {
   targetAudience?: TargetAudience
   status?: ArticleStatus
-  category?: string
   pageSize?: number
   lastDoc?: DocumentSnapshot
 }): Promise<{ articles: Article[]; lastDoc: DocumentSnapshot | null }> {
@@ -224,7 +224,6 @@ export async function getArticles(options: {
   const {
     targetAudience,
     status = 'published',
-    category,
     pageSize = 12,
     lastDoc,
   } = options
@@ -239,10 +238,6 @@ export async function getArticles(options: {
 
   if (targetAudience) {
     q = query(q, where('targetAudience', '==', targetAudience))
-  }
-
-  if (category) {
-    q = query(q, where('category', '==', category))
   }
 
   if (lastDoc) {

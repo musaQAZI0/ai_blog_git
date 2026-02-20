@@ -1,4 +1,5 @@
 import 'server-only'
+import { marked } from 'marked'
 
 export type PatientWordPressSyncInput = {
   id?: string
@@ -166,7 +167,7 @@ export async function syncPatientArticleToWordPress(
     const payload = {
       title: article.title.trim(),
       slug: article.slug.trim(),
-      content: article.content.trim(),
+      content: await marked.parse(article.content.trim()),
       excerpt: article.excerpt.trim(),
       status: config.postStatus,
       categories: [categoryId],

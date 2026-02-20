@@ -53,6 +53,7 @@ export async function POST(request: NextRequest) {
         id: userId,
         email: userData.email,
         name: userData.name,
+        phoneNumber: userData.phoneNumber || userData.whatsappNumber,
         professionalType: userData.professionalType,
         registrationNumber: userData.registrationNumber,
         specialization: userData.specialization,

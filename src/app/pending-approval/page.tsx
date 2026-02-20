@@ -25,13 +25,13 @@ export default function PendingApprovalPage() {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            Proces weryfikacji moze potrwac do 24-48 godzin roboczych.
-            Po zatwierdzeniu konta otrzymasz powiadomienie email.
+            Proces weryfikacji może potrwac do 24-48 godzin roboczych.
+            Po zatwierdzeniu konta otrzymasz powiadomienie e-mail.
           </p>
 
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Mail className="h-4 w-4" />
-            <span>Sprawdz swoja skrzynke email</span>
+            <span>Sprawdz swója skrzynke email</span>
           </div>
 
           <div className="pt-4">

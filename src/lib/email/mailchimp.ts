@@ -1,7 +1,6 @@
 import { EmailOptions } from './index'
 
 const MAILCHIMP_API_KEY = process.env.MAILCHIMP_API_KEY
-const MAILCHIMP_SERVER_PREFIX = process.env.MAILCHIMP_SERVER_PREFIX || 'us1'
 
 export async function sendEmailWithMailchimp(options: EmailOptions): Promise<void> {
   if (!MAILCHIMP_API_KEY) {

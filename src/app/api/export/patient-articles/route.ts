@@ -20,13 +20,11 @@ export async function GET(request: NextRequest) {
     // Get query params
     const { searchParams } = new URL(request.url)
     const limit = parseInt(searchParams.get('limit') || '10')
-    const category = searchParams.get('category') || undefined
 
     // Fetch patient articles
     const { articles } = await getArticles({
       targetAudience: 'patient',
       status: 'published',
-      category,
       pageSize: Math.min(limit, 50), // Max 50 articles per request
     })
 
@@ -38,7 +36,6 @@ export async function GET(request: NextRequest) {
       content: article.content,
       excerpt: article.excerpt,
       coverImage: article.coverImage,
-      category: article.category,
       tags: article.tags,
       author: article.authorName,
       publishedAt: article.publishedAt?.toISOString(),

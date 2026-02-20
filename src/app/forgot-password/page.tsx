@@ -58,9 +58,9 @@ export default function ForgotPasswordPage() {
     <div className="flex min-h-[calc(100vh-200px)] items-center justify-center px-4 py-12">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl">Resetowanie hasla</CardTitle>
+          <CardTitle className="text-2xl">Resetowanie hasła</CardTitle>
           <CardDescription>
-            Podaj swoj adres email, a wyslemy Ci link do zresetowania hasla
+            Podaj swój adres email, a wyslemy Ci link do zresetowania hasła
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -68,8 +68,8 @@ export default function ForgotPasswordPage() {
             <div className="space-y-4 text-center">
               <Alert variant="success">
                 <AlertDescription>
-                  Link do resetowania hasla zostal wyslany na podany adres email.
-                  Sprawdz swoja skrzynke.
+                  Link do resetowania hasła został wyslany na podany adres email.
+                  Sprawdz swója skrzynke.
                 </AlertDescription>
               </Alert>
               <Button variant="link" asChild>

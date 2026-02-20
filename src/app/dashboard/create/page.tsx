@@ -80,7 +80,7 @@ function CreateArticleContent() {
 
       if (!response.ok) {
         const data = await response.json()
-        throw new Error(data.error || 'Blad generowania artykulu')
+        throw new Error(data.error || 'Błąd generowania artykułu')
       }
 
       const data = await response.json()
@@ -126,7 +126,7 @@ function CreateArticleContent() {
 
       router.push('/dashboard/articles')
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Blad zapisu artykulu')
+      setError(err instanceof Error ? err.message : 'Błąd zapisu artykułu')
     } finally {
       setSaving(false)
     }
@@ -144,7 +144,7 @@ function CreateArticleContent() {
         </Link>
         <h1 className="text-4xl font-semibold tracking-tight text-foreground">Utworz nowy artykul</h1>
         <p className="mt-3 max-w-2xl text-muted-foreground">
-          Wgraj dokumenty PDF i pozwol AI wygenerowac tresc artykulu
+          Wgraj dokumenty PDF i pozwol AI wygenerować treść artykułu
         </p>
       </div>
 
@@ -229,7 +229,7 @@ function CreateArticleContent() {
               Krok 2: Edytuj i opublikuj
             </CardTitle>
             <CardDescription className="text-muted-foreground">
-              Przejrzyj wygenerowana tresc i wprowadz ewentualne poprawki
+              Przejrzyj wygenerowana treść i wprowadź ewentualne poprawki
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -238,7 +238,6 @@ function CreateArticleContent() {
                 title: generatedContent.title,
                 content: generatedContent.content,
                 excerpt: generatedContent.excerpt,
-                category: generatedContent.suggestedCategory,
                 targetAudience,
                 tags: generatedContent.suggestedTags,
                 seoMeta: generatedContent.seoMeta,

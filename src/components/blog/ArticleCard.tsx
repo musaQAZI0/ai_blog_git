@@ -14,7 +14,6 @@ export function ArticleCard({ article, basePath = '/blog' }: ArticleCardProps) {
   return (
     <Link href={`${basePath}/${article.slug}`} className="group block">
       <article className="h-full">
-        {/* Image */}
         <div className="relative aspect-[16/10] overflow-hidden rounded-xl bg-black/[0.03]">
           {article.coverImage ? (
             <Image
@@ -29,27 +28,17 @@ export function ArticleCard({ article, basePath = '/blog' }: ArticleCardProps) {
           )}
         </div>
 
-        {/* Content */}
         <div className="pt-4">
-          {/* Category + date */}
           <div className="flex items-center gap-2 text-xs text-black/40">
-            {article.category && (
-              <>
-                <span className="font-medium uppercase tracking-wide">{article.category}</span>
-                <span>·</span>
-              </>
-            )}
             <span>{formatDate(article.publishedAt || article.createdAt)}</span>
-            <span>·</span>
+            <span>|</span>
             <span>{readingTime} min</span>
           </div>
 
-          {/* Title */}
           <h3 className="mt-2 text-[15px] font-semibold leading-snug text-black transition-colors group-hover:text-black/70">
             {article.title}
           </h3>
 
-          {/* Excerpt */}
           <p className="mt-1.5 text-sm leading-relaxed text-black/45">
             {truncateText(article.excerpt, 110)}
           </p>

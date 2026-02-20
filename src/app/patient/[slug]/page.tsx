@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Article } from '@/types'
 import { getMockArticleBySlug } from '@/lib/mock-data'
+import { fetchPublishedArticleBySlug } from '@/lib/api/articles.client'
 import { ArticleView } from '@/components/blog/ArticleView'
 import { Skeleton } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
@@ -25,13 +26,11 @@ export default function PatientArticlePage() {
           // Use mock data in demo mode
           fetchedArticle = getMockArticleBySlug(slug)
         } else {
-          // Use Firebase
-          const { getArticleBySlug } = await import('@/lib/firebase/articles')
-          fetchedArticle = await getArticleBySlug(slug, 'patient')
+          fetchedArticle = await fetchPublishedArticleBySlug(slug, 'patient')
         }
 
         if (!fetchedArticle) {
-          setError('Artykul nie zostal znaleziony')
+          setError('Artykuł nie został znaleziony')
           return
         }
         if (fetchedArticle.targetAudience !== 'patient') {
@@ -45,7 +44,7 @@ export default function PatientArticlePage() {
         if (mockArticle && mockArticle.targetAudience === 'patient') {
           setArticle(mockArticle)
         } else {
-          setError('Wystapil blad podczas ladowania artykulu')
+          setError('Wystapil blad podczas ładowania artykułu')
           console.error(err)
         }
       } finally {
@@ -76,7 +75,7 @@ export default function PatientArticlePage() {
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-destructive">
-            {error || 'Artykul nie znaleziony'}
+            {error || 'Artykuł nie znaleziony'}
           </h1>
           <a href="/patient" className="mt-4 text-primary hover:underline">
             Powrot do listy artykulow

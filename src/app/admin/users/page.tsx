@@ -61,7 +61,7 @@ function AdminUsersContent() {
   }
 
   const handleDelete = async (userId: string) => {
-    if (!confirm('Czy na pewno chcesz usunac tego uzytkownika?')) return
+    if (!confirm('Czy na pewno chcesz usunąć tego użytkownika?')) return
 
     try {
       const res = await fetch('/api/admin/users/delete', {
@@ -82,7 +82,7 @@ function AdminUsersContent() {
       case 'approved':
         return <Badge variant="success">Zatwierdzony</Badge>
       case 'pending':
-        return <Badge variant="warning">Oczekujacy</Badge>
+        return <Badge variant="warning">Oczekujący</Badge>
       case 'rejected':
         return <Badge variant="destructive">Odrzucony</Badge>
     }
@@ -98,9 +98,9 @@ function AdminUsersContent() {
           <ArrowLeft className="h-4 w-4" />
           Powrot do panelu
         </Link>
-        <h1 className="text-3xl font-bold">Zarzadzanie uzytkownikami</h1>
+        <h1 className="text-3xl font-bold">Zarządzanie użytkownikami</h1>
         <p className="mt-1 text-muted-foreground">
-          Przegladaj i zarzadzaj kontami uzytkownikow
+          Przeglądaj i zarządzaj kontami użytkowników
         </p>
       </div>
 
@@ -122,7 +122,7 @@ function AdminUsersContent() {
             options={[
               { value: 'all', label: 'Wszystkie statusy' },
               { value: 'approved', label: 'Zatwierdzeni' },
-              { value: 'pending', label: 'Oczekujacy' },
+              { value: 'pending', label: 'Oczekujący' },
               { value: 'rejected', label: 'Odrzuceni' },
             ]}
             className="w-48"
@@ -139,7 +139,7 @@ function AdminUsersContent() {
           {loading ? (
             <p className="text-muted-foreground">Ladowanie...</p>
           ) : filteredUsers.length === 0 ? (
-            <p className="text-muted-foreground">Nie znaleziono uzytkownikow</p>
+            <p className="text-muted-foreground">Nie znaleziono użytkowników</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full">

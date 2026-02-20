@@ -4,7 +4,7 @@ import { RegisterForm } from '@/components/auth/RegisterForm'
 
 export const metadata: Metadata = {
   title: 'Rejestracja',
-  description: 'Zaloz konto specjalisty medycznego',
+  description: 'Za• konto specjalisty medycznego',
 }
 
 export default function RegisterPage() {
@@ -14,7 +14,7 @@ export default function RegisterPage() {
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Rejestracja specjalisty</CardTitle>
           <CardDescription>
-            Zaloz konto, aby uzyskac dostep do specjalistycznych tresci.
+            Za• konto, aby uzyskac dostep do specjalistycznych treści.
             Twoje konto zostanie zweryfikowane przez administratora.
           </CardDescription>
         </CardHeader>

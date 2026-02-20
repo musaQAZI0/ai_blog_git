@@ -6,7 +6,6 @@ import { Footer } from '@/components/layout/Footer'
 import { cn } from '@/lib/utils'
 
 const SIDE_NAV = [
-  { label: 'Start', href: '/' },
   { label: 'Blog dla Pacjentów', href: '/patient' },
   { label: 'Blog dla Specjalistów', href: '/professional' },
 ]

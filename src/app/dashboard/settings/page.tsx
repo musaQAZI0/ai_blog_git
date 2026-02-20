@@ -32,7 +32,7 @@ function DashboardSettingsContent() {
 
     const configured = await ensureFirebaseInitialized()
     if (!configured || !db) {
-      setMessage({ type: 'success', text: 'Demo mode - zmiany nie zostaly zapisane' })
+      setMessage({ type: 'success', text: 'Demo mode - zmiany nie zostały zapisane' })
       return
     }
 
@@ -45,9 +45,9 @@ function DashboardSettingsContent() {
         specialization,
         updatedAt: new Date(),
       })
-      setMessage({ type: 'success', text: 'Profil zostal zaktualizowany' })
+      setMessage({ type: 'success', text: 'Profil został zaktualizowany' })
     } catch (error) {
-      setMessage({ type: 'error', text: 'Blad aktualizacji profilu' })
+      setMessage({ type: 'error', text: 'Błąd aktualizacji profilu' })
     } finally {
       setLoading(false)
     }
@@ -77,12 +77,12 @@ function DashboardSettingsContent() {
         a.download = `moje-dane-${new Date().toISOString().split('T')[0]}.json`
         a.click()
         URL.revokeObjectURL(url)
-        setMessage({ type: 'success', text: 'Dane zostaly pobrane' })
+        setMessage({ type: 'success', text: 'Dane zostały pobrane' })
       } else {
         throw new Error(data.error)
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Blad pobierania danych' })
+      setMessage({ type: 'error', text: 'Błąd pobierania danych' })
     } finally {
       setLoading(false)
     }
@@ -92,15 +92,15 @@ function DashboardSettingsContent() {
     if (!user) return
 
     const confirmation = prompt(
-      'Wpisz swoj adres email, aby potwierdzic usuniecie konta:'
+      'Wpisz swój adres email, aby potwierdzic usuniecie konta:'
     )
 
     if (confirmation !== user.email) {
-      setMessage({ type: 'error', text: 'Email nie pasuje. Konto nie zostalo usuniete.' })
+      setMessage({ type: 'error', text: 'Email nie pasuje. Konto nie zostało usunięte.' })
       return
     }
 
-    if (!confirm('Czy na pewno chcesz usunac swoje konto? Ta operacja jest nieodwracalna.')) {
+    if (!confirm('Czy na pewno chcesz usunąć swóje konto? Ta operacja jest nieodwracalna.')) {
       return
     }
 
@@ -122,7 +122,7 @@ function DashboardSettingsContent() {
         throw new Error(data.error)
       }
     } catch (error) {
-      setMessage({ type: 'error', text: 'Blad usuwania konta' })
+      setMessage({ type: 'error', text: 'Błąd usuwania konta' })
       setLoading(false)
     }
   }
@@ -139,7 +139,7 @@ function DashboardSettingsContent() {
         </Link>
         <h1 className="text-3xl font-bold">Ustawienia konta</h1>
         <p className="mt-1 text-muted-foreground">
-          Zarzadzaj swoim profilem i preferencjami
+          Zarządzaj swoim profilem i preferencjami
         </p>
       </div>
 
@@ -156,14 +156,14 @@ function DashboardSettingsContent() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Profil</CardTitle>
-          <CardDescription>Zaktualizuj swoje dane osobowe</CardDescription>
+          <CardDescription>Zaktualizuj swóje dane osobowe</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
             <Input id="email" value={user?.email || ''} disabled />
             <p className="text-xs text-muted-foreground">
-              Email nie moze byc zmieniony
+              Email nie może byc zmieniony
             </p>
           </div>
 
@@ -221,14 +221,14 @@ function DashboardSettingsContent() {
       <Card className="mb-6">
         <CardHeader>
           <CardTitle>Prywatnosc i dane (RODO)</CardTitle>
-          <CardDescription>Zarzadzaj swoimi danymi osobowymi</CardDescription>
+          <CardDescription>Zarządzaj swoimi danymi osobowymi</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-4">
             <div>
               <h4 className="font-medium">Eksport danych</h4>
               <p className="text-sm text-muted-foreground">
-                Pobierz wszystkie swoje dane w formacie JSON
+                Pobierz wszystkie swóje dane w formacie JSON
               </p>
             </div>
             <Button variant="outline" onClick={handleExportData} disabled={loading}>
@@ -241,7 +241,7 @@ function DashboardSettingsContent() {
             <div>
               <h4 className="font-medium text-destructive">Usun konto</h4>
               <p className="text-sm text-muted-foreground">
-                Trwale usun swoje konto i wszystkie dane
+                Trwale usun swóje konto i wszystkie dane
               </p>
             </div>
             <Button

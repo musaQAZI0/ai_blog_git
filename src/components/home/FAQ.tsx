@@ -6,20 +6,20 @@ import { Minus, Plus } from 'lucide-react'
 
 const FAQS: Array<{ q: string; a: string }> = [
   {
-    q: 'Czy tresci zastepuja wizyte u lekarza?',
+    q: 'Czy treści zastępują wizyte u lekarza?',
     a: 'Nie. To materialy edukacyjne. Przy naglym pogorszeniu widzenia, silnym bolu oka lub urazie skontaktuj sie pilnie z lekarzem.',
   },
   {
     q: 'Skad pochodza informacje?',
-    a: 'Stawiamy na podejscie evidence-based. W artykulach opisujemy praktyczne wnioski, a dla specjalistow uwzgledniamy ograniczenia badan.',
+    a: 'Stawiamy na podejscie evidence-based. W artykulach opisujemy praktyczne wnioski, a dla specjalistow uwzgledniamy ograniczenia badań.',
   },
   {
-    q: 'Jak wybrac wersje dla pacjenta vs specjalisty?',
-    a: 'Dla pacjentow: prosto i praktycznie. Dla specjalistow: kliniczne podsumowania, algorytmy i przeglad literatury. Na stronie glownej mozesz przelaczac zakladki.',
+    q: 'Jak wybra? wersj? dla pacjenta vs specjalisty?',
+    a: 'Dla pacjentow: prosto i praktycznie. Dla specjalistow: kliniczne podsumowania, algorytmy i przeglad literatury. Na stronie glownej możesz przelaczac zakladki.',
   },
   {
     q: 'Jak czesto pojawiaja sie nowe artykuly?',
-    a: 'Nowe tresci pojawiaja sie regularnie. Najlatwiej sledzic aktualizacje przez sekcje bloga i newsletter.',
+    a: 'Nowe treści pojawiaja sie regularnie. Najłatwiej śledzić aktualizacje przez sekcje bloga i newsletter.',
   },
 ]
 
@@ -30,7 +30,7 @@ export function FAQ() {
     <div className="rounded-2xl border border-black/10 bg-white p-6">
       <div className="mb-5">
         <h2 className="text-xl font-semibold tracking-tight text-black">FAQ</h2>
-        <p className="mt-2 max-w-2xl text-sm text-black/70">Najczestsze pytania o tresci i sposob korzystania z bloga.</p>
+        <p className="mt-2 max-w-2xl text-sm text-black/70">Najczęstsze pytania o treści i sposób korzystania z bloga.</p>
       </div>
 
       <div className="divide-y divide-black/10 rounded-2xl border border-black/10">

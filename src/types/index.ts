@@ -7,6 +7,7 @@ export interface User {
   id: string
   email: string
   name: string
+  phoneNumber?: string
   role: UserRole
   professionalType?: ProfessionalType
   otherProfessionalType?: string
@@ -24,12 +25,13 @@ export interface UserRegistrationData {
   email: string
   password: string
   name: string
+  phoneNumber: string
   professionalType: ProfessionalType
   otherProfessionalType?: string
   registrationNumber: string
   specialization?: string
   gdprConsent: boolean
-  newsletterConsent: boolean
+  newsletterConsent?: boolean
 }
 
 // Article Types
@@ -50,7 +52,7 @@ export interface Article {
   content: string
   excerpt: string
   coverImage?: string
-  category: string
+  category?: string
   targetAudience: TargetAudience
   authorId: string
   authorName: string
@@ -68,7 +70,7 @@ export interface ArticleCreateData {
   content: string
   excerpt: string
   coverImage?: string
-  category: string
+  category?: string
   targetAudience: TargetAudience
   seoMeta: SEOMeta
   tags: string[]
@@ -175,13 +177,4 @@ export interface ContactFormData {
   name: string
   email: string
   message: string
-}
-
-// Category Type
-export interface Category {
-  id: string
-  name: string
-  slug: string
-  description?: string
-  articleCount: number
 }

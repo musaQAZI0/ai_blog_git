@@ -224,7 +224,7 @@ function deriveTitleFromContent(content: string): string {
   const match = content.match(/^#\s+(.+)$/m)
   if (match?.[1]) return match[1].trim().slice(0, 90)
   const firstSentence = content.replace(/\s+/g, ' ').trim().split(/[.!?]/)[0]
-  return (firstSentence || 'Artykul okulistyczny').trim().slice(0, 90)
+  return (firstSentence || 'Artykuł okulistyczny').trim().slice(0, 90)
 }
 
 function buildExcerpt(content: string): string {
@@ -409,7 +409,7 @@ Required JSON format:
   }
 
   if (!content || content.trim().length < 80) {
-    content = `# ${title}\n\nNie udalo sie wygenerowac pelnej tresci. Sprobuj ponownie z innym dokumentem.`
+    content = `# ${title}\n\nNie udało sie wygenerować pełnej treści. Spróbuj ponownie z innym dokumentem.`
   }
 
   if (!title || title === 'Untitled Article') {

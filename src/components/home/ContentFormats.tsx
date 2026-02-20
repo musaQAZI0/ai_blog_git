@@ -9,7 +9,7 @@ type FormatKey = 'explainers' | 'clinical' | 'research' | 'checklists'
 const FORMATS: Array<{ key: FormatKey; title: string; lead: string; details: string[] }> = [
   {
     key: 'explainers',
-    title: 'Artykuly dla pacjentow',
+    title: 'Artykuły dla pacjentow',
     lead: 'Proste omowienia objawow, leczenia i kolejnych krokow.',
     details: ['Co jest pilne, a co standardowe', 'Domowa opieka i obserwacja', 'Jak przygotowac sie do wizyty'],
   },
@@ -21,9 +21,9 @@ const FORMATS: Array<{ key: FormatKey; title: string; lead: string; details: str
   },
   {
     key: 'research',
-    title: 'Przeglad badan',
+    title: 'Przeglad badań',
     lead: 'Najwazniejsze nowosci z literatury i ich praktyczna interpretacja.',
-    details: ['Kluczowe liczby', 'Ograniczenia badan i ryzyko bledow', 'Wnioski do codziennej praktyki'],
+    details: ['Kluczowe liczby', 'Ograniczenia badań i ryzyko bledow', 'Wnioski do codziennej praktyki'],
   },
   {
     key: 'checklists',
@@ -39,13 +39,13 @@ export function ContentFormats() {
   return (
     <div>
       <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
-        Typy tresci
+        Typy treści
       </p>
       <h2 className="mt-4 text-2xl font-semibold tracking-tight text-black sm:text-3xl">
         Co znajdziesz na blogu.
       </h2>
       <p className="mt-3 max-w-2xl text-sm leading-relaxed text-black/50">
-        Artykuly sa uporzadkowane wedlug ponizszych formatow, aby ulatwic szybkie i czytelne przegladanie.
+        Artykuły sa uporzadkowane wedlug ponizszych formatow, aby ulatwic szybkie i czytelne przeglądanie.
       </p>
 
       <div className="mt-8 space-y-2">

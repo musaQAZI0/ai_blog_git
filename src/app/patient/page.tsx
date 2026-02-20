@@ -3,20 +3,15 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { Article } from '@/types'
 import { getMockArticles } from '@/lib/mock-data'
+import {
+  fetchPublishedArticles,
+  searchPublishedArticles,
+} from '@/lib/api/articles.client'
 import { ArticleGrid } from '@/components/blog/ArticleGrid'
 import { SearchBar } from '@/components/blog/SearchBar'
-import { CategoryFilter } from '@/components/blog/CategoryFilter'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { ArrowUpDown } from 'lucide-react'
-
-const CATEGORIES = [
-  'Zdrowie oczu',
-  'Choroby',
-  'Leczenie',
-  'Profilaktyka',
-  'Soczewki',
-]
 
 type SortOption = 'newest' | 'oldest' | 'az' | 'za'
 
@@ -56,10 +51,8 @@ function sortArticles(list: Article[], sort: SortOption): Article[] {
 export default function PatientBlogPage() {
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortOption, setSortOption] = useState<SortOption>('newest')
-  const [sortMenuOpen, setSortMenuOpen] = useState(false)
   const { isDemoMode } = useAuth()
 
   const fetchArticles = useCallback(async () => {
@@ -74,20 +67,13 @@ export default function PatientBlogPage() {
               a.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
           )
         }
-        if (selectedCategory) {
-          mockArticles = mockArticles.filter((a) => a.category === selectedCategory)
-        }
         setArticles(mockArticles)
       } else {
-        const { getArticles, searchArticles } = await import('@/lib/firebase/articles')
         if (searchQuery) {
-          const results = await searchArticles(searchQuery, 'patient')
+          const results = await searchPublishedArticles(searchQuery, 'patient')
           setArticles(results)
         } else {
-          const { articles: fetchedArticles } = await getArticles({
-            targetAudience: 'patient',
-            category: selectedCategory || undefined,
-          })
+          const fetchedArticles = await fetchPublishedArticles('patient')
           setArticles(fetchedArticles)
         }
       }
@@ -97,7 +83,7 @@ export default function PatientBlogPage() {
     } finally {
       setLoading(false)
     }
-  }, [selectedCategory, searchQuery, isDemoMode])
+  }, [searchQuery, isDemoMode])
 
   useEffect(() => {
     fetchArticles()
@@ -109,12 +95,6 @@ export default function PatientBlogPage() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
-    setSelectedCategory(null)
-  }
-
-  const handleCategorySelect = (category: string | null) => {
-    setSelectedCategory(category)
-    setSearchQuery('')
   }
 
   const cycleSortOption = () => {
@@ -140,12 +120,7 @@ export default function PatientBlogPage() {
 
       {/* Toolbar */}
       <div className="border-t border-black/[0.06] pt-6 pb-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CategoryFilter
-            categories={CATEGORIES}
-            selectedCategory={selectedCategory}
-            onSelect={handleCategorySelect}
-          />
+        <div className="flex justify-end">
           <div className="flex items-center gap-3">
             <SearchBar onSearch={handleSearch} />
             <button

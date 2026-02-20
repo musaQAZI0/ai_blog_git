@@ -33,7 +33,7 @@ export function NewsletterForm({ variant = 'inline', defaultEmail }: NewsletterF
       })
 
       if (!response.ok) {
-        throw new Error('Nie udalo sie zapisac do newslettera')
+        throw new Error('Nie udało sie zapisac do newslettera')
       }
 
       setSuccess(true)
@@ -83,7 +83,7 @@ export function NewsletterForm({ variant = 'inline', defaultEmail }: NewsletterF
           </Button>
         </form>
         <p className="mt-3 text-xs text-muted-foreground">
-          Mozesz zrezygnowac w kazdej chwili. Szanujemy Twoja prywatnosc.
+          Możesz zrezygnowac w każdej chwili. Szanujemy Twoją prywatność.
         </p>
       </div>
     )

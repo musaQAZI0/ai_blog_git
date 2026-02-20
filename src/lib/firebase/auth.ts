@@ -1,5 +1,6 @@
 import {
   createUserWithEmailAndPassword,
+  deleteUser as firebaseDeleteUser,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
   sendPasswordResetEmail,
@@ -7,9 +8,10 @@ import {
   User as FirebaseUser,
   onAuthStateChanged,
 } from 'firebase/auth'
-import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
+import { deleteDoc, doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db, ensureFirebaseInitialized, isFirebaseConfigured } from './config.client'
 import { User, UserRegistrationData, UserStatus } from '@/types'
+import { subscribeToNewsletter } from './newsletter'
 
 function removeUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
   const entries = Object.entries(data).filter(([, value]) => value !== undefined)
@@ -31,12 +33,13 @@ function ensureDb() {
 }
 
 export async function registerUser(data: UserRegistrationData): Promise<{ user: FirebaseUser; error?: string }> {
+  let firebaseUser: FirebaseUser | null = null
   try {
     await ensureFirebaseInitialized()
     const firebaseAuth = ensureAuth()
     const firestore = ensureDb()
     const userCredential = await createUserWithEmailAndPassword(firebaseAuth, data.email, data.password)
-    const firebaseUser = userCredential.user
+    firebaseUser = userCredential.user
 
     // Send email verification
     await sendEmailVerification(firebaseUser)
@@ -45,6 +48,7 @@ export async function registerUser(data: UserRegistrationData): Promise<{ user: 
     const userData = removeUndefined<Omit<User, 'id'>>({
       email: data.email,
       name: data.name,
+      phoneNumber: data.phoneNumber,
       role: 'professional',
       professionalType: data.professionalType,
       otherProfessionalType: data.otherProfessionalType,
@@ -53,7 +57,7 @@ export async function registerUser(data: UserRegistrationData): Promise<{ user: 
       status: 'approved' as UserStatus,
       createdAt: new Date(),
       updatedAt: new Date(),
-      newsletterSubscribed: data.newsletterConsent,
+      newsletterSubscribed: true,
       gdprConsent: data.gdprConsent,
       gdprConsentDate: new Date(),
     })
@@ -65,9 +69,25 @@ export async function registerUser(data: UserRegistrationData): Promise<{ user: 
       gdprConsentDate: serverTimestamp(),
     })
 
+    try {
+      await subscribeToNewsletter(data.email, firebaseUser.uid)
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error || '')
+      if (!message.toLowerCase().includes('already subscribed')) {
+        throw new Error('Nie udalo sie zapisac do newslettera')
+      }
+    }
 
     return { user: firebaseUser }
   } catch (error: unknown) {
+    if (firebaseUser) {
+      const firestore = db
+      if (firestore) {
+        await deleteDoc(doc(firestore, 'users', firebaseUser.uid)).catch(() => {})
+      }
+      await firebaseDeleteUser(firebaseUser).catch(() => {})
+    }
+
     const errorMessage = error instanceof Error ? error.message : 'Registration failed'
     return { user: null as unknown as FirebaseUser, error: errorMessage }
   }
@@ -138,7 +158,7 @@ export async function signIn(email: string, password: string): Promise<{ user: F
       console.log('[auth] user doc found', { status: userData.status, role: userData.role })
       if (userData.status === 'rejected') {
         await firebaseSignOut(firebaseAuth)
-        return { user: null, error: 'Twoje konto zostaÅ‚o odrzucone. Skontaktuj siÄ™ z administratorem.' }
+        return { user: null, error: 'Twoje konto zostało odrzucone. Skontaktuj się z administratorem.' }
       }
     }
 

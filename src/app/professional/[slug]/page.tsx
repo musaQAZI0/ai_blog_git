@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useParams } from 'next/navigation'
 import { Article } from '@/types'
-import { getArticleBySlug } from '@/lib/firebase/articles'
+import { fetchPublishedArticleBySlug } from '@/lib/api/articles.client'
 import { ArticleView } from '@/components/blog/ArticleView'
 import { Skeleton } from '@/components/ui'
 import { NewsletterForm } from '@/components/blog/NewsletterForm'
@@ -19,9 +19,9 @@ function ProfessionalArticleContent() {
   useEffect(() => {
     async function fetchArticle() {
       try {
-        const fetchedArticle = await getArticleBySlug(slug, 'professional')
+        const fetchedArticle = await fetchPublishedArticleBySlug(slug, 'professional')
         if (!fetchedArticle) {
-          setError('Artykul nie zostal znaleziony')
+          setError('Artykuł nie został znaleziony')
           return
         }
         if (fetchedArticle.targetAudience !== 'professional') {
@@ -30,7 +30,7 @@ function ProfessionalArticleContent() {
         }
         setArticle(fetchedArticle)
       } catch (err) {
-        setError('Wystapil blad podczas ladowania artykulu')
+        setError('Wystapil blad podczas ładowania artykułu')
         console.error(err)
       } finally {
         setLoading(false)
@@ -60,7 +60,7 @@ function ProfessionalArticleContent() {
       <div className="flex min-h-[50vh] items-center justify-center">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-destructive">
-            {error || 'Artykul nie znaleziony'}
+            {error || 'Artykuł nie znaleziony'}
           </h1>
           <a href="/professional" className="mt-4 text-primary hover:underline">
             Powrot do listy artykulow

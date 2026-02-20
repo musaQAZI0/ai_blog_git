@@ -24,7 +24,7 @@ export default function TermsPage() {
         <h2>2. Definicje</h2>
         <ul>
           <li><strong>Platforma</strong> - serwis internetowy dostepny pod adresem blog.skrzypecki.pl</li>
-          <li><strong>Uzytkownik</strong> - osoba korzystajaca z Platformy</li>
+          <li><strong>Użytkownik</strong> - osoba korzystająca z Platformy</li>
           <li><strong>Specjalista</strong> - zweryfikowany profesjonalista medyczny</li>
           <li><strong>Administrator</strong> - wlasciciel i operator Platformy</li>
         </ul>
@@ -32,8 +32,8 @@ export default function TermsPage() {
         <h2>3. Rodzaje kont</h2>
         <h3>3.1 Konto Pacjenta</h3>
         <p>
-          Dostep do tresci przeznaczonych dla pacjentow nie wymaga rejestracji.
-          Tresci te maja charakter edukacyjny i nie stanowia porady medycznej.
+          Dostęp do treści przeznaczonych dla pacjentow nie wymaga rejestracji.
+          Treśći te maja charakter edukacyjny i nie stanowia porady medycznej.
         </p>
 
         <h3>3.2 Konto Specjalisty</h3>
@@ -48,22 +48,22 @@ export default function TermsPage() {
 
         <h2>4. Zasady korzystania</h2>
         <ul>
-          <li>Uzytkownik zobowiazuje sie do podawania prawdziwych danych</li>
+          <li>Użytkownik zobowiązuje sie do podawania prawdziwych danych</li>
           <li>Zabrania sie udostepniania danych logowania osobom trzecim</li>
-          <li>Zabrania sie kopiowania i rozpowszechniania tresci bez zgody</li>
-          <li>Specjalista zobowiazuje sie do etycznego wykorzystania tresci</li>
+          <li>Zabrania sie kopiowania i rozpowszechniania treści bez zgody</li>
+          <li>Specjalista zobowiązuje sie do etycznego wykorzystania treści</li>
         </ul>
 
-        <h2>5. Tresci na Platformie</h2>
+        <h2>5. Treśći na Platformie</h2>
         <p>
-          Tresci publikowane na Platformie maja charakter edukacyjny i informacyjny.
-          Nie stanowia one porady medycznej ani nie zastepuja konsultacji z lekarzem.
+          Treśći publikowane na Platformie maja charakter edukacyjny i informacyjny.
+          Nie stanowia one porady medycznej ani nie zastępują konsultacji z lekarzem.
         </p>
 
         <h2>6. Prawa autorskie</h2>
         <p>
-          Wszystkie tresci publikowane na Platformie sa chronione prawem autorskim.
-          Kopiowanie, rozpowszechnianie lub wykorzystywanie tresci bez zgody
+          Wszystkie treści publikowane na Platformie sa chronione prawem autorskim.
+          Kopiowanie, rozpowszechnianie lub wykorzystywanie treści bez zgody
           Administratora jest zabronione.
         </p>
 
@@ -72,14 +72,14 @@ export default function TermsPage() {
           Administrator nie ponosi odpowiedzialnosci za:
         </p>
         <ul>
-          <li>Decyzje medyczne podjete na podstawie tresci Platformy</li>
+          <li>Decyzje medyczne podjęte na podstawie treści Platformy</li>
           <li>Przerwy w dzialaniu Platformy</li>
           <li>Utrate danych z przyczyn niezaleznych od Administratora</li>
         </ul>
 
         <h2>8. Zakonczenie korzystania</h2>
         <p>
-          Uzytkownik moze w kazdej chwili usunac swoje konto. Administrator
+          Użytkownik może w każdej chwili usunąć swóje konto. Administrator
           zastrzega sobie prawo do zawieszenia lub usuniecia konta naruszajacego
           regulamin.
         </p>
@@ -87,7 +87,7 @@ export default function TermsPage() {
         <h2>9. Zmiany regulaminu</h2>
         <p>
           Administrator zastrzega sobie prawo do zmiany regulaminu. O zmianach
-          uzytkownicy zostana poinformowani z wyprzedzeniem.
+          użytkownicy zostaną poinformowani z wyprzedzeniem.
         </p>
 
         <h2>10. Kontakt</h2>

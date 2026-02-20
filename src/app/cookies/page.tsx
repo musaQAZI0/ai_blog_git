@@ -31,7 +31,7 @@ export default function CookiesPage() {
           one m.in.:
         </p>
         <ul>
-          <li>Cookies sesji uzytkownika</li>
+          <li>Cookies sesji użytkownika</li>
           <li>Cookies uwierzytelniania</li>
           <li>Cookies bezpieczenstwa</li>
         </ul>
@@ -48,36 +48,36 @@ export default function CookiesPage() {
 
         <h3>Cookies analityczne</h3>
         <p>
-          Pomagaja nam zrozumiec, jak uzytkownicy korzystaja z naszej strony:
+          Pomagają nam zrozumiec, jak użytkownicy korzystają z naszej strony:
         </p>
         <ul>
           <li>Liczba odwiedzin</li>
           <li>Czas spedzony na stronie</li>
-          <li>Najpopularniejsze tresci</li>
+          <li>Najpopularniejsze treści</li>
         </ul>
 
-        <h2>3. Jak zarzadzac cookies?</h2>
+        <h2>3. Jak zarządzać cookies?</h2>
         <p>
-          Mozesz zarzadzac ustawieniami cookies w swojej przegladarce:
+          Możesz zarządzać ustawieniami cookies w swójej przeglądarce:
         </p>
         <ul>
           <li>Chrome: Ustawienia &gt; Prywatnosc i bezpieczenstwo &gt; Pliki cookie</li>
           <li>Firefox: Opcje &gt; Prywatnosc i bezpieczenstwo &gt; Ciasteczka</li>
-          <li>Safari: Preferencje &gt; Prywatnosc &gt; Zarzadzaj danymi witryn</li>
+          <li>Safari: Preferencje &gt; Prywatnosc &gt; Zarządzaj danymi witryn</li>
           <li>Edge: Ustawienia &gt; Pliki cookie i uprawnienia witryn</li>
         </ul>
 
-        <h2>4. Wylaczenie cookies</h2>
+        <h2>4. Wyłączenie cookies</h2>
         <p>
-          Wylaczenie cookies moze ograniczyc funkcjonalnosc strony. Niektorzy
+          Wyłączenie cookies może ograniczyc funkcjonalnosc strony. Niektórzy
           funkcje, takie jak logowanie czy zapamietywanie preferencji, moga
           przestac dzialac prawidlowo.
         </p>
 
         <h2>5. Zmiany w polityce</h2>
         <p>
-          Zastrzegamy sobie prawo do wprowadzania zmian w niniejszej polityce.
-          O istotnych zmianach poinformujemy uzytkownikow za posrednictwem strony.
+          Zastrzegamy sobie prawo do wprowadźania zmian w niniejszej polityce.
+          O istotnych zmianach poinformujemy użytkowników za pośrednictwem strony.
         </p>
 
         <h2>6. Kontakt</h2>

@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
 
     if (!targetAudience || !['patient', 'professional'].includes(targetAudience)) {
       return NextResponse.json(
-        { success: false, error: 'Nieprawidlowa grupa docelowa' },
+        { success: false, error: 'Nieprawidłowa grupa docelowa' },
         { status: 400 }
       )
     }
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     const rl = rateLimit(`ai-generate:${ip}`, { limit: 60, windowMs: 60 * 60 * 1000 })
     if (!rl.ok) {
       return NextResponse.json(
-        { success: false, error: 'Za duzo zapytan. Sprobuj ponownie pozniej.' },
+        { success: false, error: 'Za duzo zapytan. Spróbuj ponownie pozniej.' },
         { status: 429 }
       )
     }
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
 
     if (!pdfContent || pdfContent.trim().length < 100) {
       return NextResponse.json(
-        { success: false, error: 'Nie udalo sie wyodrebnic tekstu z plikow PDF' },
+        { success: false, error: 'Nie udało sie wyodrębnić tekstu z plikow PDF' },
         { status: 400 }
       )
     }
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Blad generowania artykulu',
+        error: error instanceof Error ? error.message : 'Błąd generowania artykułu',
       },
       { status: 500 }
     )

@@ -89,7 +89,7 @@ Glowne przyczyny to:
 1. Dlugotrwala praca przy ekranie
 2. Suche powietrze (klimatyzacja, ogrzewanie)
 3. Wiek
-4. Niektore leki
+4. Niektóre leki
 
 ## Leczenie
 
@@ -171,7 +171,7 @@ Zacma to zmętnienie soczewki oka, ktore powoduje stopniowe pogarszanie widzenia
 - Zamglone widzenie
 - Problemy z widzeniem w nocy
 - Widzenie aureoli wokol swiatel
-- Bladniecie kolorow
+- Błądniecie kolorow
 
 ## Leczenie
 

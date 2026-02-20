@@ -26,12 +26,12 @@ export function PDFUploader({
       setError(null)
 
       if (rejectedFiles.length > 0) {
-        setError('Niektore pliki zostaly odrzucone. Akceptujemy tylko pliki PDF.')
+        setError('Niektóre pliki zostały odrzucone. Akceptujemy tylko pliki PDF.')
         return
       }
 
       if (files.length + acceptedFiles.length > maxFiles) {
-        setError(`Mozesz dodac maksymalnie ${maxFiles} plikow.`)
+        setError(`Możesz dodac maksymalnie ${maxFiles} plikow.`)
         return
       }
 

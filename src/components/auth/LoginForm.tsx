@@ -10,8 +10,15 @@ import { Button, Input, Label, Alert, AlertDescription } from '@/components/ui'
 import { signIn } from '@/lib/firebase/auth'
 
 const loginSchema = z.object({
-  email: z.string().email('Podaj prawidlowy adres email'),
-  password: z.string().min(6, 'Haslo musi miec co najmniej 6 znakow'),
+  email: z
+    .string()
+    .trim()
+    .min(1, 'Email jest wymagany')
+    .email('Podaj prawidlowy adres email'),
+  password: z
+    .string()
+    .min(1, 'Haslo jest wymagane')
+    .min(6, 'Haslo musi miec co najmniej 6 znakow'),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
@@ -62,7 +69,7 @@ export function LoginForm() {
         <Input
           id="email"
           type="email"
-          placeholder="jan@example.pl"
+          aria-label="Email"
           error={errors.email?.message}
           {...register('email')}
         />
@@ -77,13 +84,13 @@ export function LoginForm() {
             href="/forgot-password"
             className="text-sm text-primary hover:underline"
           >
-            Zapomniales hasla?
+            Zapomniales hasła?
           </Link>
         </div>
         <Input
           id="password"
           type="password"
-          placeholder="********"
+          aria-label="Password"
           error={errors.password?.message}
           {...register('password')}
         />

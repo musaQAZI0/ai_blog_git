@@ -2,23 +2,17 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { Article } from '@/types'
-import { getArticles, searchArticles } from '@/lib/firebase/articles'
+import {
+  fetchPublishedArticles,
+  searchPublishedArticles,
+} from '@/lib/api/articles.client'
 import { ArticleGrid } from '@/components/blog/ArticleGrid'
 import { SearchBar } from '@/components/blog/SearchBar'
-import { CategoryFilter } from '@/components/blog/CategoryFilter'
 import { NewsletterForm } from '@/components/blog/NewsletterForm'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { ArrowUpDown } from 'lucide-react'
-
-const CATEGORIES = [
-  'Kliniczna',
-  'Badania',
-  'Techniki operacyjne',
-  'Farmakologia',
-  'Przypadki',
-]
 
 type SortOption = 'newest' | 'oldest' | 'az' | 'za'
 
@@ -58,7 +52,6 @@ function sortArticles(list: Article[], sort: SortOption): Article[] {
 function ProfessionalBlogContent() {
   const [articles, setArticles] = useState<Article[]>([])
   const [loading, setLoading] = useState(true)
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortOption, setSortOption] = useState<SortOption>('newest')
   const { user } = useAuth()
@@ -67,13 +60,10 @@ function ProfessionalBlogContent() {
     setLoading(true)
     try {
       if (searchQuery) {
-        const results = await searchArticles(searchQuery, 'professional')
+        const results = await searchPublishedArticles(searchQuery, 'professional')
         setArticles(results)
       } else {
-        const { articles: fetchedArticles } = await getArticles({
-          targetAudience: 'professional',
-          category: selectedCategory || undefined,
-        })
+        const fetchedArticles = await fetchPublishedArticles('professional')
         setArticles(fetchedArticles)
       }
     } catch (error) {
@@ -81,7 +71,7 @@ function ProfessionalBlogContent() {
     } finally {
       setLoading(false)
     }
-  }, [selectedCategory, searchQuery])
+  }, [searchQuery])
 
   useEffect(() => {
     fetchArticles()
@@ -93,12 +83,6 @@ function ProfessionalBlogContent() {
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
-    setSelectedCategory(null)
-  }
-
-  const handleCategorySelect = (category: string | null) => {
-    setSelectedCategory(category)
-    setSearchQuery('')
   }
 
   const cycleSortOption = () => {
@@ -134,12 +118,7 @@ function ProfessionalBlogContent() {
 
       {/* Toolbar */}
       <div className="border-t border-black/[0.06] pt-6 pb-8">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <CategoryFilter
-            categories={CATEGORIES}
-            selectedCategory={selectedCategory}
-            onSelect={handleCategorySelect}
-          />
+        <div className="flex justify-end">
           <div className="flex items-center gap-3">
             <SearchBar onSearch={handleSearch} />
             <button

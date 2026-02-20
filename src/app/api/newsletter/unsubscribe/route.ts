@@ -16,11 +16,11 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json()
-    const { email, token } = body
+    const { email } = body
 
     if (!email || !validateEmail(email)) {
       return NextResponse.json(
-        { success: false, error: 'Nieprawidlowy adres email' },
+        { success: false, error: 'Nieprawidłowy adres email' },
         { status: 400 }
       )
     }
@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Newsletter unsubscribe error:', error)
     return NextResponse.json(
-      { success: false, error: 'Blad wypisywania z newslettera' },
+      { success: false, error: 'Błąd wypisywania z newslettera' },
       { status: 500 }
     )
   }

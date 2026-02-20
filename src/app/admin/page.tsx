@@ -74,10 +74,10 @@ function AdminDashboardContent() {
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Approval failed')
-      setMessage({ type: 'success', text: 'Uzytkownik zostal zatwierdzony' })
+      setMessage({ type: 'success', text: 'Użytkownik został zatwierdzony' })
       fetchData()
     } catch (error) {
-      setMessage({ type: 'error', text: 'Blad zatwierdzania uzytkownika' })
+      setMessage({ type: 'error', text: 'Błąd zatwierdzania użytkownika' })
     } finally {
       setActionLoading(null)
     }
@@ -100,10 +100,10 @@ function AdminDashboardContent() {
       })
       const json = await res.json()
       if (!json.success) throw new Error(json.error || 'Reject failed')
-      setMessage({ type: 'success', text: 'Uzytkownik zostal odrzucony' })
+      setMessage({ type: 'success', text: 'Użytkownik został odrzucony' })
       fetchData()
     } catch (error) {
-      setMessage({ type: 'error', text: 'Blad odrzucania uzytkownika' })
+      setMessage({ type: 'error', text: 'Błąd odrzucania użytkownika' })
     } finally {
       setActionLoading(null)
     }
@@ -114,7 +114,7 @@ function AdminDashboardContent() {
       <div className="mb-8">
         <h1 className="text-3xl font-bold">Panel administratora</h1>
         <p className="mt-1 text-muted-foreground">
-          Zarzadzaj uzytkownikami i tresciami
+          Zarządzaj użytkownikami i treściami
         </p>
       </div>
 
@@ -141,7 +141,7 @@ function AdminDashboardContent() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Oczekujacy</CardTitle>
+            <CardTitle className="text-sm font-medium">Oczekujący</CardTitle>
             <Clock className="h-4 w-4 text-yellow-500" />
           </CardHeader>
           <CardContent>
@@ -165,7 +165,7 @@ function AdminDashboardContent() {
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Artykuly</CardTitle>
+            <CardTitle className="text-sm font-medium">Artykuły</CardTitle>
             <FileText className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -191,9 +191,9 @@ function AdminDashboardContent() {
             <CardContent className="flex items-center gap-4 p-6">
               <Users className="h-8 w-8 text-primary" />
               <div>
-                <h3 className="font-semibold">Zarzadzaj uzytkownikami</h3>
+                <h3 className="font-semibold">Zarządzaj użytkownikami</h3>
                 <p className="text-sm text-muted-foreground">
-                  Przegladaj i edytuj uzytkownikow
+                  Przeglądaj i edytuj użytkowników
                 </p>
               </div>
             </CardContent>
@@ -205,7 +205,7 @@ function AdminDashboardContent() {
             <CardContent className="flex items-center gap-4 p-6">
               <FileText className="h-8 w-8 text-primary" />
               <div>
-                <h3 className="font-semibold">Zarzadzaj artykulami</h3>
+                <h3 className="font-semibold">Zarządzaj artykulami</h3>
                 <p className="text-sm text-muted-foreground">
                   Moderuj i edytuj artykuly
                 </p>
@@ -227,6 +227,7 @@ function AdminDashboardContent() {
             </CardContent>
           </Card>
         </Link>
+
       </div>
 
       {/* Pending Approvals */}
@@ -234,7 +235,7 @@ function AdminDashboardContent() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Oczekujacy na zatwierdzenie ({pendingApprovals.length})
+            Oczekujący na zatwierdzenie ({pendingApprovals.length})
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -242,7 +243,7 @@ function AdminDashboardContent() {
             <p className="text-muted-foreground">Ladowanie...</p>
           ) : pendingApprovals.length === 0 ? (
             <p className="text-muted-foreground">
-              Brak oczekujacych zgloszen do zatwierdzenia
+              Brak oczekujących zgłoszeń do zatwierdzenia
             </p>
           ) : (
             <div className="space-y-4">

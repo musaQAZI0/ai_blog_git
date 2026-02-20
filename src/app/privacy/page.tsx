@@ -28,7 +28,7 @@ export default function PrivacyPage() {
           <li>Adres email</li>
           <li>Numer PWZ lub inny numer rejestracyjny (dla specjalistow)</li>
           <li>Specjalizacja zawodowa</li>
-          <li>Dane techniczne (adres IP, informacje o przegladarce)</li>
+          <li>Dane techniczne (adres IP, informacje o przeglądarce)</li>
         </ul>
 
         <h2>3. Cel przetwarzania danych</h2>
@@ -58,7 +58,7 @@ export default function PrivacyPage() {
         <h2>6. Twoje prawa</h2>
         <p>Masz prawo do:</p>
         <ul>
-          <li>Dostepu do swoich danych</li>
+          <li>Dostępu do swoich danych</li>
           <li>Sprostowania danych</li>
           <li>Usuniecia danych (prawo do bycia zapomnianym)</li>
           <li>Ograniczenia przetwarzania</li>
@@ -69,15 +69,15 @@ export default function PrivacyPage() {
 
         <h2>7. Eksport danych</h2>
         <p>
-          Mozesz w kazdej chwili zazadac eksportu swoich danych w formacie czytelnym
+          Możesz w każdej chwili zażądać eksportu swoich danych w formacie czytelnym
           maszynowo. Aby to zrobic, skontaktuj sie z nami lub skorzystaj z opcji
           w ustawieniach konta.
         </p>
 
         <h2>8. Usuniecie konta</h2>
         <p>
-          Mozesz zazadac calkowitego usuniecia swojego konta i wszystkich powiazanych
-          danych. Po potwierdzeniu, dane zostana trwale usuniete w ciagu 30 dni.
+          Możesz zażądać calkowitego usuniecia swójego konta i wszystkich powiazanych
+          danych. Po potwierdzeniu, dane zostaną trwale usunięte w ciagu 30 dni.
         </p>
 
         <h2>9. Pliki cookies</h2>
@@ -88,7 +88,7 @@ export default function PrivacyPage() {
 
         <h2>10. Kontakt</h2>
         <p>
-          W sprawach zwiazanych z ochrona danych osobowych mozesz skontaktowac sie
+          W sprawach zwiazanych z ochrona danych osobowych możesz skontaktowac sie
           z nami pod adresem: kontakt@skrzypecki.pl
         </p>
 

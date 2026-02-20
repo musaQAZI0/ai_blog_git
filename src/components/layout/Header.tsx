@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils'
 import { useAuth } from '@/context/AuthContext'
 
 const siteNav = [
-  { label: 'Start', href: '/' },
   { label: 'Pacjenci', href: '/patient' },
   { label: 'Specjalisci', href: '/professional' },
 ]
@@ -60,7 +59,7 @@ export function Header() {
       <nav className="relative flex w-full items-center justify-between py-4">
         {/* Left: Logo */}
         <div className="flex items-center">
-          <Link href="/" className="flex items-center">
+          <Link href="/patient" className="flex items-center">
             <span className="text-[17px] font-semibold tracking-tight text-black">
               Skrzypecki
             </span>

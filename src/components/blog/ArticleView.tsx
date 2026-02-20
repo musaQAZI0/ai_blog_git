@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -19,13 +19,102 @@ interface ArticleViewProps {
 export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
   const readingTime = getReadingTime(article.content)
   const { isDemoMode } = useAuth()
+  const trackingArticleIdRef = useRef<string | null>(null)
 
   useEffect(() => {
-    // Increment view count on mount (only if Firebase is configured)
-    if (!isDemoMode) {
-      import('@/lib/firebase/articles').then(({ incrementViewCount }) => {
-        incrementViewCount(article.id).catch(console.error)
-      })
+    if (isDemoMode || typeof window === 'undefined') return
+    if (trackingArticleIdRef.current === article.id) return
+    trackingArticleIdRef.current = article.id
+
+    const storageKey = `article-track-session:${article.id}`
+    const now = Date.now()
+    const twoMinutesMs = 2 * 60 * 1000
+
+    const parseStoredSession = (): { sessionId: string; lastSeenAt: number } | null => {
+      try {
+        const raw = window.sessionStorage.getItem(storageKey)
+        if (!raw) return null
+        const parsed = JSON.parse(raw) as { sessionId?: unknown; lastSeenAt?: unknown }
+        if (typeof parsed.sessionId !== 'string' || typeof parsed.lastSeenAt !== 'number') {
+          return null
+        }
+        return { sessionId: parsed.sessionId, lastSeenAt: parsed.lastSeenAt }
+      } catch {
+        return null
+      }
+    }
+
+    const previousSession = parseStoredSession()
+    const shouldReuseSession =
+      previousSession && now - previousSession.lastSeenAt < twoMinutesMs
+
+    const sessionId =
+      shouldReuseSession && previousSession
+        ? previousSession.sessionId
+        : (window.crypto?.randomUUID?.() ??
+            `session-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+
+    const startTime = Date.now()
+
+    const persistSession = () => {
+      try {
+        window.sessionStorage.setItem(
+          storageKey,
+          JSON.stringify({
+            sessionId,
+            lastSeenAt: Date.now(),
+          })
+        )
+      } catch {
+        // Ignore storage errors.
+      }
+    }
+
+    const sendTrackEvent = (event: 'start' | 'heartbeat' | 'end', keepalive = false) => {
+      const durationSeconds = Math.max(1, Math.round((Date.now() - startTime) / 1000))
+      persistSession()
+
+      fetch(`/api/articles/${article.id}/track`, {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({
+          event,
+          sessionId,
+          durationSeconds,
+        }),
+        keepalive,
+      }).catch(() => {})
+    }
+
+    sendTrackEvent(shouldReuseSession ? 'heartbeat' : 'start')
+
+    const heartbeatInterval = window.setInterval(() => {
+      sendTrackEvent('heartbeat')
+    }, 15000)
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'hidden') {
+        sendTrackEvent('heartbeat', true)
+      }
+    }
+
+    const handlePageHide = () => {
+      sendTrackEvent('end', true)
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    window.addEventListener('pagehide', handlePageHide)
+    window.addEventListener('beforeunload', handlePageHide)
+
+    return () => {
+      window.clearInterval(heartbeatInterval)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('pagehide', handlePageHide)
+      window.removeEventListener('beforeunload', handlePageHide)
+      sendTrackEvent('end', true)
+      trackingArticleIdRef.current = null
     }
   }, [article.id, isDemoMode])
 
@@ -41,7 +130,6 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
 
       <header className="mb-8">
         <div className="mb-4 flex flex-wrap items-center gap-2">
-          <Badge>{article.category}</Badge>
           {article.tags.map((tag) => (
             <Badge key={tag} variant="outline">
               {tag}

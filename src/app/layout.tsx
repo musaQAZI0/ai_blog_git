@@ -1,5 +1,5 @@
 import type { Metadata } from 'next'
-import { Poppins } from 'next/font/google'
+import { Noto_Sans, Poppins } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '@/context/AuthContext'
 import { Header } from '@/components/layout/Header'
@@ -11,6 +11,13 @@ const poppins = Poppins({
   variable: '--font-sans',
   display: 'swap',
   weight: ['300', '400', '500', '600', '700'],
+})
+
+const notoSans = Noto_Sans({
+  subsets: ['latin', 'latin-ext'],
+  variable: '--font-pl-fallback',
+  display: 'swap',
+  weight: ['400', '500', '600', '700'],
 })
 
 export const metadata: Metadata = {
@@ -46,8 +53,8 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pl" suppressHydrationWarning>
-      <body className={`${poppins.variable} font-sans antialiased`} suppressHydrationWarning>
+    <html lang="pl" suppressHydrationWarning className={`${poppins.variable} ${notoSans.variable}`}>
+      <body className="font-sans antialiased" suppressHydrationWarning>
         <AuthProvider>
           <div className="flex min-h-screen flex-col">
             <Header />

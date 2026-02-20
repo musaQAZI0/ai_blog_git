@@ -7,7 +7,6 @@ import { db, isFirebaseConfigured } from '@/lib/firebase/config.server'
 export interface SearchOptions {
   query: string
   targetAudience?: TargetAudience
-  category?: string
   tags?: string[]
   limit?: number
 }
@@ -48,11 +47,6 @@ function calculateRelevanceScore(article: Article, searchQuery: string): number 
   // Tag match
   if (article.tags?.some((tag) => tag.toLowerCase().includes(query))) {
     score += 30
-  }
-
-  // Category match
-  if (article.category.toLowerCase().includes(query)) {
-    score += 40
   }
 
   // Content match (lower weight, as it's less visible)
@@ -118,7 +112,7 @@ function generateHighlights(article: Article, searchQuery: string, maxHighlights
  * For production, consider using Algolia, ElasticSearch, or Typesense
  */
 export async function searchArticles(options: SearchOptions): Promise<SearchResult[]> {
-  const { query: searchQuery, targetAudience, category, tags, limit: resultLimit = 20 } = options
+  const { query: searchQuery, targetAudience, tags, limit: resultLimit = 20 } = options
 
   if (!searchQuery || searchQuery.length < 2) {
     return []
@@ -138,10 +132,6 @@ export async function searchArticles(options: SearchOptions): Promise<SearchResu
 
   if (targetAudience) {
     articlesQuery = query(articlesQuery, where('targetAudience', '==', targetAudience))
-  }
-
-  if (category) {
-    articlesQuery = query(articlesQuery, where('category', '==', category))
   }
 
   const snapshot = await getDocs(articlesQuery)

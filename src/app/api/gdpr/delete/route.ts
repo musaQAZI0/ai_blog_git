@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
     articlesSnapshot.docs.forEach((articleDoc) => {
       batch.update(articleDoc.ref, {
         authorId: 'deleted-user',
-        authorName: 'Usuniety uzytkownik',
+        authorName: 'Usunięty użytkownik',
       })
     })
 
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Dane zostaly usuniete zgodnie z RODO',
+      message: 'Dane zostały usunięte zgodnie z RODO',
     })
   } catch (error) {
     console.error('GDPR deletion error:', error)

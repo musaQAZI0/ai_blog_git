@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
@@ -13,7 +13,12 @@ import {
   Badge,
   Input,
 } from '@/components/ui'
-import { getArticlesByAuthor, deleteArticle, publishArticle, unpublishArticle } from '@/lib/firebase/articles'
+import {
+  getArticlesByAuthor,
+  deleteArticle,
+  publishArticle,
+  unpublishArticle,
+} from '@/lib/firebase/articles'
 import { Article } from '@/types'
 import { ArrowLeft, Plus, Search, Edit, Trash2, Eye, EyeOff } from 'lucide-react'
 import { formatDate } from '@/lib/utils'
@@ -43,19 +48,18 @@ function DashboardArticlesContent() {
   }, [fetchArticles])
 
   useEffect(() => {
-    if (searchQuery) {
-      setFilteredArticles(
-        articles.filter((a) =>
-          a.title.toLowerCase().includes(searchQuery.toLowerCase())
-        )
-      )
-    } else {
+    if (!searchQuery) {
       setFilteredArticles(articles)
+      return
     }
+
+    setFilteredArticles(
+      articles.filter((a) => a.title.toLowerCase().includes(searchQuery.toLowerCase()))
+    )
   }, [articles, searchQuery])
 
   const handleDelete = async (articleId: string) => {
-    if (!confirm('Czy na pewno chcesz usunac ten artykul?')) return
+    if (!confirm('Are you sure you want to delete this article?')) return
 
     try {
       await deleteArticle(articleId)
@@ -86,48 +90,44 @@ function DashboardArticlesContent() {
           className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary"
         >
           <ArrowLeft className="h-4 w-4" />
-          Powrot do panelu
+          Back to dashboard
         </Link>
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Moje artykuly</h1>
-            <p className="mt-1 text-muted-foreground">
-              Zarzadzaj swoimi artykulami
-            </p>
+            <h1 className="text-3xl font-bold">My Articles</h1>
+            <p className="mt-1 text-muted-foreground">Manage your articles</p>
           </div>
           <Button asChild>
             <Link href="/dashboard/create">
               <Plus className="mr-2 h-4 w-4" />
-              Nowy artykul
+              New article
             </Link>
           </Button>
         </div>
       </div>
 
-      {/* Search */}
       <div className="relative mb-6">
         <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
         <Input
-          placeholder="Szukaj artykulow..."
+          placeholder="Search articles..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
           className="pl-10"
         />
       </div>
 
-      {/* Articles List */}
       <Card>
         <CardHeader>
-          <CardTitle>Artykuly ({filteredArticles.length})</CardTitle>
+          <CardTitle>Articles ({filteredArticles.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {loading ? (
-            <p className="text-muted-foreground">Ladowanie...</p>
+            <p className="text-muted-foreground">Loading...</p>
           ) : filteredArticles.length === 0 ? (
             <p className="text-muted-foreground">
-              Nie masz jeszcze zadnych artykulow.{' '}
+              You do not have any articles yet.{' '}
               <Link href="/dashboard/create" className="text-primary hover:underline">
-                Utworz pierwszy artykul
+                Create the first one
               </Link>
             </p>
           ) : (
@@ -140,24 +140,15 @@ function DashboardArticlesContent() {
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
                       <span className="font-medium">{article.title}</span>
-                      <Badge
-                        variant={
-                          article.status === 'published' ? 'success' : 'secondary'
-                        }
-                      >
-                        {article.status === 'published'
-                          ? 'Opublikowany'
-                          : 'Wersja robocza'}
+                      <Badge variant={article.status === 'published' ? 'success' : 'secondary'}>
+                        {article.status === 'published' ? 'Published' : 'Draft'}
                       </Badge>
                       <Badge variant="outline">
-                        {article.targetAudience === 'patient'
-                          ? 'Pacjenci'
-                          : 'Specjalisci'}
+                        {article.targetAudience === 'patient' ? 'Patient' : 'Professional'}
                       </Badge>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      {article.category} • {article.viewCount} wyswietlen •{' '}
-                      {formatDate(article.createdAt)}
+                      {article.viewCount} views | {formatDate(article.createdAt)}
                     </p>
                   </div>
 
@@ -166,9 +157,7 @@ function DashboardArticlesContent() {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleTogglePublish(article)}
-                      title={
-                        article.status === 'published' ? 'Cofnij publikacje' : 'Opublikuj'
-                      }
+                      title={article.status === 'published' ? 'Unpublish' : 'Publish'}
                     >
                       {article.status === 'published' ? (
                         <EyeOff className="h-4 w-4" />
@@ -181,11 +170,7 @@ function DashboardArticlesContent() {
                         <Edit className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleDelete(article.id)}
-                    >
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(article.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

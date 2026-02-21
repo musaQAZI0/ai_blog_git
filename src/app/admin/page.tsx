@@ -250,7 +250,7 @@ function AdminDashboardContent() {
               {pendingApprovals.map((approval) => (
                 <div
                   key={approval.userId}
-                  className="flex items-center justify-between rounded-lg border bg-muted/50 p-4"
+                  className="flex flex-col gap-4 rounded-lg border bg-muted/50 p-4 md:flex-row md:items-center md:justify-between"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -276,7 +276,7 @@ function AdminDashboardContent() {
                     )}
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       variant="outline"
                       size="sm"

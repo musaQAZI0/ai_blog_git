@@ -83,7 +83,10 @@ export function Footer({
           </p>
           <div className="flex flex-col text-xs font-bold text-black sm:items-end">
             <p>Powered and Managed by Musa Aamir Qazi</p>
-            <a href="mailto:musaqazi54@gmail.com" className="mt-1 transition-colors hover:text-black/80">
+            <a
+              href="mailto:musaqazi54@gmail.com"
+              className="mt-1 break-all transition-colors hover:text-black/80"
+            >
               musaqazi54@gmail.com
             </a>
           </div>

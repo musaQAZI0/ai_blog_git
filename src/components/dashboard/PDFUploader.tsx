@@ -135,14 +135,14 @@ export function PDFUploader({
           {files.map((file, index) => (
             <div
               key={index}
-              className="flex items-center justify-between rounded-xl border border-border bg-card p-3"
+              className="flex items-start justify-between gap-3 rounded-xl border border-border bg-card p-3"
             >
-              <div className="flex items-center gap-3">
+              <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted">
                   <FileText className="h-4 w-4 text-muted-foreground" />
                 </div>
-                <div>
-                  <p className="max-w-[36ch] truncate text-sm font-medium text-foreground">{file.name}</p>
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
                   <p className="text-xs text-muted-foreground">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>

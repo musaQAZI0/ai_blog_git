@@ -137,11 +137,11 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
           ))}
         </div>
 
-        <h1 className="mb-4 text-3xl font-bold leading-tight sm:text-4xl">
+        <h1 className="mb-4 text-2xl font-bold leading-tight sm:text-4xl">
           {article.title}
         </h1>
 
-        <p className="mb-6 text-lg text-muted-foreground">{article.excerpt}</p>
+        <p className="mb-6 text-base text-muted-foreground sm:text-lg">{article.excerpt}</p>
 
         <div className="flex flex-wrap items-center gap-4 border-b pb-6">
           <div className="flex items-center gap-2">
@@ -149,7 +149,7 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
             <span className="text-sm font-medium">{article.authorName}</span>
           </div>
 
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
             <span className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
               {formatDate(article.publishedAt || article.createdAt)}

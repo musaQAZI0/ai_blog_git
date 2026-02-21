@@ -2,10 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { Article } from '@/types'
-import {
-  fetchPublishedArticles,
-  searchPublishedArticles,
-} from '@/lib/api/articles.client'
+import { getArticles, searchArticles } from '@/lib/firebase/articles'
 import { ArticleGrid } from '@/components/blog/ArticleGrid'
 import { SearchBar } from '@/components/blog/SearchBar'
 import { NewsletterForm } from '@/components/blog/NewsletterForm'
@@ -60,10 +57,12 @@ function ProfessionalBlogContent() {
     setLoading(true)
     try {
       if (searchQuery) {
-        const results = await searchPublishedArticles(searchQuery, 'professional')
+        const results = await searchArticles(searchQuery, 'professional')
         setArticles(results)
       } else {
-        const fetchedArticles = await fetchPublishedArticles('professional')
+        const { articles: fetchedArticles } = await getArticles({
+          targetAudience: 'professional',
+        })
         setArticles(fetchedArticles)
       }
     } catch (error) {
@@ -92,7 +91,7 @@ function ProfessionalBlogContent() {
   }
 
   return (
-    <div className="mx-auto max-w-[980px] py-8">
+    <div className="mx-auto max-w-[980px] px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="pb-8">
         <div className="flex items-start justify-between gap-4">
@@ -119,12 +118,12 @@ function ProfessionalBlogContent() {
       {/* Toolbar */}
       <div className="border-t border-black/[0.06] pt-6 pb-8">
         <div className="flex justify-end">
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-wrap items-center justify-end gap-3">
             <SearchBar onSearch={handleSearch} />
             <button
               type="button"
               onClick={cycleSortOption}
-              className="flex items-center gap-1.5 rounded-lg border border-black/[0.08] px-3 py-1.5 text-xs text-black/40 transition-colors hover:border-black/15 hover:text-black/60"
+              className="flex h-10 items-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3 text-xs font-medium text-sky-800 transition-colors hover:border-sky-400 hover:bg-sky-100"
             >
               <ArrowUpDown className="h-3 w-3" />
               {SORT_LABELS[sortOption]}

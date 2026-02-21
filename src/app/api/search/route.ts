@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { searchArticles, getSearchSuggestions } from '@/lib/search'
 import { TargetAudience } from '@/types'
+import { trackSearch } from '@/lib/analytics'
 
 export const dynamic = 'force-dynamic'
 
@@ -51,7 +52,21 @@ export async function GET(request: NextRequest) {
       success: true,
       data: {
         query,
-        results,
+        results: results.map((r) => ({
+          article: {
+            id: r.article.id,
+            title: r.article.title,
+            slug: r.article.slug,
+            excerpt: r.article.excerpt,
+            coverImage: r.article.coverImage,
+            category: r.article.category,
+            tags: r.article.tags,
+            publishedAt: r.article.publishedAt,
+            targetAudience: r.article.targetAudience,
+          },
+          score: r.score,
+          highlights: r.highlights,
+        })),
         totalResults: results.length,
       },
     })

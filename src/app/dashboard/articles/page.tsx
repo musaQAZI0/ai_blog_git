@@ -92,7 +92,7 @@ function DashboardArticlesContent() {
           <ArrowLeft className="h-4 w-4" />
           Back to dashboard
         </Link>
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-3xl font-bold">My Articles</h1>
             <p className="mt-1 text-muted-foreground">Manage your articles</p>
@@ -135,7 +135,7 @@ function DashboardArticlesContent() {
               {filteredArticles.map((article) => (
                 <div
                   key={article.id}
-                  className="flex items-center justify-between rounded-lg border bg-muted/50 p-4"
+                  className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between"
                 >
                   <div className="space-y-1">
                     <div className="flex items-center gap-2">
@@ -152,7 +152,7 @@ function DashboardArticlesContent() {
                     </p>
                   </div>
 
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     <Button
                       variant="ghost"
                       size="icon"

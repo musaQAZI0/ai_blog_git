@@ -48,7 +48,7 @@ function DashboardContent() {
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Panel użytkownika</h1>
           <p className="mt-1 text-muted-foreground">Witaj, {user?.name}</p>
@@ -187,7 +187,7 @@ function DashboardContent() {
                 {articles.slice(0, 5).map((article) => (
                   <div
                     key={article.id}
-                    className="flex items-center justify-between border-b pb-4 last:border-0"
+                    className="flex flex-col gap-3 border-b pb-4 last:border-0 sm:flex-row sm:items-center sm:justify-between"
                   >
                     <div>
                       <h4 className="font-medium">{article.title}</h4>

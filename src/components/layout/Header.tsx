@@ -56,14 +56,14 @@ export function Header() {
         </div>
       )}
 
-      <nav className="relative flex w-full items-center justify-between py-4">
+      <nav className="relative mx-auto flex w-full max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
         {/* Left: Logo */}
         <div className="flex items-center">
           <Link href="/patient" className="flex items-center">
             <span className="text-[17px] font-semibold tracking-tight text-black">
               Skrzypecki
             </span>
-            <span className="ml-1.5 text-[17px] font-normal tracking-tight text-black/35">
+            <span className="ml-1.5 text-[17px] font-semibold tracking-tight text-black">
               Blog
             </span>
           </Link>
@@ -195,7 +195,7 @@ export function Header() {
           <div
             role="dialog"
             aria-modal="true"
-            className="absolute right-0 top-0 h-full w-[280px] bg-white shadow-[-8px_0_30px_-12px_rgba(0,0,0,0.1)]"
+            className="absolute right-0 top-0 h-full w-full max-w-[320px] bg-white shadow-[-8px_0_30px_-12px_rgba(0,0,0,0.1)]"
           >
             {/* Close */}
             <div className="flex items-center justify-between px-5 py-4">

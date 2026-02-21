@@ -106,7 +106,7 @@ function AdminUsersContent() {
 
       {/* Filters */}
       <Card className="mb-6">
-        <CardContent className="flex gap-4 p-4">
+        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -125,7 +125,7 @@ function AdminUsersContent() {
               { value: 'pending', label: 'Oczekujący' },
               { value: 'rejected', label: 'Odrzuceni' },
             ]}
-            className="w-48"
+            className="w-full sm:w-48"
           />
         </CardContent>
       </Card>
@@ -142,7 +142,7 @@ function AdminUsersContent() {
             <p className="text-muted-foreground">Nie znaleziono użytkowników</p>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[840px]">
                 <thead>
                   <tr className="border-b text-left">
                     <th className="pb-3 font-medium">Nazwa</th>
@@ -170,7 +170,7 @@ function AdminUsersContent() {
                       <td className="py-3">{getStatusBadge(user.status)}</td>
                       <td className="py-3">{formatDate(user.createdAt)}</td>
                       <td className="py-3">
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 whitespace-nowrap">
                           <Button variant="ghost" size="icon">
                             <Edit className="h-4 w-4" />
                           </Button>

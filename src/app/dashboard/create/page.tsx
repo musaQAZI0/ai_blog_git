@@ -202,7 +202,7 @@ function CreateArticleContent() {
               <Button
                 onClick={handleGenerate}
                 disabled={files.length === 0 || generating}
-                className="rounded-full bg-foreground px-6 text-background hover:bg-foreground/80 disabled:bg-muted disabled:text-muted-foreground"
+                className="w-full rounded-full bg-foreground px-6 text-background hover:bg-foreground/80 disabled:bg-muted disabled:text-muted-foreground sm:w-auto"
               >
                 {generating ? (
                   <>

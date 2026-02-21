@@ -179,7 +179,7 @@ function AdminArticlesContent() {
 
   return (
     <div className="mx-auto max-w-7xl space-y-6 px-4 py-10 sm:px-6 lg:px-8">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-3xl font-bold">Articles (Admin)</h1>
           <p className="text-muted-foreground">Review and manage all published articles.</p>
@@ -216,7 +216,7 @@ function AdminArticlesContent() {
                       Updated: {formatDateShort(article.updatedAt)}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary">{article.status}</Badge>
                     <Badge variant="outline">{article.targetAudience}</Badge>
                     <Button variant="outline" size="sm" asChild>
@@ -267,7 +267,7 @@ function AdminArticlesContent() {
                       </p>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <Badge variant="secondary">{article.status}</Badge>
                     <Badge variant="outline">{article.targetAudience}</Badge>
                     <Button
@@ -346,7 +346,7 @@ function AdminArticlesContent() {
               </div>
 
               <div className="overflow-x-auto rounded-md border">
-                <table className="min-w-full divide-y divide-border text-sm">
+                <table className="min-w-[900px] divide-y divide-border text-sm">
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="px-3 py-2 text-left font-medium">IP</th>

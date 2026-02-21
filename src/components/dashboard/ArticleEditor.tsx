@@ -125,7 +125,7 @@ export function ArticleEditor({
         </Alert>
       )}
 
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="inline-flex rounded-md border border-muted bg-muted/30 p-1">
           <Button
             type="button"
@@ -149,12 +149,13 @@ export function ArticleEditor({
           </Button>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
           {!hideDraftButton && (
             <Button
               variant="outline"
               onClick={handleSubmit((data) => handleSave(data, false))}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               <Save className="mr-2 h-4 w-4" />
               {draftLabel}
@@ -164,6 +165,7 @@ export function ArticleEditor({
             <Button
               onClick={handleSubmit((data) => handleSave(data, true))}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               <Send className="mr-2 h-4 w-4" />
               {publishLabel}

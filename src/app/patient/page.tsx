@@ -3,12 +3,9 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { Article } from '@/types'
 import { getMockArticles } from '@/lib/mock-data'
-import {
-  fetchPublishedArticles,
-  searchPublishedArticles,
-} from '@/lib/api/articles.client'
 import { ArticleGrid } from '@/components/blog/ArticleGrid'
 import { SearchBar } from '@/components/blog/SearchBar'
+import { NewsletterForm } from '@/components/blog/NewsletterForm'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { ArrowUpDown } from 'lucide-react'
@@ -69,11 +66,14 @@ export default function PatientBlogPage() {
         }
         setArticles(mockArticles)
       } else {
+        const { getArticles, searchArticles } = await import('@/lib/firebase/articles')
         if (searchQuery) {
-          const results = await searchPublishedArticles(searchQuery, 'patient')
+          const results = await searchArticles(searchQuery, 'patient')
           setArticles(results)
         } else {
-          const fetchedArticles = await fetchPublishedArticles('patient')
+          const { articles: fetchedArticles } = await getArticles({
+            targetAudience: 'patient',
+          })
           setArticles(fetchedArticles)
         }
       }
@@ -104,7 +104,7 @@ export default function PatientBlogPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[980px] py-8">
+    <div className="mx-auto max-w-[980px] px-4 py-8 sm:px-6 lg:px-8">
       {/* Header */}
       <div className="pb-8">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
@@ -121,12 +121,12 @@ export default function PatientBlogPage() {
       {/* Toolbar */}
       <div className="border-t border-black/[0.06] pt-6 pb-8">
         <div className="flex justify-end">
-          <div className="flex items-center gap-3">
+          <div className="flex w-full flex-wrap items-center justify-end gap-3">
             <SearchBar onSearch={handleSearch} />
             <button
               type="button"
               onClick={cycleSortOption}
-              className="flex items-center gap-1.5 rounded-lg border border-black/[0.08] px-3 py-1.5 text-xs text-black/40 transition-colors hover:border-black/15 hover:text-black/60"
+              className="flex h-10 items-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3 text-xs font-medium text-sky-800 transition-colors hover:border-sky-400 hover:bg-sky-100"
             >
               <ArrowUpDown className="h-3 w-3" />
               {SORT_LABELS[sortOption]}
@@ -141,6 +141,13 @@ export default function PatientBlogPage() {
         loading={loading}
         basePath="/patient"
       />
+
+      {/* Newsletter */}
+      <div className="mt-14 border-t border-black/[0.06] pt-10">
+        <div className="max-w-lg">
+          <NewsletterForm variant="card" />
+        </div>
+      </div>
 
       {!loading && articles.length > 0 && (
         <div className="mt-12 flex justify-center">

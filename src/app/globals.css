@@ -64,6 +64,7 @@
     text-rendering: optimizeLegibility;
     -webkit-font-smoothing: antialiased;
     background-image: none;
+    overflow-x: hidden;
   }
 }
 
@@ -112,7 +113,7 @@
 }
 
 .prose table {
-  @apply w-full border-collapse;
+  @apply block w-full overflow-x-auto border-collapse;
 }
 
 .prose th,

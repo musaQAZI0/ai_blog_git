@@ -224,7 +224,7 @@ function DashboardSettingsContent() {
           <CardDescription>Zarządzaj swoimi danymi osobowymi</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between rounded-lg border bg-muted/50 p-4">
+          <div className="flex flex-col gap-3 rounded-lg border bg-muted/50 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h4 className="font-medium">Eksport danych</h4>
               <p className="text-sm text-muted-foreground">
@@ -237,7 +237,7 @@ function DashboardSettingsContent() {
             </Button>
           </div>
 
-          <div className="flex items-center justify-between rounded-lg border border-destructive/50 bg-destructive/5 p-4">
+          <div className="flex flex-col gap-3 rounded-lg border border-destructive/50 bg-destructive/5 p-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h4 className="font-medium text-destructive">Usun konto</h4>
               <p className="text-sm text-muted-foreground">

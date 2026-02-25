@@ -63,6 +63,10 @@ export interface Article {
   publishedAt?: Date
   viewCount: number
   tags: string[]
+  wordpressSync?: {
+    status: string
+    postUrl?: string
+  }
 }
 
 export interface ArticleCreateData {

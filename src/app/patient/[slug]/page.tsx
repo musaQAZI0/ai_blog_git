@@ -56,6 +56,25 @@ export default function PatientArticlePage() {
     fetchArticle()
   }, [slug, isDemoMode])
 
+  // Inject canonical <link> tag for patient articles synced to WordPress
+  useEffect(() => {
+    const canonicalUrl = article?.wordpressSync?.postUrl
+    if (!canonicalUrl) return
+
+    // Remove any existing canonical link
+    const existing = document.querySelector('link[rel="canonical"]')
+    if (existing) existing.remove()
+
+    const link = document.createElement('link')
+    link.rel = 'canonical'
+    link.href = canonicalUrl
+    document.head.appendChild(link)
+
+    return () => {
+      link.remove()
+    }
+  }, [article])
+
   if (loading) {
     return (
       <div className="mx-auto max-w-3xl px-4 py-12">
@@ -92,3 +111,4 @@ export default function PatientArticlePage() {
     </div>
   )
 }
+

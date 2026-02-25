@@ -52,7 +52,7 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
       shouldReuseSession && previousSession
         ? previousSession.sessionId
         : (window.crypto?.randomUUID?.() ??
-            `session-${Date.now()}-${Math.random().toString(36).slice(2)}`)
+          `session-${Date.now()}-${Math.random().toString(36).slice(2)}`)
 
     const startTime = Date.now()
 
@@ -85,7 +85,7 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
           durationSeconds,
         }),
         keepalive,
-      }).catch(() => {})
+      }).catch(() => { })
     }
 
     sendTrackEvent(shouldReuseSession ? 'heartbeat' : 'start')
@@ -187,6 +187,19 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
       </div>
 
       <footer className="mt-8 border-t pt-6">
+        {article.wordpressSync?.postUrl && (
+          <div className="mb-4 rounded-lg border border-sky-200 bg-sky-50 px-4 py-3">
+            <a
+              href={article.wordpressSync.postUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 text-sm font-medium text-sky-700 transition-colors hover:text-sky-900"
+            >
+              📖 Przeczytaj oryginalny artykuł na okulistykaakademicka.pl
+              <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
+            </a>
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm text-muted-foreground">Tagi:</span>
           {article.tags.map((tag) => (

@@ -7,7 +7,8 @@
     "build": "node scripts/verify-env.js && next build",
     "start": "next start",
     "lint": "next lint",
-    "verify-env": "node scripts/verify-env.js"
+    "verify-env": "node scripts/verify-env.js",
+    "test:sendgrid": "node scripts/test-sendgrid.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.18.0",

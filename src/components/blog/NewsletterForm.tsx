@@ -33,7 +33,8 @@ export function NewsletterForm({ variant = 'inline', defaultEmail }: NewsletterF
       })
 
       if (!response.ok) {
-        throw new Error('Nie udało sie zapisac do newslettera')
+        const payload = (await response.json().catch(() => null)) as { error?: string } | null
+        throw new Error(payload?.error || 'Nie udalo sie zapisac do newslettera')
       }
 
       setSuccess(true)
@@ -48,9 +49,7 @@ export function NewsletterForm({ variant = 'inline', defaultEmail }: NewsletterF
   if (success) {
     return (
       <Alert variant="success">
-        <AlertDescription>
-          Dziekujemy za zapisanie sie do newslettera!
-        </AlertDescription>
+        <AlertDescription>Dziekujemy za zapisanie sie do newslettera!</AlertDescription>
       </Alert>
     )
   }
@@ -83,30 +82,32 @@ export function NewsletterForm({ variant = 'inline', defaultEmail }: NewsletterF
           </Button>
         </form>
         <p className="mt-3 text-xs text-muted-foreground">
-          Możesz zrezygnowac w każdej chwili. Szanujemy Twoją prywatność.
+          Mozesz zrezygnowac w kazdej chwili. Szanujemy Twoja prywatnosc.
         </p>
       </div>
     )
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <div className="space-y-2">
       {error && (
-        <Alert variant="destructive" className="mb-2">
+        <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      <Input
-        type="email"
-        value={email}
-        onChange={(e) => setEmail(e.target.value)}
-        placeholder="Twoj adres email"
-        required
-        className="flex-1"
-      />
-      <Button type="submit" isLoading={loading}>
-        Zapisz sie
-      </Button>
-    </form>
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <Input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="Twoj adres email"
+          required
+          className="flex-1"
+        />
+        <Button type="submit" isLoading={loading}>
+          Zapisz sie
+        </Button>
+      </form>
+    </div>
   )
 }

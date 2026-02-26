@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAllActiveSubscribers } from '@/lib/firebase/newsletter'
-import { getArticles } from '@/lib/firebase/articles'
 import { sendNewsletterEmail } from '@/lib/email'
+import { getAdminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin.server'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,6 +10,13 @@ export const dynamic = 'force-dynamic'
  */
 export async function POST(request: NextRequest) {
   try {
+    if (!isFirebaseAdminConfigured()) {
+      return NextResponse.json(
+        { success: false, error: 'Firebase Admin not configured' },
+        { status: 500 }
+      )
+    }
+
     // Verify admin authorization
     const authHeader = request.headers.get('authorization')
     const expectedToken = `Bearer ${process.env.EXPORT_API_SECRET}`
@@ -20,9 +26,26 @@ export async function POST(request: NextRequest) {
     }
 
     const { frequency = 'weekly', targetAudience = 'professional' } = await request.json()
+    const adminDb = getAdminDb()
 
     // Get active subscribers for this frequency
-    const subscribers = await getAllActiveSubscribers(frequency)
+    let subscribersQuery = adminDb
+      .collection('newsletterSubscriptions')
+      .where('unsubscribedAt', '==', null)
+      .where('confirmedAt', '!=', null)
+      .orderBy('confirmedAt', 'desc')
+
+    if (frequency) {
+      subscribersQuery = subscribersQuery.where('preferences.frequency', '==', frequency) as typeof subscribersQuery
+    }
+
+    const subscribersSnapshot = await subscribersQuery.get()
+    const subscribers = subscribersSnapshot.docs.map((docSnap) => {
+      const data = docSnap.data() as Record<string, any>
+      return {
+        email: typeof data.email === 'string' ? data.email : '',
+      }
+    })
 
     if (subscribers.length === 0) {
       return NextResponse.json({
@@ -33,10 +56,25 @@ export async function POST(request: NextRequest) {
     }
 
     // Get recent published articles
-    const { articles } = await getArticles({
-      targetAudience,
-      status: 'published',
-      pageSize: 5, // Top 5 articles
+    let articlesQuery = adminDb
+      .collection('articles')
+      .where('status', '==', 'published')
+      .orderBy('publishedAt', 'desc')
+      .limit(5)
+
+    if (targetAudience) {
+      articlesQuery = articlesQuery.where('targetAudience', '==', targetAudience) as typeof articlesQuery
+    }
+
+    const articlesSnapshot = await articlesQuery.get()
+    const articles = articlesSnapshot.docs.map((docSnap) => {
+      const data = docSnap.data() as Record<string, any>
+      return {
+        title: String(data.title || ''),
+        excerpt: String(data.excerpt || ''),
+        slug: String(data.slug || ''),
+        coverImage: typeof data.coverImage === 'string' ? data.coverImage : undefined,
+      }
     })
 
     if (articles.length === 0) {
@@ -55,7 +93,7 @@ export async function POST(request: NextRequest) {
     }))
 
     // Send newsletter to all subscribers
-    const subscriberEmails = subscribers.map((s) => s.email)
+    const subscriberEmails = subscribers.map((s) => s.email).filter(Boolean)
 
     await sendNewsletterEmail({
       to: subscriberEmails,

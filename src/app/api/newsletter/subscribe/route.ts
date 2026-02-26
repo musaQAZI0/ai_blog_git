@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { doc, setDoc, serverTimestamp, getDoc } from 'firebase/firestore'
+import { doc, setDoc, serverTimestamp } from 'firebase/firestore'
 import { db, isFirebaseConfigured } from '@/lib/firebase/config.server'
+import { getAdminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin.server'
+import { FieldValue } from 'firebase-admin/firestore'
 import { hashString, validateEmail } from '@/lib/utils'
 
 export const dynamic = 'force-dynamic'
@@ -28,30 +30,59 @@ export async function POST(request: NextRequest) {
     // Create a hash of the email as document ID
     const emailHash = hashString(email)
 
-    // Check if already subscribed
-    const existingDoc = await getDoc(doc(db, 'newsletterSubscriptions', emailHash))
-    if (existingDoc.exists()) {
-      const data = existingDoc.data()
-      if (!data.unsubscribedAt) {
-        return NextResponse.json(
-          { success: false, error: 'Ten email jest juz zapisany do newslettera' },
-          { status: 400 }
-        )
+    if (isFirebaseAdminConfigured()) {
+      const adminDb = getAdminDb()
+      const subscriptionRef = adminDb.collection('newsletterSubscriptions').doc(emailHash)
+
+      // Public Firestore rules block reads of newsletterSubscriptions, so prefer admin reads.
+      const existingDoc = await subscriptionRef.get()
+      if (existingDoc.exists) {
+        const data = existingDoc.data()
+        if (!data?.unsubscribedAt) {
+          return NextResponse.json(
+            { success: false, error: 'Ten email jest juz zapisany do newslettera' },
+            { status: 400 }
+          )
+        }
+      }
+
+      await subscriptionRef.set({
+        email,
+        userId: userId || null,
+        subscribedAt: FieldValue.serverTimestamp(),
+        confirmedAt: FieldValue.serverTimestamp(),
+        unsubscribedAt: null,
+        preferences: {
+          frequency: 'weekly',
+          categories: [],
+        },
+      })
+    } else {
+      // Fallback for environments without Firebase Admin.
+      // Avoid getDoc() because public reads are denied by Firestore rules.
+      try {
+        await setDoc(doc(db, 'newsletterSubscriptions', emailHash), {
+          email,
+          userId: userId || null,
+          subscribedAt: serverTimestamp(),
+          confirmedAt: serverTimestamp(),
+          unsubscribedAt: null,
+          preferences: {
+            frequency: 'weekly',
+            categories: [],
+          },
+        })
+      } catch (error) {
+        const message = error instanceof Error ? error.message.toLowerCase() : ''
+        if (message.includes('permission') || message.includes('insufficient')) {
+          return NextResponse.json(
+            { success: false, error: 'Ten email jest juz zapisany do newslettera' },
+            { status: 400 }
+          )
+        }
+        throw error
       }
     }
-
-    // Create subscription
-    await setDoc(doc(db, 'newsletterSubscriptions', emailHash), {
-      email,
-      userId: userId || null,
-      subscribedAt: serverTimestamp(),
-      confirmedAt: serverTimestamp(),
-      unsubscribedAt: null,
-      preferences: {
-        frequency: 'weekly',
-        categories: [],
-      },
-    })
 
     return NextResponse.json({
       success: true,

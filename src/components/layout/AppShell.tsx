@@ -26,10 +26,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   if (!withSidebar) {
     return (
-      <>
+      <div className="flex flex-1 flex-col">
         <main className="flex-1">{children}</main>
         <Footer />
-      </>
+      </div>
     )
   }
 

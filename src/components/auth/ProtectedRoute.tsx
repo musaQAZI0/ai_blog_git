@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { Skeleton } from '@/components/ui'
@@ -18,21 +18,25 @@ export function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, loading, isAdmin, isApproved } = useAuth()
   const router = useRouter()
+  const redirected = useRef(false)
 
   useEffect(() => {
-    if (!loading) {
+    if (!loading && !redirected.current) {
       if (!user) {
-        router.push('/login')
+        redirected.current = true
+        router.replace('/login')
         return
       }
 
       if (requireApproved && !isApproved) {
-        router.push('/pending-approval')
+        redirected.current = true
+        router.replace('/pending-approval')
         return
       }
 
       if (requireAdmin && !isAdmin) {
-        router.push('/dashboard')
+        redirected.current = true
+        router.replace('/dashboard')
         return
       }
     }
@@ -50,6 +54,7 @@ export function ProtectedRoute({
     )
   }
 
+  // Return null while redirect is in progress — navigation is already queued
   if (!user) return null
   if (requireApproved && !isApproved) return null
   if (requireAdmin && !isAdmin) return null

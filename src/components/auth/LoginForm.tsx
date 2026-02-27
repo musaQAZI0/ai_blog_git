@@ -55,14 +55,14 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" suppressHydrationWarning>
       {error && (
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
 
-      <div className="space-y-2">
+      <div className="space-y-2" suppressHydrationWarning>
         <Label htmlFor="email" required>
           Email
         </Label>
@@ -75,7 +75,7 @@ export function LoginForm() {
         />
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-2" suppressHydrationWarning>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Label htmlFor="password" required>
             Haslo

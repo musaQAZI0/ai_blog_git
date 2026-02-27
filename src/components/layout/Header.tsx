@@ -60,7 +60,10 @@ export function Header() {
         {/* Left: Logo */}
         <div className="flex items-center">
           <Link href="/patient" className="flex items-center">
-            <span className="text-[17px] font-semibold tracking-tight text-black">
+            <span
+              translate="no"
+              className="text-[17px] font-semibold tracking-tight text-black"
+            >
               Skrzypecki
             </span>
             <span className="ml-1.5 text-[17px] font-semibold tracking-tight text-black">

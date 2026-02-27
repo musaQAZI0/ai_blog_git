@@ -17,7 +17,7 @@ export function Footer({
           {/* Brand */}
           <div className="lg:col-span-2">
             <Link href="/" className="inline-flex items-center gap-2">
-              <span className="text-lg font-bold tracking-tight text-black">Skrzypecki Blog</span>
+              <span translate="no" className="text-lg font-bold tracking-tight text-black">Skrzypecki Blog</span>
             </Link>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-black/50">
               Profesjonalna platforma edukacyjna z zakresu okulistyki dla pacjentów i specjalistów medycznych.

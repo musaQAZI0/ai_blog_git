@@ -61,7 +61,7 @@ function AdminUsersContent() {
   }
 
   const handleDelete = async (userId: string) => {
-    if (!confirm('Czy na pewno chcesz usunąć tego użytkownika?')) return
+    if (!confirm('Czy na pewno chcesz usunac tego uzytkownika?')) return
 
     try {
       const res = await fetch('/api/admin/users/delete', {
@@ -82,11 +82,18 @@ function AdminUsersContent() {
       case 'approved':
         return <Badge variant="success">Zatwierdzony</Badge>
       case 'pending':
-        return <Badge variant="warning">Oczekujący</Badge>
+        return <Badge variant="warning">Oczekujacy</Badge>
       case 'rejected':
         return <Badge variant="destructive">Odrzucony</Badge>
     }
   }
+
+  const getProfessionalTypeLabel = (user: User) =>
+    user.professionalType === 'lekarz'
+      ? 'Lekarz'
+      : user.professionalType === 'optometrysta'
+        ? 'Optometrysta'
+        : user.otherProfessionalType || 'Inny'
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -98,15 +105,14 @@ function AdminUsersContent() {
           <ArrowLeft className="h-4 w-4" />
           Powrot do panelu
         </Link>
-        <h1 className="text-3xl font-bold">Zarządzanie użytkownikami</h1>
+        <h1 className="text-3xl font-bold">Zarzadzanie uzytkownikami</h1>
         <p className="mt-1 text-muted-foreground">
-          Przeglądaj i zarządzaj kontami użytkowników
+          Przegladaj i zarzadzaj kontami uzytkownikow
         </p>
       </div>
 
-      {/* Filters */}
       <Card className="mb-6">
-        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row">
+        <CardContent className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <Input
@@ -122,7 +128,7 @@ function AdminUsersContent() {
             options={[
               { value: 'all', label: 'Wszystkie statusy' },
               { value: 'approved', label: 'Zatwierdzeni' },
-              { value: 'pending', label: 'Oczekujący' },
+              { value: 'pending', label: 'Oczekujacy' },
               { value: 'rejected', label: 'Odrzuceni' },
             ]}
             className="w-full sm:w-48"
@@ -130,7 +136,6 @@ function AdminUsersContent() {
         </CardContent>
       </Card>
 
-      {/* Users Table */}
       <Card>
         <CardHeader>
           <CardTitle>Uzytkownicy ({filteredUsers.length})</CardTitle>
@@ -139,55 +144,85 @@ function AdminUsersContent() {
           {loading ? (
             <p className="text-muted-foreground">Ladowanie...</p>
           ) : filteredUsers.length === 0 ? (
-            <p className="text-muted-foreground">Nie znaleziono użytkowników</p>
+            <p className="text-muted-foreground">Nie znaleziono uzytkownikow</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[840px]">
-                <thead>
-                  <tr className="border-b text-left">
-                    <th className="pb-3 font-medium">Nazwa</th>
-                    <th className="pb-3 font-medium">Email</th>
-                    <th className="pb-3 font-medium">Typ</th>
-                    <th className="pb-3 font-medium">PWZ</th>
-                    <th className="pb-3 font-medium">Status</th>
-                    <th className="pb-3 font-medium">Data rejestracji</th>
-                    <th className="pb-3 font-medium">Akcje</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredUsers.map((user) => (
-                    <tr key={user.id} className="border-b last:border-0">
-                      <td className="py-3">{user.name}</td>
-                      <td className="py-3">{user.email}</td>
-                      <td className="py-3">
-                        {user.professionalType === 'lekarz'
-                          ? 'Lekarz'
-                          : user.professionalType === 'optometrysta'
-                          ? 'Optometrysta'
-                          : user.otherProfessionalType || 'Inny'}
-                      </td>
-                      <td className="py-3">{user.registrationNumber || '-'}</td>
-                      <td className="py-3">{getStatusBadge(user.status)}</td>
-                      <td className="py-3">{formatDate(user.createdAt)}</td>
-                      <td className="py-3">
-                        <div className="flex gap-2 whitespace-nowrap">
-                          <Button variant="ghost" size="icon">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDelete(user.id)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </td>
+            <>
+              <div className="space-y-3 md:hidden">
+                {filteredUsers.map((user) => (
+                  <div key={user.id} className="rounded-lg border bg-muted/40 p-4">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">{user.name}</p>
+                        <p className="truncate text-sm text-muted-foreground">{user.email}</p>
+                      </div>
+                      {getStatusBadge(user.status)}
+                    </div>
+                    <div className="mt-3 space-y-1 text-sm text-muted-foreground">
+                      <p>Typ: {getProfessionalTypeLabel(user)}</p>
+                      <p>PWZ: {user.registrationNumber || '-'}</p>
+                      <p>Rejestracja: {formatDate(user.createdAt)}</p>
+                    </div>
+                    <div className="mt-3 flex gap-2">
+                      <Button variant="outline" className="flex-1" size="sm">
+                        <Edit className="mr-2 h-4 w-4" />
+                        Edytuj
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        className="flex-1"
+                        size="sm"
+                        onClick={() => handleDelete(user.id)}
+                      >
+                        <Trash2 className="mr-2 h-4 w-4" />
+                        Usun
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden overflow-x-auto md:block">
+                <table className="w-full min-w-[840px]">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-3 font-medium">Nazwa</th>
+                      <th className="pb-3 font-medium">Email</th>
+                      <th className="pb-3 font-medium">Typ</th>
+                      <th className="pb-3 font-medium">PWZ</th>
+                      <th className="pb-3 font-medium">Status</th>
+                      <th className="pb-3 font-medium">Data rejestracji</th>
+                      <th className="pb-3 font-medium">Akcje</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {filteredUsers.map((user) => (
+                      <tr key={user.id} className="border-b last:border-0">
+                        <td className="py-3">{user.name}</td>
+                        <td className="py-3">{user.email}</td>
+                        <td className="py-3">{getProfessionalTypeLabel(user)}</td>
+                        <td className="py-3">{user.registrationNumber || '-'}</td>
+                        <td className="py-3">{getStatusBadge(user.status)}</td>
+                        <td className="py-3">{formatDate(user.createdAt)}</td>
+                        <td className="py-3">
+                          <div className="flex gap-2 whitespace-nowrap">
+                            <Button variant="ghost" size="icon">
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDelete(user.id)}
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

@@ -210,7 +210,7 @@ function DashboardSettingsContent() {
             />
           </div>
 
-          <Button onClick={handleSaveProfile} disabled={loading}>
+          <Button onClick={handleSaveProfile} disabled={loading} className="w-full sm:w-auto">
             <Save className="mr-2 h-4 w-4" />
             Zapisz zmiany
           </Button>
@@ -231,7 +231,7 @@ function DashboardSettingsContent() {
                 Pobierz wszystkie swóje dane w formacie JSON
               </p>
             </div>
-            <Button variant="outline" onClick={handleExportData} disabled={loading}>
+            <Button variant="outline" onClick={handleExportData} disabled={loading} className="w-full sm:w-auto">
               <Download className="mr-2 h-4 w-4" />
               Pobierz
             </Button>
@@ -248,6 +248,7 @@ function DashboardSettingsContent() {
               variant="destructive"
               onClick={handleDeleteAccount}
               disabled={loading}
+              className="w-full sm:w-auto"
             >
               <Trash2 className="mr-2 h-4 w-4" />
               Usun konto

@@ -15,8 +15,8 @@ type SortOption = 'newest' | 'oldest' | 'az' | 'za'
 const SORT_LABELS: Record<SortOption, string> = {
   newest: 'Najnowsze',
   oldest: 'Najstarsze',
-  az: 'A–Z',
-  za: 'Z–A',
+  az: 'A-Z',
+  za: 'Z-A',
 }
 
 function toMillis(input: unknown): number {
@@ -104,29 +104,30 @@ export default function PatientBlogPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[980px] px-4 py-8 sm:px-6 lg:px-8">
-      {/* Header */}
+    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-10">
       <div className="pb-8">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
-          Blog dla Pacjentów
+          Blog dla Pacjentow
         </p>
-        <h1 className="mt-4 text-[clamp(1.75rem,4vw,2.5rem)] font-semibold leading-[1.1] tracking-tight text-black">
+        <h1 className="mt-4 text-[clamp(1.9rem,5vw,3.1rem)] font-semibold leading-[1.02] tracking-tight text-black">
           Zdrowie oczu
         </h1>
-        <p className="mt-3 max-w-xl text-sm leading-relaxed text-black/50">
+        <p className="mt-3 max-w-2xl text-sm leading-relaxed text-black/55 sm:text-[15px]">
           Przystepne artykuly o zdrowiu oczu, chorobach i profilaktyce okulistycznej.
         </p>
       </div>
 
-      {/* Toolbar */}
       <div className="border-t border-black/[0.06] pt-6 pb-8">
-        <div className="flex justify-end">
-          <div className="flex w-full flex-wrap items-center justify-end gap-3">
-            <SearchBar onSearch={handleSearch} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs uppercase tracking-[0.14em] text-black/40">
+            {loading ? 'Ladowanie artykulow' : `${articles.length} artykulow`}
+          </p>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <SearchBar onSearch={handleSearch} className="w-full sm:min-w-[20rem] sm:max-w-sm" />
             <button
               type="button"
               onClick={cycleSortOption}
-              className="flex h-10 items-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3 text-xs font-medium text-sky-800 transition-colors hover:border-sky-400 hover:bg-sky-100"
+              className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3 text-xs font-medium text-sky-800 transition-colors hover:border-sky-400 hover:bg-sky-100 sm:w-auto sm:justify-start"
             >
               <ArrowUpDown className="h-3 w-3" />
               {SORT_LABELS[sortOption]}
@@ -135,14 +136,12 @@ export default function PatientBlogPage() {
         </div>
       </div>
 
-      {/* Articles */}
       <ArticleGrid
         articles={articles}
         loading={loading}
         basePath="/patient"
       />
 
-      {/* Newsletter */}
       <div className="mt-14 border-t border-black/[0.06] pt-10">
         <div className="max-w-lg">
           <NewsletterForm variant="card" />

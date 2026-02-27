@@ -2,15 +2,18 @@
 
 import React, { useState, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 interface SearchBarProps {
   onSearch: (query: string) => void
   placeholder?: string
+  className?: string
 }
 
 export function SearchBar({
   onSearch,
   placeholder = 'Szukaj artykulow...',
+  className,
 }: SearchBarProps) {
   const [query, setQuery] = useState('')
 
@@ -28,7 +31,7 @@ export function SearchBar({
   }, [onSearch])
 
   return (
-    <form onSubmit={handleSubmit} className="relative w-full max-w-sm">
+    <form onSubmit={handleSubmit} className={cn('relative w-full', className)}>
       <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-sky-600/70" />
       <input
         type="text"

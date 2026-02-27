@@ -77,7 +77,7 @@ function DashboardArticleEditContent() {
               Zaktualizuj treść i opublikuj, gdy będzie gotowy
             </p>
           </div>
-          <Button variant="outline" asChild>
+          <Button variant="outline" asChild className="w-full sm:w-auto">
             <Link href="/dashboard/create">Nowy artykul</Link>
           </Button>
         </div>

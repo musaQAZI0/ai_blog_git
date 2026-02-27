@@ -54,7 +54,7 @@ function DashboardContent() {
           <p className="mt-1 text-muted-foreground">Witaj, {user?.name}</p>
         </div>
         {isAdmin ? (
-          <Button asChild>
+          <Button asChild className="w-full sm:w-auto">
             <Link href="/dashboard/create">
               <Plus className="mr-2 h-4 w-4" />
               Nowy artykul
@@ -196,7 +196,7 @@ function DashboardContent() {
                         {article.viewCount} wyswietlen
                       </p>
                     </div>
-                    <Button variant="outline" size="sm" asChild>
+                    <Button variant="outline" size="sm" asChild className="w-full sm:w-auto">
                       <Link href={`/dashboard/articles/${article.id}`}>Edytuj</Link>
                     </Button>
                   </div>

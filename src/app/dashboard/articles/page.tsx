@@ -97,7 +97,7 @@ function DashboardArticlesContent() {
             <h1 className="text-3xl font-bold">My Articles</h1>
             <p className="mt-1 text-muted-foreground">Manage your articles</p>
           </div>
-          <Button asChild>
+          <Button asChild className="w-full sm:w-auto">
             <Link href="/dashboard/create">
               <Plus className="mr-2 h-4 w-4" />
               New article
@@ -152,12 +152,13 @@ function DashboardArticlesContent() {
                     </p>
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:justify-end">
                     <Button
                       variant="ghost"
                       size="icon"
                       onClick={() => handleTogglePublish(article)}
                       title={article.status === 'published' ? 'Unpublish' : 'Publish'}
+                      className="h-9 w-9"
                     >
                       {article.status === 'published' ? (
                         <EyeOff className="h-4 w-4" />
@@ -165,12 +166,12 @@ function DashboardArticlesContent() {
                         <Eye className="h-4 w-4" />
                       )}
                     </Button>
-                    <Button variant="ghost" size="icon" asChild>
+                    <Button variant="ghost" size="icon" asChild className="h-9 w-9">
                       <Link href={`/dashboard/articles/${article.id}`}>
                         <Edit className="h-4 w-4" />
                       </Link>
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => handleDelete(article.id)}>
+                    <Button variant="ghost" size="icon" onClick={() => handleDelete(article.id)} className="h-9 w-9">
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>

@@ -45,6 +45,9 @@ export const metadata: Metadata = {
     url: 'https://blog.skrzypecki.pl',
     siteName: 'Blog Okulistyczny Dr Skrzypecki',
   },
+  other: {
+    google: 'notranslate',
+  },
 }
 
 export default function RootLayout({
@@ -53,8 +56,13 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pl" suppressHydrationWarning className={`${poppins.variable} ${notoSans.variable}`}>
-      <body className="font-sans antialiased" suppressHydrationWarning>
+    <html
+      lang="pl"
+      translate="no"
+      suppressHydrationWarning
+      className={`notranslate ${poppins.variable} ${notoSans.variable}`}
+    >
+      <body className="font-sans antialiased notranslate" suppressHydrationWarning>
         <AuthProvider>
           <div className="flex min-h-screen flex-col">
             <Header />

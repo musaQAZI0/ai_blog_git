@@ -184,7 +184,7 @@ function AdminArticlesContent() {
           <h1 className="text-3xl font-bold">Articles (Admin)</h1>
           <p className="text-muted-foreground">Review and manage all published articles.</p>
         </div>
-        <Button asChild>
+        <Button asChild className="w-full sm:w-auto">
           <Link href="/dashboard/create">Create new</Link>
         </Button>
       </div>
@@ -216,7 +216,7 @@ function AdminArticlesContent() {
                       Updated: {formatDateShort(article.updatedAt)}
                     </p>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
                     <Badge variant="secondary">{article.status}</Badge>
                     <Badge variant="outline">{article.targetAudience}</Badge>
                     <Button variant="outline" size="sm" asChild>
@@ -267,7 +267,7 @@ function AdminArticlesContent() {
                       </p>
                     )}
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex w-full flex-wrap items-center gap-2 md:w-auto md:justify-end">
                     <Badge variant="secondary">{article.status}</Badge>
                     <Badge variant="outline">{article.targetAudience}</Badge>
                     <Button
@@ -345,7 +345,32 @@ function AdminArticlesContent() {
                 </div>
               </div>
 
-              <div className="overflow-x-auto rounded-md border">
+              <div className="space-y-3 md:hidden">
+                {liveStats.recentSessions.length === 0 ? (
+                  <p className="rounded-md border px-3 py-4 text-sm text-muted-foreground">
+                    No viewer sessions recorded yet.
+                  </p>
+                ) : (
+                  liveStats.recentSessions.map((session) => (
+                    <div key={session.sessionId} className="rounded-md border p-3 text-sm">
+                      <div className="flex items-center justify-between gap-2">
+                        <p className="font-mono text-xs">{session.ip}</p>
+                        <Badge variant={session.isActive ? 'secondary' : 'outline'}>
+                          {session.isActive ? 'active' : 'inactive'}
+                        </Badge>
+                      </div>
+                      <div className="mt-2 space-y-1 text-xs text-muted-foreground">
+                        <p>Read time: {formatDuration(session.durationSeconds)}</p>
+                        <p>Started: {formatDateTime(session.startedAt)}</p>
+                        <p>Last seen: {formatDateTime(session.lastSeenAt)}</p>
+                        <p className="break-words">UA: {session.userAgent}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="hidden overflow-x-auto rounded-md border md:block">
                 <table className="min-w-[900px] divide-y divide-border text-sm">
                   <thead className="bg-muted/50">
                     <tr>

@@ -142,7 +142,7 @@ function CreateArticleContent() {
           <ArrowLeft className="h-4 w-4" />
           Powrot do panelu
         </Link>
-        <h1 className="text-4xl font-semibold tracking-tight text-foreground">Utworz nowy artykul</h1>
+        <h1 className="text-[clamp(1.85rem,5vw,2.5rem)] font-semibold tracking-tight text-foreground">Utworz nowy artykul</h1>
         <p className="mt-3 max-w-2xl text-muted-foreground">
           Wgraj dokumenty PDF i pozwol AI wygenerować treść artykułu
         </p>

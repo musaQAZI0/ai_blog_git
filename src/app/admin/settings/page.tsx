@@ -30,7 +30,7 @@ function AdminSettingsContent() {
             Ustawienia
           </CardTitle>
           <CardDescription>
-            Ta sekcja jest w przygotowaniu. Wróci tu konfiguracja systemu, AI i powiadomień.
+            Ta sekcja jest w przygotowaniu. Wroci tu konfiguracja systemu, AI i powiadomien.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 pt-6">
@@ -38,11 +38,11 @@ function AdminSettingsContent() {
             Na ten moment ustawienia sa zarzadzane przez pliki konfiguracyjne i zmienne srodowiskowe.
           </p>
           <div className="flex flex-wrap gap-3">
-            <Button asChild variant="outline">
-              <Link href="/admin/users">Zarządzaj użytkownikami</Link>
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link href="/admin/users">Zarzadzaj uzytkownikami</Link>
             </Button>
-            <Button asChild variant="outline">
-              <Link href="/admin/articles">Zarządzaj artykulami</Link>
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link href="/admin/articles">Zarzadzaj artykulami</Link>
             </Button>
           </div>
         </CardContent>

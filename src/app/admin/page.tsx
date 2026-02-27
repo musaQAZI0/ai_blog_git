@@ -282,6 +282,7 @@ function AdminDashboardContent() {
                       size="sm"
                       onClick={() => handleReject(approval)}
                       disabled={actionLoading === approval.userId}
+                      className="flex-1 sm:flex-none"
                     >
                       <XCircle className="mr-1 h-4 w-4" />
                       Odrzuc
@@ -290,6 +291,7 @@ function AdminDashboardContent() {
                       size="sm"
                       onClick={() => handleApprove(approval)}
                       disabled={actionLoading === approval.userId}
+                      className="flex-1 sm:flex-none"
                     >
                       <CheckCircle className="mr-1 h-4 w-4" />
                       Zatwierdz

@@ -104,7 +104,7 @@ export default function PatientBlogPage() {
   }
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-4 py-8 sm:px-6 lg:px-10">
+    <div className="mx-auto w-full max-w-[1320px] px-4 py-8 sm:px-6 lg:px-8">
       <div className="pb-8">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
           Blog dla Pacjentow
@@ -117,7 +117,7 @@ export default function PatientBlogPage() {
         </p>
       </div>
 
-      <div className="border-t border-black/[0.06] pt-6 pb-8">
+      <div className="pt-6 pb-8">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs uppercase tracking-[0.14em] text-black/40">
             {loading ? 'Ladowanie artykulow' : `${articles.length} artykulow`}
@@ -142,7 +142,7 @@ export default function PatientBlogPage() {
         basePath="/patient"
       />
 
-      <div className="mt-14 border-t border-black/[0.06] pt-10">
+      <div className="mt-14 pt-10">
         <div className="max-w-lg">
           <NewsletterForm variant="card" />
         </div>

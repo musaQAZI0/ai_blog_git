@@ -24,20 +24,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname() || '/'
   const withSidebar = shouldShowSidebar(pathname)
 
-  if (!withSidebar) {
-    return (
-      <div className="flex flex-1 flex-col">
-        <main className="flex-1">{children}</main>
-        <Footer />
-      </div>
-    )
-  }
-
   return (
+    // Single stable root — never changes shape between routes
     <div className="flex flex-1 flex-col">
-      <div className="w-full flex-1 sm:flex">
-        {/* Sidebar */}
-        <aside className="hidden w-56 flex-shrink-0 self-start sm:sticky sm:top-20 sm:flex sm:h-[calc(100vh-5rem)] sm:flex-col sm:border-r sm:border-black/[0.06]">
+      <div className={cn('w-full flex-1', withSidebar && 'sm:flex')}>
+        {/* Sidebar — always in the DOM, hidden via CSS when not needed */}
+        <aside
+          aria-hidden={!withSidebar}
+          className={cn(
+            'w-56 flex-shrink-0 self-start sm:sticky sm:top-20 sm:h-[calc(100vh-5rem)] sm:flex-col sm:border-r sm:border-black/[0.06]',
+            withSidebar ? 'hidden sm:flex' : 'hidden'
+          )}
+        >
           <nav className="flex-1 overflow-y-auto px-4 pt-8 pb-6">
             <div className="space-y-1">
               {SIDE_NAV.map((item) => {
@@ -57,7 +55,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                         : 'text-black/45 hover:text-black/80'
                     )}
                   >
-                    {/* Active indicator — left bar like OpenAI */}
                     {isActive && (
                       <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-black" />
                     )}
@@ -69,12 +66,17 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </nav>
         </aside>
 
-        {/* Main content */}
-        <div className="flex min-w-0 flex-1 flex-col">
-          <div className="pt-8 sm:pl-8 sm:pr-4">
+        {/* Main content — always rendered */}
+        <div
+          className={cn(
+            'flex min-w-0 flex-1 flex-col',
+            withSidebar && 'sm:pl-8 sm:pr-4'
+          )}
+        >
+          <div className={cn('flex-1', withSidebar ? 'pt-8' : '')}>
             <main className="flex-1 pb-20">{children}</main>
           </div>
-          <Footer containerClassName="sm:pl-8 sm:pr-4" />
+          <Footer />
         </div>
       </div>
     </div>

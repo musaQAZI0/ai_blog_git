@@ -18,6 +18,8 @@ const COOKIE_PREFERENCES_KEY = 'cookie_preferences'
 const COOKIE_EXPIRY_DAYS = 365
 
 export function CookieConsent() {
+  // Start as not mounted — avoid SSR/client hydration mismatch
+  const [mounted, setMounted] = useState(false)
   const [showBanner, setShowBanner] = useState(false)
   const [showSettings, setShowSettings] = useState(false)
   const [preferences, setPreferences] = useState<CookiePreferences>({
@@ -28,6 +30,7 @@ export function CookieConsent() {
   })
 
   useEffect(() => {
+    setMounted(true)
     // Check if user has already consented
     const consent = Cookies.get(COOKIE_CONSENT_KEY)
     const savedPreferences = Cookies.get(COOKIE_PREFERENCES_KEY)
@@ -130,10 +133,11 @@ export function CookieConsent() {
     savePreferences(preferences)
   }
 
-  if (!showBanner) return null
+  // Don't render until mounted (avoids SSR/hydration mismatch)
+  if (!mounted || !showBanner) return null
 
   return (
-    <>
+    <div>
       {/* Cookie Banner */}
       <div className="fixed bottom-0 left-0 right-0 z-50 p-4 sm:p-6">
         <div className="mx-auto max-w-4xl rounded-lg border-2 bg-background shadow-xl">
@@ -288,7 +292,7 @@ export function CookieConsent() {
       {showBanner && (
         <div className="fixed inset-0 z-40 bg-black/20 backdrop-blur-sm" aria-hidden="true" />
       )}
-    </>
+    </div>
   )
 }
 

@@ -49,7 +49,7 @@ export function Header() {
   }
 
   return (
-    <header className="sticky top-0 z-50 w-full bg-white/95 backdrop-blur">
+    <header className="sticky top-0 z-50 w-full bg-white">
       {mounted && isDemoMode && (
         <div className="bg-amber-50 px-4 py-1.5 text-center text-[11px] text-amber-700">
           Tryb demo - skonfiguruj Firebase w .env.local

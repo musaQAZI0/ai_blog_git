@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { Article } from '@/types'
 import { getArticles, searchArticles } from '@/lib/firebase/articles'
 import { ArticleGrid } from '@/components/blog/ArticleGrid'
@@ -9,9 +9,11 @@ import { NewsletterForm } from '@/components/blog/NewsletterForm'
 import { Button } from '@/components/ui'
 import { useAuth } from '@/context/AuthContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-import { ArrowUpDown } from 'lucide-react'
+import { ChevronDown, Grid3X3, List } from 'lucide-react'
+import { cn } from '@/lib/utils'
 
 type SortOption = 'newest' | 'oldest' | 'az' | 'za'
+type ViewMode = 'grid' | 'list'
 
 const SORT_LABELS: Record<SortOption, string> = {
   newest: 'Najnowsze',
@@ -19,6 +21,8 @@ const SORT_LABELS: Record<SortOption, string> = {
   az: 'A-Z',
   za: 'Z-A',
 }
+
+const SORT_OPTIONS: SortOption[] = ['newest', 'oldest', 'az', 'za']
 
 function toMillis(input: unknown): number {
   if (!input) return 0
@@ -51,6 +55,9 @@ function ProfessionalBlogContent() {
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [sortOption, setSortOption] = useState<SortOption>('newest')
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [isSortOpen, setIsSortOpen] = useState(false)
+  const sortMenuRef = useRef<HTMLDivElement>(null)
   const { user } = useAuth()
 
   const fetchArticles = useCallback(async () => {
@@ -77,18 +84,24 @@ function ProfessionalBlogContent() {
   }, [fetchArticles])
 
   useEffect(() => {
-    setArticles((prev) => sortArticles(prev, sortOption))
-  }, [sortOption])
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (sortMenuRef.current && !sortMenuRef.current.contains(target)) {
+        setIsSortOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
 
   const handleSearch = (query: string) => {
     setSearchQuery(query)
   }
 
-  const cycleSortOption = () => {
-    const options: SortOption[] = ['newest', 'oldest', 'az', 'za']
-    const currentIndex = options.indexOf(sortOption)
-    setSortOption(options[(currentIndex + 1) % options.length])
-  }
+  const visibleArticles = useMemo(() => {
+    return sortArticles(articles, sortOption)
+  }, [articles, sortOption])
 
   return (
     <div className="mx-auto w-full max-w-[1320px] px-4 py-8 sm:px-6 lg:px-8">
@@ -115,28 +128,84 @@ function ProfessionalBlogContent() {
       </div>
 
       <div className="pt-6 pb-8">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <p className="text-xs uppercase tracking-[0.14em] text-black/40">
-            {loading ? 'Ladowanie artykulow' : `${articles.length} artykulow`}
+            {loading ? 'Ladowanie artykulow' : `${visibleArticles.length} artykulow`}
           </p>
-          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
             <SearchBar onSearch={handleSearch} className="w-full sm:min-w-[20rem] sm:max-w-sm" />
-            <button
-              type="button"
-              onClick={cycleSortOption}
-              className="flex h-10 w-full items-center justify-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3 text-xs font-medium text-sky-800 transition-colors hover:border-sky-400 hover:bg-sky-100 sm:w-auto sm:justify-start"
-            >
-              <ArrowUpDown className="h-3 w-3" />
-              {SORT_LABELS[sortOption]}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <div className="relative" ref={sortMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSortOpen((prev) => !prev)
+                  }}
+                  title={`Sortowanie: ${SORT_LABELS[sortOption]}`}
+                  className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-[15px] font-medium text-black transition-colors hover:bg-black/[0.04]"
+                >
+                  Sortuj
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+                {isSortOpen && (
+                  <div className="absolute right-0 z-20 mt-1.5 min-w-[180px] overflow-hidden rounded-xl border border-black/[0.1] bg-white py-1 shadow-[0_10px_25px_-12px_rgba(0,0,0,0.24)]">
+                    {SORT_OPTIONS.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          setSortOption(option)
+                          setIsSortOpen(false)
+                        }}
+                        className={cn(
+                          'block w-full px-3 py-2 text-left text-[14px] transition-colors hover:bg-black/[0.04]',
+                          sortOption === option ? 'font-medium text-black' : 'text-black/70'
+                        )}
+                      >
+                        {SORT_LABELS[option]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="ml-0.5 flex items-center gap-0.5">
+                <button
+                  type="button"
+                  aria-label="Widok siatki"
+                  onClick={() => setViewMode('grid')}
+                  className={cn(
+                    'inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+                    viewMode === 'grid'
+                      ? 'text-black'
+                      : 'text-black/30 hover:bg-black/[0.04] hover:text-black/70'
+                  )}
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Widok listy"
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    'inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+                    viewMode === 'list'
+                      ? 'text-black'
+                      : 'text-black/30 hover:bg-black/[0.04] hover:text-black/70'
+                  )}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
       <ArticleGrid
-        articles={articles}
+        articles={visibleArticles}
         loading={loading}
         basePath="/professional"
+        viewMode={viewMode}
       />
 
       <div className="mt-14 pt-10">
@@ -145,7 +214,7 @@ function ProfessionalBlogContent() {
         </div>
       </div>
 
-      {!loading && articles.length > 0 && (
+      {!loading && visibleArticles.length > 0 && (
         <div className="mt-12 flex justify-center">
           <Button
             variant="outline"

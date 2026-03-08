@@ -109,7 +109,7 @@ function ProfessionalBlogContent() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
-              Blog dla Specjalistów
+              Blog dla Specjalistow
             </p>
             <h1 className="mt-4 text-[clamp(1.9rem,5vw,3.1rem)] font-semibold leading-[1.02] tracking-tight text-black">
               Artykuly kliniczne

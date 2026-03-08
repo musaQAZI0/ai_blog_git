@@ -1,12 +1,5 @@
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app'
-import {
-  getAuth,
-  initializeAuth,
-  indexedDBLocalPersistence,
-  browserLocalPersistence,
-  browserSessionPersistence,
-  Auth,
-} from 'firebase/auth'
+import { getAuth, Auth } from 'firebase/auth'
 import { getFirestore, Firestore } from 'firebase/firestore'
 import { getStorage, FirebaseStorage } from 'firebase/storage'
 
@@ -72,27 +65,15 @@ export async function ensureFirebaseInitialized(): Promise<boolean> {
         app = getApps()[0]
       }
 
-      auth = initializeAuth(app, {
-        persistence: [indexedDBLocalPersistence, browserLocalPersistence, browserSessionPersistence],
-        popupRedirectResolver: undefined,
-      })
+      auth = getAuth(app)
       db = getFirestore(app)
       storage = getStorage(app)
       isFirebaseConfigured = true
       return true
     } catch (error) {
       console.warn('Firebase (client) initialization failed:', error)
-      try {
-        auth = getAuth(app!)
-        db = getFirestore(app!)
-        storage = getStorage(app!)
-        isFirebaseConfigured = true
-        return true
-      } catch (fallbackError) {
-        console.warn('Firebase (client) fallback initialization failed:', fallbackError)
-        isFirebaseConfigured = false
-        return false
-      }
+      isFirebaseConfigured = false
+      return false
     }
   })()
 

@@ -1,14 +1,14 @@
 import { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Polityka Prywatności',
+  title: 'Polityka Prywatnosci',
   description: 'Polityka prywatnosci bloga Dr Skrzypecki',
 }
 
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 lg:px-8">
-      <h1 className="mb-8 text-3xl font-bold">Polityka Prywatności</h1>
+      <h1 className="mb-8 text-3xl font-bold">Polityka Prywatnosci</h1>
 
       <div className="prose max-w-none dark:prose-invert">
         <p className="text-muted-foreground">

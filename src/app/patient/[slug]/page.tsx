@@ -79,7 +79,7 @@ export default function PatientArticlePage() {
             {error || 'Artykul nie znaleziony'}
           </h1>
           <a href="/patient" className="mt-4 text-primary hover:underline">
-            Powrót do listy artykułów
+            Powrot do listy artykulow
           </a>
         </div>
       </div>

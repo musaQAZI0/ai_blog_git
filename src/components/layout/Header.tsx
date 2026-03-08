@@ -9,8 +9,8 @@ import { useAuth } from '@/context/AuthContext'
 
 const desktopNav = [
   { label: 'Pacjenci', href: '/patient' },
-  { label: 'Specjaliści', href: '/professional' },
-  { label: 'Prywatność', href: '/privacy' },
+  { label: 'Specjalisci', href: '/professional' },
+  { label: 'Prywatnosc', href: '/privacy' },
   { label: 'Regulamin', href: '/terms' },
   { label: 'Cookies', href: '/cookies' },
 ]

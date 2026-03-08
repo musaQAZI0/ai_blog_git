@@ -1,5 +1,4 @@
 import { generateFileName, uploadFile, uploadFileToProvider, type StorageProvider } from '@/lib/storage'
-import { buildTextSafeImagePrompt } from '@/lib/ai/figure-safety'
 
 export type ImagenPurpose = 'cover' | 'illustration' | 'chart'
 
@@ -76,7 +75,6 @@ async function generateWithNanaBanana(
   model: string = NANO_BANANA_MODEL
 ): Promise<{ buffer: Buffer; mimeType: string }> {
   const apiKey = getApiKey()
-  const safePrompt = buildTextSafeImagePrompt(prompt)
 
   console.log(`[nano-banana] Generating image with model "${model}"`)
 
@@ -86,7 +84,7 @@ async function generateWithNanaBanana(
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: safePrompt }] }],
+        contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           responseModalities: ['IMAGE', 'TEXT'],
         },
@@ -131,7 +129,6 @@ async function generateWithImagen(
 ): Promise<{ buffer: Buffer; mimeType: string }> {
   const apiKey = getApiKey()
   const model = IMAGEN_MODEL_BY_PURPOSE[purpose] || IMAGEN_FALLBACK
-  const safePrompt = buildTextSafeImagePrompt(prompt)
 
   console.log(`[imagen-fallback] Generating image with model "${model}" (purpose: ${purpose})`)
 
@@ -145,7 +142,7 @@ async function generateWithImagen(
           'x-goog-api-key': apiKey,
         },
         body: JSON.stringify({
-          instances: [{ prompt: safePrompt }],
+          instances: [{ prompt }],
           parameters: { sampleCount: 1 },
         }),
       }

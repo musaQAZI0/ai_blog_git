@@ -1,77 +1,52 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getRequestUser } from '@/lib/auth/server'
-import { getAdminAuth, getAdminDb, isFirebaseAdminConfigured } from '@/lib/firebase/admin'
+import {
+  doc,
+  collection,
+  query,
+  where,
+  getDocs,
+  writeBatch,
+} from 'firebase/firestore'
+import { db, isFirebaseConfigured } from '@/lib/firebase/config.server'
 
 export const dynamic = 'force-dynamic'
 
+// GDPR data deletion endpoint (right to be forgotten)
 export async function POST(request: NextRequest) {
   try {
-    if (!isFirebaseAdminConfigured()) {
+    if (!isFirebaseConfigured || !db) {
       return NextResponse.json(
-        { success: false, error: 'Firebase Admin is not configured' },
+        { success: false, error: 'Database not configured' },
         { status: 503 }
       )
     }
 
-    const requestUser = await getRequestUser(request)
-    if (!requestUser.uid || requestUser.role === 'guest') {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized' },
-        { status: 401 }
-      )
-    }
+    const body = await request.json()
+    const { userId, confirmEmail } = body
 
-    const body = await request.json().catch(() => ({}))
-    const requestedUserId =
-      typeof body?.userId === 'string' && body.userId.trim()
-        ? body.userId.trim()
-        : requestUser.uid
-    const confirmEmail = typeof body?.confirmEmail === 'string' ? body.confirmEmail.trim() : ''
-
-    if (!confirmEmail) {
+    if (!userId || !confirmEmail) {
       return NextResponse.json(
-        { success: false, error: 'Email confirmation required' },
+        { success: false, error: 'User ID and email confirmation required' },
         { status: 400 }
       )
     }
 
-    if (requestedUserId !== requestUser.uid && requestUser.role !== 'admin') {
-      return NextResponse.json(
-        { success: false, error: 'Forbidden' },
-        { status: 403 }
-      )
-    }
+    const batch = writeBatch(db)
 
-    const adminDb = getAdminDb()
-    const userRef = adminDb.collection('users').doc(requestedUserId)
-    const userSnap = await userRef.get()
+    // Delete user document
+    batch.delete(doc(db, 'users', userId))
 
-    if (!userSnap.exists) {
-      return NextResponse.json(
-        { success: false, error: 'User not found' },
-        { status: 404 }
-      )
-    }
+    // Delete pending approval if exists
+    batch.delete(doc(db, 'pendingApprovals', userId))
 
-    const userData = userSnap.data() || {}
-    if ((userData.email || '').toLowerCase() !== confirmEmail.toLowerCase()) {
-      return NextResponse.json(
-        { success: false, error: 'Email confirmation does not match' },
-        { status: 400 }
-      )
-    }
+    // Delete or anonymize user's articles
+    const articlesQuery = query(
+      collection(db, 'articles'),
+      where('authorId', '==', userId)
+    )
+    const articlesSnapshot = await getDocs(articlesQuery)
 
-    const [articlesSnapshot, consentSnapshot, newsletterSnapshot] = await Promise.all([
-      adminDb.collection('articles').where('authorId', '==', requestedUserId).get(),
-      adminDb.collection('consentLogs').where('userId', '==', requestedUserId).get().catch(() => null),
-      adminDb.collection('newsletterSubscriptions').where('userId', '==', requestedUserId).get().catch(() => null),
-    ])
-
-    const batch = adminDb.batch()
-
-    batch.delete(userRef)
-    batch.delete(adminDb.collection('pendingApprovals').doc(requestedUserId))
-
+    // Anonymize articles (keep content but remove author info)
     articlesSnapshot.docs.forEach((articleDoc) => {
       batch.update(articleDoc.ref, {
         authorId: 'deleted-user',
@@ -79,23 +54,11 @@ export async function POST(request: NextRequest) {
       })
     })
 
-    consentSnapshot?.docs.forEach((doc) => {
-      batch.delete(doc.ref)
-    })
-
-    newsletterSnapshot?.docs.forEach((doc) => {
-      batch.delete(doc.ref)
-    })
-
+    // Commit all deletions
     await batch.commit()
 
-    try {
-      await getAdminAuth().deleteUser(requestedUserId)
-    } catch (error) {
-      console.warn('Failed to delete auth user:', error)
-    }
-
-    console.log(`GDPR deletion completed for user: ${requestedUserId}`)
+    // Log deletion for compliance
+    console.log(`GDPR deletion completed for user: ${userId}`)
 
     return NextResponse.json({
       success: true,
@@ -104,7 +67,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('GDPR deletion error:', error)
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Deletion failed' },
+      { success: false, error: 'Deletion failed' },
       { status: 500 }
     )
   }

@@ -177,11 +177,11 @@ function CreateArticleContent() {
                       id="targetAudience"
                       value={lockedTargetAudience}
                       disabled
-                        options={[
-                          lockedTargetAudience === 'patient'
-                            ? { value: 'patient', label: 'Pacjenci (prosty język)' }
-                            : { value: 'professional', label: 'Specjaliści (język techniczny)' },
-                        ]}
+                      options={[
+                        lockedTargetAudience === 'patient'
+                          ? { value: 'patient', label: 'Pacjenci (prosty jezyk)' }
+                          : { value: 'professional', label: 'Specjalisci (jezyk techniczny)' },
+                      ]}
                     />
                   ) : (
                     <Select
@@ -189,8 +189,8 @@ function CreateArticleContent() {
                       value={targetAudience}
                       onChange={(e) => setTargetAudience(e.target.value as TargetAudience)}
                       options={[
-                        { value: 'patient', label: 'Pacjenci (prosty język)' },
-                        { value: 'professional', label: 'Specjaliści (język techniczny)' },
+                        { value: 'patient', label: 'Pacjenci (prosty jezyk)' },
+                        { value: 'professional', label: 'Specjalisci (jezyk techniczny)' },
                       ]}
                     />
                   )}

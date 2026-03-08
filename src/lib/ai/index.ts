@@ -2,7 +2,6 @@ import { generateArticleWithOpenAI, improveContent } from './openai'
 import { generateArticleWithClaude, improveContentWithClaude } from './claude'
 import { generateArticleWithGemini, improveContentWithGemini } from './gemini'
 import { normalizeAIGenerationResponse } from './normalize'
-import { appendSourceReferenceSection } from './source-reference'
 import { AIGenerationRequest, AIGenerationResponse, AIProvider } from '@/types'
 
 export async function generateArticle(
@@ -10,23 +9,18 @@ export async function generateArticle(
 ): Promise<AIGenerationResponse> {
   const { pdfContent, targetAudience, provider, generateImage } = request
 
-  const withSourceReference = (response: AIGenerationResponse) => ({
-    ...response,
-    content: appendSourceReferenceSection(response.content, pdfContent),
-  })
-
   if (provider === 'openai') {
     return normalizeAIGenerationResponse(
-      withSourceReference(await generateArticleWithOpenAI(pdfContent, targetAudience, generateImage))
+      await generateArticleWithOpenAI(pdfContent, targetAudience, generateImage)
     )
   }
   if (provider === 'gemini') {
     return normalizeAIGenerationResponse(
-      withSourceReference(await generateArticleWithGemini(pdfContent, targetAudience, generateImage))
+      await generateArticleWithGemini(pdfContent, targetAudience, generateImage)
     )
   } else {
     return normalizeAIGenerationResponse(
-      withSourceReference(await generateArticleWithClaude(pdfContent, targetAudience))
+      await generateArticleWithClaude(pdfContent, targetAudience)
     )
   }
 }

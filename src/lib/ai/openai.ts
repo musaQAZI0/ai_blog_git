@@ -1,7 +1,6 @@
 import OpenAI from 'openai'
 import { AIGenerationResponse, TargetAudience } from '@/types'
 import { generateAndUploadImagen, type ImagenPurpose } from '@/lib/ai/gemini-imagen'
-import { isTextHeavyFigure, removeFigurePlaceholder } from '@/lib/ai/figure-safety'
 import { findCoverImageUrl } from '@/lib/images/cover-search'
 
 function getOpenAIClient() {
@@ -68,16 +67,10 @@ export async function generateArticleWithOpenAI(
   ## Kluczowe informacje
   ## Znaczenie kliniczne
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
-- If the source includes numerical results, present them as markdown bullet points or markdown tables inside "content".
-- Do NOT request charts, graphs, tables, infographics, screenshots, or any figure that requires visible text or numbers.
-- Figures must be text-free medical illustrations only.
 `
       : `AudienceInstructions (patient):
 - Keep language simple and reassuring.
 - Explain any unavoidable medical terms briefly.
-- If the source includes numerical results, present them as simple markdown lists or markdown tables inside "content".
-- Do NOT request charts, graphs, tables, infographics, screenshots, or any figure that requires visible text or numbers.
-- Figures must be text-free medical illustrations only.
 `
 
   const userPrompt = `Based on the following medical document content, create a blog article/review in Polish.
@@ -88,15 +81,14 @@ Document content: ${pdfContent}
 
 IMPORTANT:
 - Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
-- Include up to 2 optional figures, but ONLY as text-free medical illustrations.
-- If the PDF contains numerical data, present it in markdown tables or bullet lists inside "content", not as an image.
+- Include up to 3 figures (mix of medical illustration and/or chart/graph if the PDF contains numerical data).
 - In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. ${getFigurePlaceholderUrl(1)}.
 ${audienceInstructions}
 
 Required JSON format:
 {
   "title": "Article title",
-  "content": "Full article content in markdown format (may include markdown tables and placeholders like ${getFigurePlaceholderUrl(1)} where images should appear)",
+  "content": "Full article content in markdown format (must include placeholders like ${getFigurePlaceholderUrl(1)} where images should appear)",
   "excerpt": "A brief 2-3 sentence summary (max 160 characters)",
   "seoMeta": {
     "title": "SEO optimized title (max 60 characters)",
@@ -109,11 +101,11 @@ Required JSON format:
   "figures": [
     {
       "id": "figure_1",
-      "type": "illustration",
+      "type": "illustration|chart",
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "${getFigurePlaceholderUrl(1)}",
-      "prompt": "Text-free medical illustration prompt in English. No words, letters, numbers, labels, legends, tables, or watermarks."
+      "prompt": "Image generation prompt in English. If chart, include exact data and style instructions."
     }
   ]
 }`
@@ -264,15 +256,6 @@ Required JSON format:
     for (let i = 0; i < limitedFigures.length; i++) {
       const figure = limitedFigures[i]
       if (!figure?.prompt) continue
-      const placeholder =
-        figure.placeholder ||
-        getFigurePlaceholderUrl(i + 1)
-
-      if (isTextHeavyFigure(figure)) {
-        console.warn('Skipping text-heavy figure request:', figure.id || `figure-${i + 1}`)
-        content = removeFigurePlaceholder(content, placeholder)
-        continue
-      }
 
       // Pick the right Imagen model based on figure type
       const figurePurpose: ImagenPurpose =
@@ -286,6 +269,9 @@ Required JSON format:
           figurePurpose
         )
 
+        const placeholder =
+          figure.placeholder ||
+          getFigurePlaceholderUrl(i + 1)
         const alt = figure.alt || `Ilustracja ${i + 1}`
         content = injectFigure({
           content,

@@ -295,7 +295,7 @@ export function RegisterForm() {
             <span className="text-destructive">*</span> Wyrazam zgode na przetwarzanie
             moich danych osobowych zgodnie z{' '}
             <Link href="/privacy" className="text-primary hover:underline">
-              Polityka Prywatności
+              Polityka Prywatnosci
             </Link>
             . Rozumiem, ze moje dane beda wykorzystywane do weryfikacji konta i
             swiadczenia uslug.

@@ -21,11 +21,19 @@ import { db, ensureFirebaseInitialized } from '@/lib/firebase/config.client'
 import { ArrowLeft, Save, Download, Trash2 } from 'lucide-react'
 
 function DashboardSettingsContent() {
-  const { user } = useAuth()
+  const { user, firebaseUser } = useAuth()
   const [loading, setLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [name, setName] = useState(user?.name || '')
   const [specialization, setSpecialization] = useState(user?.specialization || '')
+
+  const getAuthHeaders = async () => {
+    const token = await firebaseUser?.getIdToken?.()
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    }
+  }
 
   const handleSaveProfile = async () => {
     if (!user) return
@@ -60,7 +68,7 @@ function DashboardSettingsContent() {
     try {
       const response = await fetch('/api/gdpr/export', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ userId: user.id }),
       })
 
@@ -109,7 +117,7 @@ function DashboardSettingsContent() {
     try {
       const response = await fetch('/api/gdpr/delete', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: await getAuthHeaders(),
         body: JSON.stringify({ userId: user.id, confirmEmail: user.email }),
       })
 

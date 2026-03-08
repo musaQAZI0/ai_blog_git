@@ -125,7 +125,7 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="h-4 w-4" />
-        Powrot do listy artykulow
+        Powrót do listy artykułów
       </Link>
 
       <header className="mb-8">
@@ -195,7 +195,7 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
               rel="noopener noreferrer"
               className="inline-flex items-center gap-2 text-sm font-medium text-sky-700 transition-colors hover:text-sky-900"
             >
-              📖 Przeczytaj oryginalny artykuł na okulistykaakademicka.pl
+              Przeczytaj oryginalny artykuł na okulistykaakademicka.pl
               <ArrowLeft className="h-3.5 w-3.5 rotate-180" />
             </a>
           </div>

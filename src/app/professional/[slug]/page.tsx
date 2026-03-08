@@ -63,7 +63,7 @@ function ProfessionalArticleContent() {
             {error || 'Artykul nie znaleziony'}
           </h1>
           <a href="/professional" className="mt-4 text-primary hover:underline">
-            Powrot do listy artykulow
+            Powrót do listy artykułów
           </a>
         </div>
       </div>

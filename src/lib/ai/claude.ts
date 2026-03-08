@@ -56,10 +56,16 @@ export async function generateArticleWithClaude(
   ## Kluczowe informacje
   ## Znaczenie kliniczne
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
+- If the source includes numerical results, present them as markdown bullet points or markdown tables inside "content".
+- Do NOT request charts, graphs, tables, infographics, screenshots, or any figure that requires visible text or numbers.
+- Figures must be text-free medical illustrations only.
 `
       : `AudienceInstructions (patient):
 - Keep language simple and reassuring.
 - Explain any unavoidable medical terms briefly.
+- If the source includes numerical results, present them as simple markdown lists or markdown tables inside "content".
+- Do NOT request charts, graphs, tables, infographics, screenshots, or any figure that requires visible text or numbers.
+- Figures must be text-free medical illustrations only.
 `
 
   const userPrompt = `Based on the following medical document content, create a blog article/review in Polish.
@@ -70,14 +76,15 @@ Document content: ${pdfContent}
 
 IMPORTANT:
 - Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
-- Include up to 3 figures (mix of medical illustration and/or chart/graph if the PDF contains numerical data).
+- Include up to 2 optional figures, but ONLY as text-free medical illustrations.
+- If the PDF contains numerical data, present it in markdown tables or bullet lists inside "content", not as an image.
 - In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D.
 ${audienceInstructions}
 
 Required JSON format:
 {
   "title": "Article title",
-  "content": "Full article content in markdown format (must include placeholders like https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D where images should appear)",
+  "content": "Full article content in markdown format (may include markdown tables and placeholders like https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D where images should appear)",
   "excerpt": "A brief 2-3 sentence summary (max 160 characters)",
   "seoMeta": {
     "title": "SEO optimized title (max 60 characters)",
@@ -90,11 +97,11 @@ Required JSON format:
   "figures": [
     {
       "id": "figure_1",
-      "type": "illustration|chart",
+      "type": "illustration",
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D",
-      "prompt": "Image generation prompt in English. If chart, include exact data and style instructions."
+      "prompt": "Text-free medical illustration prompt in English. No words, letters, numbers, labels, legends, tables, or watermarks."
     }
   ]
 }`

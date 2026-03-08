@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
 import { AIGenerationResponse, TargetAudience } from '@/types'
 import { generateAndUploadImagen, type ImagenPurpose } from '@/lib/ai/gemini-imagen'
+import { isTextHeavyFigure, removeFigurePlaceholder } from '@/lib/ai/figure-safety'
 import { findCoverImageUrl } from '@/lib/images/cover-search'
 
 function getGeminiClient() {
@@ -251,12 +252,18 @@ export async function generateArticleWithGemini(
   ## Kluczowe informacje
   ## Znaczenie kliniczne
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
+- If the source includes numerical results, present them as markdown bullet points or markdown tables inside "content".
+- Do NOT request charts, graphs, tables, infographics, screenshots, or any figure that requires visible text or numbers.
+- Figures must be text-free medical illustrations only.
 - For "suggestedCategory", pick the BEST match from: ${validCategories.join(', ')}.
 `
       : `AudienceInstructions (patient):
 - Keep language simple and reassuring.
 - Explain any unavoidable medical terms briefly.
 - Use ## headings to break the article into 3-5 clear sections.
+- If the source includes numerical results, present them as simple markdown lists or markdown tables inside "content".
+- Do NOT request charts, graphs, tables, infographics, screenshots, or any figure that requires visible text or numbers.
+- Figures must be text-free medical illustrations only.
 - For "suggestedCategory", pick the BEST match from: ${validCategories.join(', ')}.
 `
 
@@ -271,7 +278,7 @@ Document content: ${normalizedPdfContent}
 CRITICAL RULES — you MUST follow ALL of these:
 1. Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
 2. The "content" field MUST be a COMPLETE article — never stop mid-sentence or mid-paragraph.
-3. Include 1-3 figures (medical illustrations or charts if the PDF has numerical data). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
+3. Include 0-2 optional figures, but ONLY as text-free medical illustrations. If the PDF has numerical data, present it in markdown tables or bullet lists inside "content", not as an image. In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
 4. "seoMeta.title" MUST be max 60 characters — write a SHORT, keyword-rich title, NOT the full article title.
 5. "seoMeta.description" MUST be max 160 characters — write a unique meta description that summarizes the article differently from the excerpt.
 6. "seoMeta.keywords" MUST contain 3-5 relevant Polish keywords (e.g. ["zaćma", "soczewka wewnątrzgałkowa", "operacja oka"]). NEVER return an empty array.
@@ -284,7 +291,7 @@ ${audienceInstructions}
 Required JSON format:
 {
   "title": "Descriptive article title in Polish",
-  "content": "Full COMPLETE article in markdown (380-450 words, with ## headings, bullet points, and figure placeholders like ${getFigurePlaceholderUrl(1)})",
+  "content": "Full COMPLETE article in markdown (380-450 words, with ## headings, bullet points, optional markdown tables, and figure placeholders like ${getFigurePlaceholderUrl(1)})",
   "excerpt": "2-3 sentence summary, max 160 characters",
   "seoMeta": {
     "title": "Short SEO title, max 60 chars",
@@ -297,11 +304,11 @@ Required JSON format:
   "figures": [
     {
       "id": "figure_1",
-      "type": "illustration or chart",
+      "type": "illustration",
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "${getFigurePlaceholderUrl(1)}",
-      "prompt": "Detailed English image generation prompt. If chart, include exact data and style."
+      "prompt": "Detailed English prompt for a text-free medical illustration. No words, letters, numbers, labels, legends, tables, or watermarks."
     }
   ]
 }`
@@ -524,6 +531,13 @@ Required JSON format:
   for (let i = 0; i < limitedFigures.length; i++) {
     const figure = limitedFigures[i]
     if (!figure?.prompt) continue
+    const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
+
+    if (isTextHeavyFigure(figure)) {
+      console.warn('Skipping text-heavy figure request:', figure.id || `figure-${i + 1}`)
+      content = removeFigurePlaceholder(content, placeholder)
+      continue
+    }
 
     // Pick the right Imagen model based on figure type
     const figurePurpose: ImagenPurpose =
@@ -537,7 +551,6 @@ Required JSON format:
         figurePurpose
       )
 
-      const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
       const alt = figure.alt || figure.caption || `Rycina ${i + 1}`
       const captionLine = figure.caption ? `\n\n*${figure.caption}*` : ''
       const markdownImage = `![${alt}](${url})${captionLine}`
@@ -547,7 +560,6 @@ Required JSON format:
       }
     } catch (error) {
       console.error('Gemini figure generation failed:', error)
-      const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
       if (coverFallbackUrl && content.includes(placeholder)) {
         const alt = figure.alt || figure.caption || `Rycina ${i + 1}`
         content = content.split(placeholder).join(`![${alt}](${coverFallbackUrl})`)

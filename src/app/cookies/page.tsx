@@ -61,9 +61,9 @@ export default function CookiesPage() {
           Możesz zarządzać ustawieniami cookies w swójej przeglądarce:
         </p>
         <ul>
-          <li>Chrome: Ustawienia &gt; Prywatnosc i bezpieczenstwo &gt; Pliki cookie</li>
-          <li>Firefox: Opcje &gt; Prywatnosc i bezpieczenstwo &gt; Ciasteczka</li>
-          <li>Safari: Preferencje &gt; Prywatnosc &gt; Zarządzaj danymi witryn</li>
+          <li>Chrome: Ustawienia &gt; Prywatność i bezpieczeństwo &gt; Pliki cookie</li>
+          <li>Firefox: Opcje &gt; Prywatność i bezpieczeństwo &gt; Ciasteczka</li>
+          <li>Safari: Preferencje &gt; Prywatność &gt; Zarządzaj danymi witryn</li>
           <li>Edge: Ustawienia &gt; Pliki cookie i uprawnienia witryn</li>
         </ul>
 

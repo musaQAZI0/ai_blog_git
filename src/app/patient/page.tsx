@@ -120,7 +120,7 @@ export default function PatientBlogPage() {
     <div className="mx-auto w-full max-w-[1320px] px-4 py-8 sm:px-6 lg:px-8">
       <div className="pb-8">
         <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
-          Blog dla Pacjentow
+          Blog dla Pacjentów
         </p>
         <h1 className="mt-4 text-[clamp(1.9rem,5vw,3.1rem)] font-semibold leading-[1.02] tracking-tight text-black">
           Zdrowie oczu

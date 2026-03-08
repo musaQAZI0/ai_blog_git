@@ -220,7 +220,7 @@ function DashboardSettingsContent() {
       {/* GDPR */}
       <Card className="mb-6">
         <CardHeader>
-          <CardTitle>Prywatnosc i dane (RODO)</CardTitle>
+          <CardTitle>Prywatność i dane (RODO)</CardTitle>
           <CardDescription>Zarządzaj swoimi danymi osobowymi</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">

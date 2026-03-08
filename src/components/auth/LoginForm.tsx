@@ -14,11 +14,11 @@ const loginSchema = z.object({
     .string()
     .trim()
     .min(1, 'Email jest wymagany')
-    .email('Podaj prawidlowy adres email'),
+    .email('Podaj prawidłowy adres email'),
   password: z
     .string()
-    .min(1, 'Haslo jest wymagane')
-    .min(6, 'Haslo musi miec co najmniej 6 znakow'),
+    .min(1, 'Hasło jest wymagane')
+    .min(6, 'Hasło musi mieć co najmniej 6 znaków'),
 })
 
 type LoginFormData = z.infer<typeof loginSchema>
@@ -78,13 +78,13 @@ export function LoginForm() {
       <div className="space-y-2" suppressHydrationWarning>
         <div className="flex flex-wrap items-center justify-between gap-2">
           <Label htmlFor="password" required>
-            Haslo
+            Hasło
           </Label>
           <Link
             href="/forgot-password"
             className="text-sm text-primary hover:underline"
           >
-            Zapomniales hasła?
+            Zapomniałeś hasła?
           </Link>
         </div>
         <Input
@@ -97,13 +97,13 @@ export function LoginForm() {
       </div>
 
       <Button type="submit" className="w-full" isLoading={loading}>
-        Zaloguj sie
+        Zaloguj się
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
         Nie masz konta?{' '}
         <Link href="/register" className="text-primary hover:underline">
-          Zarejestruj sie
+          Zarejestruj się
         </Link>
       </p>
     </form>

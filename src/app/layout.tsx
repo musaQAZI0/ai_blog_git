@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     template: '%s | Dr Skrzypecki Blog',
   },
   description:
-    'Profesjonalna platforma edukacyjna z zakresu okulistyki dla pacjentow i specjalistow medycznych.',
+    'Profesjonalna platforma edukacyjna z zakresu okulistyki dla pacjentów i specjalistów medycznych.',
   keywords: [
     'okulistyka',
     'oftalmologia',

@@ -22,24 +22,24 @@ const registerSchema = z
     name: z
       .string()
       .trim()
-      .min(1, 'Imie i nazwisko jest wymagane')
-      .min(2, 'Imie i nazwisko musi miec co najmniej 2 znaki'),
+      .min(1, 'Imię i nazwisko jest wymagane')
+      .min(2, 'Imię i nazwisko musi mieć co najmniej 2 znaki'),
     email: z
       .string()
       .trim()
       .min(1, 'Email jest wymagany')
-      .email('Podaj prawidlowy adres email'),
+      .email('Podaj prawidłowy adres email'),
     phoneNumber: z
       .string()
       .trim()
       .min(1, 'Numer telefonu jest wymagany')
       .min(7, 'Numer telefonu jest wymagany')
-      .regex(/^\+?[0-9()\-\s]{7,20}$/, 'Podaj prawidlowy numer telefonu'),
+      .regex(/^\+?[0-9()\-\s]{7,20}$/, 'Podaj prawidłowy numer telefonu'),
     password: z
       .string()
-      .min(1, 'Haslo jest wymagane')
-      .min(8, 'Haslo musi miec co najmniej 8 znakow'),
-    confirmPassword: z.string().min(1, 'Potwierdzenie hasla jest wymagane'),
+      .min(1, 'Hasło jest wymagane')
+      .min(8, 'Hasło musi mieć co najmniej 8 znaków'),
+    confirmPassword: z.string().min(1, 'Potwierdzenie hasła jest wymagane'),
     professionalType: z.enum(['lekarz', 'optometrysta', 'other'], {
       required_error: 'Wybierz typ specjalisty',
     }),
@@ -50,11 +50,11 @@ const registerSchema = z
       .min(1, 'Numer PWZ jest wymagany'),
     specialization: z.string().optional(),
     gdprConsent: z.boolean().refine((val) => val === true, {
-      message: 'Musisz wyrazic zgode na przetwarzanie danych',
+      message: 'Musisz wyrazić zgodę na przetwarzanie danych',
     }),
   })
   .refine((data) => data.password === data.confirmPassword, {
-    message: 'Hasla musza byc takie same',
+    message: 'Hasła muszą być takie same',
     path: ['confirmPassword'],
   })
   .refine(
@@ -63,7 +63,7 @@ const registerSchema = z
       return Boolean(data.otherProfessionalType?.trim())
     },
     {
-      message: 'Okresl typ specjalisty',
+      message: 'Określ typ specjalisty',
       path: ['otherProfessionalType'],
     }
   )
@@ -140,8 +140,8 @@ export function RegisterForm() {
       <div className="text-center">
         <Alert variant="success">
           <AlertDescription>
-            Rejestracja przebiegla pomyslnie! Twoje konto jest aktywne.
-            Możesz sie teraz zalogowac.
+            Rejestracja przebiegła pomyślnie! Twoje konto jest aktywne.
+            Możesz się teraz zalogować.
           </AlertDescription>
         </Alert>
         <Button
@@ -149,7 +149,7 @@ export function RegisterForm() {
           className="mt-4"
           onClick={() => router.push('/login')}
         >
-          Przejdz do logowania
+          Przejdź do logowania
         </Button>
       </div>
     )
@@ -165,11 +165,11 @@ export function RegisterForm() {
 
       <div className="space-y-2">
         <Label htmlFor="name" required>
-          Imie i nazwisko
+          Imię i nazwisko
         </Label>
         <Input
           id="name"
-          aria-label="Imie i nazwisko"
+          aria-label="Imię i nazwisko"
           error={errors.name?.message}
           {...register('name')}
         />
@@ -204,12 +204,12 @@ export function RegisterForm() {
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="password" required>
-            Haslo
+            Hasło
           </Label>
           <Input
             id="password"
             type="password"
-            aria-label="Haslo"
+            aria-label="Hasło"
             error={errors.password?.message}
             {...register('password')}
           />
@@ -217,12 +217,12 @@ export function RegisterForm() {
 
         <div className="space-y-2">
           <Label htmlFor="confirmPassword" required>
-            Potwierdz haslo
+            Potwierdź hasło
           </Label>
           <Input
             id="confirmPassword"
             type="password"
-            aria-label="Potwierdz haslo"
+            aria-label="Potwierdź hasło"
             error={errors.confirmPassword?.message}
             {...register('confirmPassword')}
           />
@@ -245,11 +245,11 @@ export function RegisterForm() {
       {professionalType === 'other' && (
         <div className="space-y-2">
           <Label htmlFor="otherProfessionalType" required>
-            Okresl typ specjalisty
+            Określ typ specjalisty
           </Label>
           <Input
             id="otherProfessionalType"
-            aria-label="Okresl typ specjalisty"
+            aria-label="Określ typ specjalisty"
             error={errors.otherProfessionalType?.message}
             {...register('otherProfessionalType')}
           />
@@ -292,13 +292,13 @@ export function RegisterForm() {
             {...register('gdprConsent')}
           />
           <label htmlFor="gdprConsent" className="text-sm">
-            <span className="text-destructive">*</span> Wyrazam zgode na przetwarzanie
+            <span className="text-destructive">*</span> Wyrażam zgodę na przetwarzanie
             moich danych osobowych zgodnie z{' '}
             <Link href="/privacy" className="text-primary hover:underline">
-              Polityka Prywatnosci
+              Polityką Prywatności
             </Link>
-            . Rozumiem, ze moje dane beda wykorzystywane do weryfikacji konta i
-            swiadczenia uslug.
+            . Rozumiem, że moje dane będą wykorzystywane do weryfikacji konta i
+            świadczenia usług.
           </label>
         </div>
         {errors.gdprConsent && (
@@ -311,13 +311,13 @@ export function RegisterForm() {
       </div>
 
       <Button type="submit" className="w-full" isLoading={loading}>
-        Zarejestruj sie
+        Zarejestruj się
       </Button>
 
       <p className="text-center text-sm text-muted-foreground">
-        Masz juz konto?{' '}
+        Masz już konto?{' '}
         <Link href="/login" className="text-primary hover:underline">
-          Zaloguj sie
+          Zaloguj się
         </Link>
       </p>
     </form>

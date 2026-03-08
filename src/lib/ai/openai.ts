@@ -81,8 +81,17 @@ Document content: ${pdfContent}
 
 IMPORTANT:
 - Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
-- Include up to 3 figures (mix of medical illustration and/or chart/graph if the PDF contains numerical data).
+- Include up to 3 figures (medical illustrations ONLY - NO charts/graphs with text or numbers, as AI image generators create gibberish text).
+- ALL figure prompts MUST specify: NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image.
 - In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. ${getFigurePlaceholderUrl(1)}.
+- MUST include a "## Źródło" section at the END of the content with the original article reference extracted from the PDF.
+- Reference format: Authors (one line), Title (one line), Journal Year Vol. X Issue Y Pages Z-W (one line).
+- Example reference format:
+  ## Źródło
+
+  J. Skrzypecki, D. D. Koch and L. Wang
+  Performance of formulas included in the ESCRS intraocular lens power calculator
+  J Cataract Refract Surg 2024 Vol. 50 Issue 12 Pages 1224-1229
 ${audienceInstructions}
 
 Required JSON format:
@@ -97,15 +106,15 @@ Required JSON format:
   },
   "suggestedTags": ["tag1", "tag2"],
   "suggestedCategory": "Category name",
-  "coverImagePrompt": "A short prompt for a cover image relevant to the article (no text on image).",
+  "coverImagePrompt": "A short prompt for a cover image relevant to the article. CRITICAL: NO TEXT, NO LABELS, NO WORDS in the image.",
   "figures": [
     {
       "id": "figure_1",
-      "type": "illustration|chart",
+      "type": "illustration",
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "${getFigurePlaceholderUrl(1)}",
-      "prompt": "Image generation prompt in English. If chart, include exact data and style instructions."
+      "prompt": "IMPORTANT: Medical illustration prompt in English. NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image. Only visual medical illustration of anatomy or concepts. Avoid charts/graphs with text."
     }
   ]
 }`

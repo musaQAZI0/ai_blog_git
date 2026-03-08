@@ -9,8 +9,8 @@ import { useAuth } from '@/context/AuthContext'
 
 const desktopNav = [
   { label: 'Pacjenci', href: '/patient' },
-  { label: 'Specjalisci', href: '/professional' },
-  { label: 'Prywatnosc', href: '/privacy' },
+  { label: 'Specjaliści', href: '/professional' },
+  { label: 'Prywatność', href: '/privacy' },
   { label: 'Regulamin', href: '/terms' },
   { label: 'Cookies', href: '/cookies' },
 ]
@@ -149,7 +149,7 @@ export function Header() {
                     href="/login"
                     className="inline-flex items-center gap-1 rounded-full bg-[#f2f2f2] px-4 py-2 text-[14px] font-medium text-black transition-colors hover:bg-[#ebebeb]"
                   >
-                    Zaloguj sie
+                    Zaloguj się
                     <ChevronDown className="h-3.5 w-3.5" />
                   </Link>
                   <Link
@@ -168,7 +168,7 @@ export function Header() {
             <button
               className="ml-1 rounded-lg p-1.5 text-black/50 transition-colors hover:bg-black/[0.04] hover:text-black sm:hidden"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              aria-label={mobileMenuOpen ? 'Zamknij menu' : 'Otworz menu'}
+              aria-label={mobileMenuOpen ? 'Zamknij menu' : 'Otwórz menu'}
               aria-expanded={mobileMenuOpen}
             >
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -266,7 +266,7 @@ export function Header() {
                     className="block rounded-full bg-[#f2f2f2] px-4 py-2 text-center text-[13px] font-medium text-black"
                     onClick={() => setMobileMenuOpen(false)}
                   >
-                    Zaloguj sie
+                    Zaloguj się
                   </Link>
                   <Link
                     href="/register"

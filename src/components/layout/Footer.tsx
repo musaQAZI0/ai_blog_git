@@ -21,7 +21,7 @@ export function Footer({
               </span>
             </Link>
             <p className="mt-3 max-w-sm text-sm leading-relaxed text-black/50">
-              Profesjonalna platforma edukacyjna z zakresu okulistyki dla pacjentow i specjalistow medycznych.
+              Profesjonalna platforma edukacyjna z zakresu okulistyki dla pacjentów i specjalistów medycznych.
             </p>
           </div>
 
@@ -30,12 +30,12 @@ export function Footer({
             <ul className="mt-4 space-y-2.5">
               <li>
                 <Link href="/patient" className="text-sm text-black/60 transition-colors hover:text-black">
-                  Blog dla Pacjentow
+                  Blog dla Pacjentów
                 </Link>
               </li>
               <li>
                 <Link href="/professional" className="text-sm text-black/60 transition-colors hover:text-black">
-                  Blog dla Specjalistow
+                  Blog dla Specjalistów
                 </Link>
               </li>
               <li>
@@ -45,7 +45,7 @@ export function Footer({
                   target="_blank"
                   rel="noopener noreferrer"
                 >
-                  Strona glowna
+                  Strona główna
                 </Link>
               </li>
             </ul>
@@ -56,7 +56,7 @@ export function Footer({
             <ul className="mt-4 space-y-2.5">
               <li>
                 <Link href="/privacy" className="text-sm text-black/60 transition-colors hover:text-black">
-                  Prywatnosc
+                  Prywatność
                 </Link>
               </li>
               <li>
@@ -77,7 +77,7 @@ export function Footer({
       <div className="border-t border-black/5">
         <div className={cn('mx-auto flex w-full max-w-7xl flex-col gap-2 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10', containerClassName)}>
           <p className="text-xs text-black/40">
-            &copy; {currentYear} Dr hab. n. med. Janusz Skrzypecki. Wszelkie prawa zastrzezone.
+            &copy; {currentYear} Dr hab. n. med. Janusz Skrzypecki. Wszelkie prawa zastrzeżone.
           </p>
         </div>
       </div>

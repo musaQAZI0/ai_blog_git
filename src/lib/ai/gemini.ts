@@ -271,7 +271,8 @@ Document content: ${normalizedPdfContent}
 CRITICAL RULES — you MUST follow ALL of these:
 1. Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
 2. The "content" field MUST be a COMPLETE article — never stop mid-sentence or mid-paragraph.
-3. Include 1-3 figures (medical illustrations or charts if the PDF has numerical data). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
+3. Include 1-3 figures (medical illustrations ONLY - NO charts/graphs with text or numbers, as AI image generators create gibberish text). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
+3a. ALL figure prompts MUST specify: NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image.
 4. "seoMeta.title" MUST be max 60 characters — write a SHORT, keyword-rich title, NOT the full article title.
 5. "seoMeta.description" MUST be max 160 characters — write a unique meta description that summarizes the article differently from the excerpt.
 6. "seoMeta.keywords" MUST contain 3-5 relevant Polish keywords (e.g. ["zaćma", "soczewka wewnątrzgałkowa", "operacja oka"]). NEVER return an empty array.
@@ -279,6 +280,14 @@ CRITICAL RULES — you MUST follow ALL of these:
 8. "suggestedCategory" MUST be one of: ${validCategories.join(', ')}. NEVER use "General".
 9. "excerpt" must be exactly 2-3 sentences, max 160 characters, in Polish — a genuine summary, NOT a copy of the first paragraph.
 10. "coverImagePrompt" must be a detailed English prompt for an AI image generator (no text in image).
+11. MUST include a "## Źródło" section at the END of the content with the original article reference extracted from the PDF.
+12. Reference format: Authors (one line), Title (one line), Journal Year Vol. X Issue Y Pages Z-W (one line).
+13. Example reference format:
+    ## Źródło
+
+    J. Skrzypecki, D. D. Koch and L. Wang
+    Performance of formulas included in the ESCRS intraocular lens power calculator
+    J Cataract Refract Surg 2024 Vol. 50 Issue 12 Pages 1224-1229
 ${audienceInstructions}
 
 Required JSON format:
@@ -293,15 +302,15 @@ Required JSON format:
   },
   "suggestedTags": ["tag1", "tag2", "tag3"],
   "suggestedCategory": "One of: ${validCategories.join(' | ')}",
-  "coverImagePrompt": "Detailed English prompt for cover image, no text in image",
+  "coverImagePrompt": "Detailed English prompt for cover image. CRITICAL: NO TEXT, NO LABELS, NO WORDS in the image.",
   "figures": [
     {
       "id": "figure_1",
-      "type": "illustration or chart",
+      "type": "illustration",
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "${getFigurePlaceholderUrl(1)}",
-      "prompt": "Detailed English image generation prompt. If chart, include exact data and style."
+      "prompt": "IMPORTANT: Medical illustration prompt in English. NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image. Only visual medical illustration of anatomy or concepts. Avoid charts/graphs with text."
     }
   ]
 }`
@@ -360,6 +369,8 @@ Rules:
 - Do not copy long passages verbatim. Paraphrase in simple, patient-friendly Polish.
 - Include clear headings and short paragraphs.
 - Do not include figure placeholders.
+- MUST include a "## Źródło" section at the END of the content with the original article reference extracted from the PDF.
+- Reference format: Authors (one line), Title (one line), Journal Year Vol. X Issue Y Pages Z-W (one line).
 
 Document excerpt:
 ${normalizedPdfContent}
@@ -367,7 +378,7 @@ ${normalizedPdfContent}
 Required JSON format:
 {
   "title": "Article title",
-  "content": "Full article content in markdown format",
+  "content": "Full article content in markdown format (must include ## Źródło section at the end)",
   "excerpt": "A brief 2-3 sentence summary (max 160 characters)",
   "seoMeta": {
     "title": "SEO optimized title (max 60 characters)",

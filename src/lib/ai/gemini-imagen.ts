@@ -78,16 +78,13 @@ async function generateWithNanaBanana(
 
   console.log(`[nano-banana] Generating image with model "${model}"`)
 
-  // Add explicit no-text instructions to prevent gibberish text in images
-  const enhancedPrompt = `${prompt}. IMPORTANT: No text, no labels, no words, no letters, no numbers in the image. Pure visual illustration only.`
-
   const response = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`,
     {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: enhancedPrompt }] }],
+        contents: [{ parts: [{ text: prompt }] }],
         generationConfig: {
           responseModalities: ['IMAGE', 'TEXT'],
         },
@@ -135,9 +132,6 @@ async function generateWithImagen(
 
   console.log(`[imagen-fallback] Generating image with model "${model}" (purpose: ${purpose})`)
 
-  // Add explicit no-text instructions to prevent gibberish text in images
-  const enhancedPrompt = `${prompt}. IMPORTANT: No text, no labels, no words, no letters, no numbers in the image. Pure visual illustration only.`
-
   const tryPredict = async (modelName: string) => {
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:predict`,
@@ -148,7 +142,7 @@ async function generateWithImagen(
           'x-goog-api-key': apiKey,
         },
         body: JSON.stringify({
-          instances: [{ prompt: enhancedPrompt }],
+          instances: [{ prompt }],
           parameters: { sampleCount: 1 },
         }),
       }

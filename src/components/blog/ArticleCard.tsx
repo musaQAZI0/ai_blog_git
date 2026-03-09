@@ -12,7 +12,7 @@ interface ArticleCardProps {
 export function ArticleCard({ article, basePath = '/blog', variant = 'grid' }: ArticleCardProps) {
   const categoryLabel =
     article.category ||
-    (article.targetAudience === 'professional' ? 'Specjalisci' : 'Pacjenci')
+    (article.targetAudience === 'professional' ? 'Specjaliści' : 'Pacjenci')
   const excerpt =
     article.excerpt && article.excerpt.length > 180
       ? `${article.excerpt.slice(0, 177)}...`

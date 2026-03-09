@@ -5,7 +5,7 @@ import Image from 'next/image'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import { Article } from '@/types'
-import { Badge, Avatar } from '@/components/ui'
+import { Badge } from '@/components/ui'
 import { formatDate, getReadingTime } from '@/lib/utils'
 import { Clock, Eye, Calendar, ArrowLeft } from 'lucide-react'
 import Link from 'next/link'
@@ -125,7 +125,7 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="h-4 w-4" />
-        Powrot do listy artykulow
+        Powrót do listy artykułów
       </Link>
 
       <header className="mb-8">
@@ -145,7 +145,6 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
 
         <div className="flex flex-wrap items-center gap-4 border-b pb-6">
           <div className="flex items-center gap-2">
-            <Avatar fallback={article.authorName} size="sm" />
             <span className="text-sm font-medium">{article.authorName}</span>
           </div>
 
@@ -160,7 +159,7 @@ export function ArticleView({ article, backPath = '/blog' }: ArticleViewProps) {
             </span>
             <span className="flex items-center gap-1">
               <Eye className="h-4 w-4" />
-              {article.viewCount} wyswietlen
+              {article.viewCount} wyświetleń
             </span>
           </div>
         </div>

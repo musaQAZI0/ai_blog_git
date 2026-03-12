@@ -246,11 +246,14 @@ export async function generateArticleWithGemini(
   const figureInstructions =
     targetAudience === 'professional'
       ? `3. Include 1-3 figures. You MAY include charts/graphs that visualize REAL DATA from the PDF source document.
-3a. CRITICAL for charts/graphs: Use ONLY data/numbers that appear in the source document. Do NOT ask the image generator to render text/labels/numbers - instead describe the data pattern visually (e.g., "bar chart showing increasing trend" rather than "bar chart with values 10, 20, 30").
-3b. For anatomical illustrations: Medical illustrations with NO TEXT, NO LABELS, NO WORDS, NO NUMBERS.
-3c. In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.`
-      : `3. Include 1-3 figures (medical illustrations ONLY - NO charts/graphs with text or numbers). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
-3a. ALL figure prompts MUST specify: NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image.`
+3a. CRITICAL for charts/graphs: Include data labels and text ONLY if they come from the source document. Use EXACT values from the PDF - do NOT make up or estimate numbers.
+3b. Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg").
+3c. For anatomical illustrations: You may include simple anatomical labels (e.g., "Cornea", "Lens", "Retina") - keep labels short and accurate.
+3d. In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.`
+      : `3. Include 1-3 figures (simple anatomical illustrations). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
+3a. You may include basic anatomical labels on illustrations (e.g., "Cornea", "Lens", "Retina").
+3b. Keep labels SHORT (1-2 words max) and use ONLY standard medical terms that are likely to render correctly.
+3c. NO complex charts or data visualizations with numbers.`
 
   const audienceInstructions =
     targetAudience === 'professional'
@@ -310,15 +313,15 @@ Required JSON format:
   },
   "suggestedTags": ["tag1", "tag2", "tag3"],
   "suggestedCategory": "One of: ${validCategories.join(' | ')}",
-  "coverImagePrompt": "Detailed English prompt for cover image. For anatomical illustrations: NO TEXT, NO LABELS, NO WORDS in the image.",
+  "coverImagePrompt": "Detailed English prompt for cover image.",
   "figures": [
     {
       "id": "figure_1",
-      "type": "illustration",
+      "type": "illustration or chart",
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "${getFigurePlaceholderUrl(1)}",
-      "prompt": "Medical illustration or data visualization prompt in English. CRITICAL: For charts, describe visual patterns only (e.g., 'bar chart showing upward trend'), do NOT include specific numbers/labels/text. For anatomical illustrations: NO TEXT, NO LABELS, NO WORDS."
+      "prompt": "Medical illustration or data visualization prompt in English. For charts: include specific data labels from the PDF source (use exact values). For anatomical illustrations: may include simple labels like 'Cornea', 'Lens', 'Retina'."
     }
   ]
 }`

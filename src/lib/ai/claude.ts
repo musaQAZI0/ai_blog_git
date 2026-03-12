@@ -48,6 +48,14 @@ export async function generateArticleWithClaude(
     ? PATIENT_SYSTEM_PROMPT
     : PROFESSIONAL_SYSTEM_PROMPT
 
+  const figureInstructions =
+    targetAudience === 'professional'
+      ? `- Include up to 3 figures. You MAY include charts/graphs that visualize REAL DATA from the PDF source document.
+- CRITICAL for charts/graphs: Use ONLY data/numbers that appear in the source document. Do NOT ask the image generator to render text/labels/numbers - instead describe the data pattern visually (e.g., "bar chart showing increasing trend" rather than "bar chart with values 10, 20, 30").
+- For anatomical illustrations: Medical illustrations with NO TEXT, NO LABELS, NO WORDS, NO NUMBERS.`
+      : `- Include up to 3 figures (medical illustrations ONLY - NO charts/graphs with text or numbers).
+- ALL figure prompts MUST specify: NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image.`
+
   const audienceInstructions =
     targetAudience === 'professional'
       ? `AudienceInstructions (professional):
@@ -70,8 +78,7 @@ Document content: ${pdfContent}
 
 IMPORTANT:
 - Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
-- Include up to 3 figures (medical illustrations ONLY - NO charts/graphs with text or numbers, as AI image generators create gibberish text).
-- ALL figure prompts MUST specify: NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image.
+${figureInstructions}
 - In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D.
 - MUST include a "## Źródło" section at the END of the content with the original article reference extracted from the PDF.
 - Reference format: Authors (one line), Title (one line), Journal Year Vol. X Issue Y Pages Z-W (one line).
@@ -95,7 +102,7 @@ Required JSON format:
   },
   "suggestedTags": ["tag1", "tag2"],
   "suggestedCategory": "Category name",
-  "coverImagePrompt": "A short prompt for a cover image relevant to the article. CRITICAL: NO TEXT, NO LABELS, NO WORDS in the image.",
+  "coverImagePrompt": "A short prompt for a cover image relevant to the article. For anatomical illustrations: NO TEXT, NO LABELS, NO WORDS in the image.",
   "figures": [
     {
       "id": "figure_1",
@@ -103,7 +110,7 @@ Required JSON format:
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D",
-      "prompt": "IMPORTANT: Medical illustration prompt in English. NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image. Only visual medical illustration of anatomy or concepts. Avoid charts/graphs with text."
+      "prompt": "Medical illustration or data visualization prompt in English. CRITICAL: For charts, describe visual patterns only (e.g., 'bar chart showing upward trend'), do NOT include specific numbers/labels/text. For anatomical illustrations: NO TEXT, NO LABELS, NO WORDS."
     }
   ]
 }`

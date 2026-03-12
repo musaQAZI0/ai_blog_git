@@ -243,6 +243,15 @@ export async function generateArticleWithGemini(
 
   const validCategories = targetAudience === 'patient' ? PATIENT_CATEGORIES : PROFESSIONAL_CATEGORIES
 
+  const figureInstructions =
+    targetAudience === 'professional'
+      ? `3. Include 1-3 figures. You MAY include charts/graphs that visualize REAL DATA from the PDF source document.
+3a. CRITICAL for charts/graphs: Use ONLY data/numbers that appear in the source document. Do NOT ask the image generator to render text/labels/numbers - instead describe the data pattern visually (e.g., "bar chart showing increasing trend" rather than "bar chart with values 10, 20, 30").
+3b. For anatomical illustrations: Medical illustrations with NO TEXT, NO LABELS, NO WORDS, NO NUMBERS.
+3c. In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.`
+      : `3. Include 1-3 figures (medical illustrations ONLY - NO charts/graphs with text or numbers). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
+3a. ALL figure prompts MUST specify: NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image.`
+
   const audienceInstructions =
     targetAudience === 'professional'
       ? `AudienceInstructions (professional):
@@ -271,8 +280,7 @@ Document content: ${normalizedPdfContent}
 CRITICAL RULES — you MUST follow ALL of these:
 1. Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
 2. The "content" field MUST be a COMPLETE article — never stop mid-sentence or mid-paragraph.
-3. Include 1-3 figures (medical illustrations ONLY - NO charts/graphs with text or numbers, as AI image generators create gibberish text). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
-3a. ALL figure prompts MUST specify: NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image.
+${figureInstructions}
 4. "seoMeta.title" MUST be max 60 characters — write a SHORT, keyword-rich title, NOT the full article title.
 5. "seoMeta.description" MUST be max 160 characters — write a unique meta description that summarizes the article differently from the excerpt.
 6. "seoMeta.keywords" MUST contain 3-5 relevant Polish keywords (e.g. ["zaćma", "soczewka wewnątrzgałkowa", "operacja oka"]). NEVER return an empty array.
@@ -302,7 +310,7 @@ Required JSON format:
   },
   "suggestedTags": ["tag1", "tag2", "tag3"],
   "suggestedCategory": "One of: ${validCategories.join(' | ')}",
-  "coverImagePrompt": "Detailed English prompt for cover image. CRITICAL: NO TEXT, NO LABELS, NO WORDS in the image.",
+  "coverImagePrompt": "Detailed English prompt for cover image. For anatomical illustrations: NO TEXT, NO LABELS, NO WORDS in the image.",
   "figures": [
     {
       "id": "figure_1",
@@ -310,7 +318,7 @@ Required JSON format:
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "${getFigurePlaceholderUrl(1)}",
-      "prompt": "IMPORTANT: Medical illustration prompt in English. NO TEXT, NO LABELS, NO WORDS, NO NUMBERS in the image. Only visual medical illustration of anatomy or concepts. Avoid charts/graphs with text."
+      "prompt": "Medical illustration or data visualization prompt in English. CRITICAL: For charts, describe visual patterns only (e.g., 'bar chart showing upward trend'), do NOT include specific numbers/labels/text. For anatomical illustrations: NO TEXT, NO LABELS, NO WORDS."
     }
   ]
 }`

@@ -65,10 +65,10 @@ export async function generateArticleWithOpenAI(
 - CRITICAL for charts/graphs: Include data labels and text ONLY if they come from the source document. Use EXACT values from the PDF - do NOT make up or estimate numbers.
 - Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg").
 - For anatomical illustrations: You may include simple anatomical labels (e.g., "Cornea", "Lens", "Retina") - keep labels short and accurate.`
-      : `- Include up to 3 figures (simple anatomical illustrations).
-- You may include basic anatomical labels on illustrations (e.g., "Cornea", "Lens", "Retina").
-- Keep labels SHORT (1-2 words max) and use ONLY standard medical terms that are likely to render correctly.
-- NO complex charts or data visualizations with numbers.`
+      : `- Include up to 3 figures (simple anatomical illustrations ONLY).
+- CRITICAL: ALL figures MUST be completely clean - NO TEXT, NO LABELS, NO WORDS, NO NUMBERS, NO DATA.
+- Request only pure visual illustrations without any text elements.
+- NO charts or data visualizations.`
 
   const audienceInstructions =
     targetAudience === 'professional'
@@ -124,7 +124,7 @@ Required JSON format:
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "${getFigurePlaceholderUrl(1)}",
-      "prompt": "Medical illustration or data visualization prompt in English. ${targetAudience === 'professional' ? 'For charts: include specific data labels from the PDF source (use exact values). For anatomical illustrations: may include simple labels like "Cornea", "Lens", "Retina".' : 'For anatomical illustrations: may include simple labels like "Cornea", "Lens" (keep very short, 1-2 words).'}"
+      "prompt": "Medical illustration or data visualization prompt in English. ${targetAudience === 'professional' ? 'For charts: include specific data labels from the PDF source (use exact values). For anatomical illustrations: may include simple labels like "Cornea", "Lens", "Retina".' : 'CRITICAL: Pure visual illustration only - absolutely NO TEXT, NO LABELS, NO WORDS, NO NUMBERS. Clean medical illustration.'}"
     }
   ]
 }`

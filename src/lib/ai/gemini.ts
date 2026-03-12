@@ -250,10 +250,10 @@ export async function generateArticleWithGemini(
 3b. Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg").
 3c. For anatomical illustrations: You may include simple anatomical labels (e.g., "Cornea", "Lens", "Retina") - keep labels short and accurate.
 3d. In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.`
-      : `3. Include 1-3 figures (simple anatomical illustrations). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
-3a. You may include basic anatomical labels on illustrations (e.g., "Cornea", "Lens", "Retina").
-3b. Keep labels SHORT (1-2 words max) and use ONLY standard medical terms that are likely to render correctly.
-3c. NO complex charts or data visualizations with numbers.`
+      : `3. Include 1-3 figures (simple anatomical illustrations ONLY). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
+3a. CRITICAL: ALL figures MUST be completely clean - NO TEXT, NO LABELS, NO WORDS, NO NUMBERS, NO DATA.
+3b. Request only pure visual illustrations without any text elements.
+3c. NO charts or data visualizations.`
 
   const audienceInstructions =
     targetAudience === 'professional'
@@ -321,7 +321,7 @@ Required JSON format:
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "${getFigurePlaceholderUrl(1)}",
-      "prompt": "Medical illustration or data visualization prompt in English. For charts: include specific data labels from the PDF source (use exact values). For anatomical illustrations: may include simple labels like 'Cornea', 'Lens', 'Retina'."
+      "prompt": "Medical illustration or data visualization prompt in English. ${targetAudience === 'professional' ? 'For charts: include specific data labels from the PDF source (use exact values). For anatomical illustrations: may include simple labels like \'Cornea\', \'Lens\', \'Retina\'.' : 'CRITICAL: Pure visual illustration only - absolutely NO TEXT, NO LABELS, NO WORDS, NO NUMBERS. Clean medical illustration.'}"
     }
   ]
 }`

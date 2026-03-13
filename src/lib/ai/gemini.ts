@@ -2,6 +2,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { AIGenerationResponse, TargetAudience } from '@/types'
 import { generateAndUploadImagen, type ImagenPurpose } from '@/lib/ai/gemini-imagen'
 import { findCoverImageUrl } from '@/lib/images/cover-search'
+import { extractGenerateAndUploadCharts } from '@/lib/charts/chart-uploader'
 
 function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY
@@ -544,37 +545,61 @@ Required JSON format:
     }
   }
 
-  const limitedFigures = figures.slice(0, 3)
-  for (let i = 0; i < limitedFigures.length; i++) {
-    const figure = limitedFigures[i]
-    if (!figure?.prompt) continue
-
-    // Pick the right Imagen model based on figure type
-    const figurePurpose: ImagenPurpose =
-      (figure as any).type === 'chart' ? 'chart' : 'illustration'
-
+  // For professional articles: Use Chart.js to generate accurate data charts
+  // For patient articles: Use AI image generation for clean anatomical illustrations
+  if (targetAudience === 'professional') {
     try {
-      const url = await generateAndUploadImagen(
-        figure.prompt,
-        figure.id || `figure-${i + 1}`,
-        'ai-figure',
-        figurePurpose
-      )
+      console.log('[gemini] Extracting and generating charts for professional article...')
+      const generatedCharts = await extractGenerateAndUploadCharts(pdfContent, 3)
 
-      const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
-      const alt = figure.alt || figure.caption || `Rycina ${i + 1}`
-      const captionLine = figure.caption ? `\n\n*${figure.caption}*` : ''
-      const markdownImage = `![${alt}](${url})${captionLine}`
+      if (generatedCharts.length > 0) {
+        console.log(`[gemini] Successfully generated ${generatedCharts.length} charts`)
 
-      if (content.includes(placeholder)) {
-        content = content.split(placeholder).join(markdownImage)
+        // Inject generated charts into content
+        for (const chart of generatedCharts) {
+          const captionLine = chart.caption ? `\n\n*${chart.caption}*` : ''
+          const markdownImage = `![${chart.alt}](${chart.url})${captionLine}`
+
+          if (content.includes(chart.placeholder)) {
+            content = content.split(chart.placeholder).join(markdownImage)
+          }
+        }
+      } else {
+        console.log('[gemini] No chart data found in PDF, skipping chart generation')
       }
     } catch (error) {
-      console.error('Gemini figure generation failed:', error)
-      const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
-      if (coverFallbackUrl && content.includes(placeholder)) {
+      console.error('[gemini] Chart generation failed:', error)
+    }
+  } else {
+    // Patient articles: use AI image generation for anatomical illustrations
+    const limitedFigures = figures.slice(0, 3)
+    for (let i = 0; i < limitedFigures.length; i++) {
+      const figure = limitedFigures[i]
+      if (!figure?.prompt) continue
+
+      try {
+        const url = await generateAndUploadImagen(
+          figure.prompt,
+          figure.id || `figure-${i + 1}`,
+          'ai-figure',
+          'illustration'
+        )
+
+        const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
         const alt = figure.alt || figure.caption || `Rycina ${i + 1}`
-        content = content.split(placeholder).join(`![${alt}](${coverFallbackUrl})`)
+        const captionLine = figure.caption ? `\n\n*${figure.caption}*` : ''
+        const markdownImage = `![${alt}](${url})${captionLine}`
+
+        if (content.includes(placeholder)) {
+          content = content.split(placeholder).join(markdownImage)
+        }
+      } catch (error) {
+        console.error('Gemini figure generation failed:', error)
+        const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
+        if (coverFallbackUrl && content.includes(placeholder)) {
+          const alt = figure.alt || figure.caption || `Rycina ${i + 1}`
+          content = content.split(placeholder).join(`![${alt}](${coverFallbackUrl})`)
+        }
       }
     }
   }

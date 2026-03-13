@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { AIGenerationResponse, TargetAudience } from '@/types'
+import { extractGenerateAndUploadCharts } from '@/lib/charts/chart-uploader'
 
 function getAnthropicClient() {
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -138,9 +139,46 @@ Required JSON format:
   const jsonStr = jsonMatch ? jsonMatch[0] : '{}'
   const articleData = JSON.parse(jsonStr)
 
+  let content: string = articleData.content || ''
+
+  // For professional articles: Use Chart.js to generate accurate data charts
+  if (targetAudience === 'professional') {
+    try {
+      console.log('[claude] Extracting and generating charts for professional article...')
+      const generatedCharts = await extractGenerateAndUploadCharts(pdfContent, 3)
+
+      if (generatedCharts.length > 0) {
+        console.log(`[claude] Successfully generated ${generatedCharts.length} charts`)
+
+        // Inject generated charts into content
+        for (const chart of generatedCharts) {
+          const captionLine = chart.caption ? `\n\n*${chart.caption}*` : ''
+          const markdownImage = `![${chart.alt}](${chart.url})${captionLine}`
+
+          if (content.includes(chart.placeholder)) {
+            content = content.split(chart.placeholder).join(markdownImage)
+          } else {
+            // If placeholder not in content, append the chart
+            content += `\n\n${markdownImage}\n`
+          }
+        }
+      } else {
+        console.log('[claude] No chart data found in PDF, skipping chart generation')
+      }
+    } catch (error) {
+      console.error('[claude] Chart generation failed:', error)
+    }
+  }
+
+  // Safety net: remove any leftover figure placeholders
+  content = content
+    .replace(/\{\{FIGURE_\d+_URL\}\}/g, '')
+    .replace(/https?:\/\/www\.google\.com\/search\?q=%7B%7BFIGURE_\d+_URL%7D%7D/g, '')
+    .replace(/\n{3,}/g, '\n\n')
+
   return {
     title: articleData.title || 'Untitled Article',
-    content: articleData.content || '',
+    content,
     excerpt: articleData.excerpt || '',
     seoMeta: articleData.seoMeta || {
       title: articleData.title || '',

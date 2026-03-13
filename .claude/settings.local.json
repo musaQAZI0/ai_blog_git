@@ -21,7 +21,8 @@
       "Bash(npx tsc:*)",
       "Bash(node test-firebase.js:*)",
       "Bash(git reset:*)",
-      "Bash(git restore:*)"
+      "Bash(git restore:*)",
+      "Bash(jobs)"
     ]
   }
 }

@@ -1,0 +1,119 @@
+import { generateFileName, uploadFile, uploadFileToProvider, type StorageProvider } from '@/lib/storage'
+import { generateChartImage, generateSimpleBarChart, type ChartData } from './chart-generator'
+import { extractChartDataFromPDF, validateChartData, type ExtractedChartData } from './data-extractor'
+
+export interface GeneratedChart {
+  id: string
+  url: string
+  title: string
+  alt: string
+  caption: string
+  placeholder: string
+  sourceDescription: string
+}
+
+/**
+ * Uploads a chart buffer to storage (Cloudinary or local)
+ * @param chartBuffer PNG buffer from Chart.js
+ * @param originalName Original filename
+ * @param folderPrefix Folder prefix for storage
+ * @returns Public URL of uploaded chart
+ */
+export async function uploadChartImage(
+  chartBuffer: Buffer,
+  originalName: string,
+  folderPrefix: string = 'ai-chart'
+): Promise<string> {
+  const fileName = generateFileName(`${originalName}.png`, folderPrefix)
+  const mimeType = 'image/png'
+
+  const provider = process.env.AI_STORAGE_PROVIDER as StorageProvider | undefined
+  if (provider) {
+    return uploadFileToProvider(provider, chartBuffer, fileName, mimeType)
+  }
+
+  return uploadFile(chartBuffer, fileName, mimeType)
+}
+
+/**
+ * Generates chart from data and uploads to storage
+ * @param chartData Chart data (labels, datasets, etc.)
+ * @param chartTitle Title for the chart
+ * @param chartId Unique ID for this chart
+ * @returns Public URL of uploaded chart
+ */
+export async function generateAndUploadChart(
+  chartData: ChartData,
+  chartTitle: string,
+  chartId: string
+): Promise<string> {
+  const chartBuffer = await generateChartImage(chartData, {
+    title: chartTitle,
+    width: 800,
+    height: 600,
+    type: 'bar',
+  })
+
+  return uploadChartImage(chartBuffer, chartId, 'ai-chart')
+}
+
+/**
+ * Main function: Extract chart data from PDF, generate charts, and upload them
+ * @param pdfContent Text content from PDF
+ * @param maxCharts Maximum number of charts to generate (default: 3)
+ * @returns Array of generated charts with URLs and metadata
+ */
+export async function extractGenerateAndUploadCharts(
+  pdfContent: string,
+  maxCharts: number = 3
+): Promise<GeneratedChart[]> {
+  console.log('[chart-pipeline] Extracting chart data from PDF...')
+  const extractedCharts = await extractChartDataFromPDF(pdfContent, maxCharts)
+
+  if (extractedCharts.length === 0) {
+    console.log('[chart-pipeline] No suitable chart data found in PDF')
+    return []
+  }
+
+  console.log(`[chart-pipeline] Found ${extractedCharts.length} charts to generate`)
+
+  const generatedCharts: GeneratedChart[] = []
+
+  for (let i = 0; i < extractedCharts.length; i++) {
+    const extractedChart = extractedCharts[i]
+
+    // Validate chart data to prevent AI hallucination
+    if (!validateChartData(extractedChart)) {
+      console.warn(`[chart-pipeline] Chart ${i + 1} failed validation, skipping`)
+      continue
+    }
+
+    try {
+      const chartId = `chart-${i + 1}`
+      const placeholder = `https://www.google.com/search?q=%7B%7BFIGURE_${i + 1}_URL%7D%7D`
+
+      console.log(`[chart-pipeline] Generating chart ${i + 1}: ${extractedChart.chartTitle}`)
+      const url = await generateAndUploadChart(
+        extractedChart.data,
+        extractedChart.chartTitle,
+        chartId
+      )
+
+      generatedCharts.push({
+        id: chartId,
+        url,
+        title: extractedChart.chartTitle,
+        alt: `Wykres: ${extractedChart.chartTitle}`,
+        caption: extractedChart.sourceDescription,
+        placeholder,
+        sourceDescription: extractedChart.sourceDescription,
+      })
+
+      console.log(`[chart-pipeline] Chart ${i + 1} uploaded successfully: ${url}`)
+    } catch (error) {
+      console.error(`[chart-pipeline] Failed to generate/upload chart ${i + 1}:`, error)
+    }
+  }
+
+  return generatedCharts
+}

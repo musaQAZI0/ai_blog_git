@@ -2,6 +2,7 @@ import OpenAI from 'openai'
 import { AIGenerationResponse, TargetAudience } from '@/types'
 import { generateAndUploadImagen, type ImagenPurpose } from '@/lib/ai/gemini-imagen'
 import { findCoverImageUrl } from '@/lib/images/cover-search'
+import { extractGenerateAndUploadCharts } from '@/lib/charts/chart-uploader'
 
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY
@@ -272,37 +273,62 @@ Required JSON format:
       console.error('Gemini cover image generation failed:', error)
     }
 
-    const limitedFigures = figures.slice(0, 3)
-
-    for (let i = 0; i < limitedFigures.length; i++) {
-      const figure = limitedFigures[i]
-      if (!figure?.prompt) continue
-
-      // Pick the right Imagen model based on figure type
-      const figurePurpose: ImagenPurpose =
-        figure.type === 'chart' ? 'chart' : 'illustration'
-
+    // For professional articles: Use Chart.js to generate accurate data charts
+    // For patient articles: Use AI image generation for clean anatomical illustrations
+    if (targetAudience === 'professional') {
       try {
-        const url = await generateAndUploadImagen(
-          figure.prompt,
-          figure.id || `figure-${i + 1}`,
-          'ai-figure',
-          figurePurpose
-        )
+        console.log('[openai] Extracting and generating charts for professional article...')
+        const generatedCharts = await extractGenerateAndUploadCharts(pdfContent, 3)
 
-        const placeholder =
-          figure.placeholder ||
-          getFigurePlaceholderUrl(i + 1)
-        const alt = figure.alt || `Ilustracja ${i + 1}`
-        content = injectFigure({
-          content,
-          placeholder,
-          url,
-          alt,
-          caption: figure.caption,
-        })
+        if (generatedCharts.length > 0) {
+          console.log(`[openai] Successfully generated ${generatedCharts.length} charts`)
+
+          // Inject generated charts into content
+          for (const chart of generatedCharts) {
+            content = injectFigure({
+              content,
+              placeholder: chart.placeholder,
+              url: chart.url,
+              alt: chart.alt,
+              caption: chart.caption,
+            })
+          }
+        } else {
+          console.log('[openai] No chart data found in PDF, skipping chart generation')
+        }
       } catch (error) {
-        console.error('Gemini figure generation failed:', error)
+        console.error('[openai] Chart generation failed:', error)
+      }
+    } else {
+      // Patient articles: use AI image generation for anatomical illustrations
+      const limitedFigures = figures.slice(0, 3)
+
+      for (let i = 0; i < limitedFigures.length; i++) {
+        const figure = limitedFigures[i]
+        if (!figure?.prompt) continue
+
+        try {
+          const url = await generateAndUploadImagen(
+            figure.prompt,
+            figure.id || `figure-${i + 1}`,
+            'ai-figure',
+            'illustration'
+          )
+
+          const placeholder =
+            figure.placeholder ||
+            getFigurePlaceholderUrl(i + 1)
+          const alt = figure.alt || `Ilustracja ${i + 1}`
+          content = injectFigure({
+            content,
+            placeholder,
+            url,
+            alt,
+            caption: figure.caption,
+          })
+        } catch (error) {
+          console.error('Gemini figure generation failed:', error)
+        }
       }
     }
 

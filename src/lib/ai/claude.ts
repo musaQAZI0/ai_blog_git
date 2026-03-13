@@ -50,10 +50,10 @@ export async function generateArticleWithClaude(
 
   const figureInstructions =
     targetAudience === 'professional'
-      ? `- Include up to 3 figures. You MAY include charts/graphs that visualize REAL DATA from the PDF source document.
+      ? `- Include up to 3 figures. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize REAL DATA from the PDF source document.
 - CRITICAL for charts/graphs: Include data labels and text ONLY if they come from the source document. Use EXACT values from the PDF - do NOT make up or estimate numbers.
-- Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg").
-- For anatomical illustrations: You may include simple anatomical labels (e.g., "Cornea", "Lens", "Retina") - keep labels short and accurate.`
+- Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg", "Cooke K6", "Barrett Universal II").
+- Focus on DATA VISUALIZATION (charts showing statistics, results, comparisons) rather than anatomical illustrations.`
       : `- Include up to 3 figures (simple anatomical illustrations ONLY).
 - CRITICAL: ALL figures MUST be completely clean - NO TEXT, NO LABELS, NO WORDS, NO NUMBERS, NO DATA.
 - Request only pure visual illustrations without any text elements.
@@ -113,7 +113,7 @@ Required JSON format:
       "alt": "Alt text in Polish",
       "caption": "Short caption in Polish",
       "placeholder": "https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D",
-      "prompt": "Medical illustration or data visualization prompt in English. ${targetAudience === 'professional' ? 'For charts: include specific data labels from the PDF source (use exact values). For anatomical illustrations: may include simple labels like \'Cornea\', \'Lens\', \'Retina\'.' : 'CRITICAL: Pure visual illustration only - absolutely NO TEXT, NO LABELS, NO WORDS, NO NUMBERS. Clean medical illustration.'}"
+      "prompt": "Medical illustration or data visualization prompt in English. ${targetAudience === 'professional' ? 'PRIORITIZE data charts/graphs. Example: \"Bar chart comparing IOL formula performance. X-axis: Cooke K6, Barrett Universal II, EVO, Kane. Y-axis: SD of PEs (D). Data values: 12, 147, 1227, 183. Label specific bars with formula names.\" Use exact values from PDF.' : 'CRITICAL: Pure visual illustration only - absolutely NO TEXT, NO LABELS, NO WORDS, NO NUMBERS. Clean medical illustration.'}"
     }
   ]
 }`

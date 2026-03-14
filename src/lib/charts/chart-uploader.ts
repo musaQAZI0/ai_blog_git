@@ -104,7 +104,7 @@ export async function extractGenerateAndUploadCharts(
         url,
         title: extractedChart.chartTitle,
         alt: `Wykres: ${extractedChart.chartTitle}`,
-        caption: extractedChart.sourceDescription,
+        caption: `Rysunek ${i + 1}: ${extractedChart.chartTitle}`,
         placeholder,
         sourceDescription: extractedChart.sourceDescription,
       })

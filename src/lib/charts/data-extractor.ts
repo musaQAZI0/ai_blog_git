@@ -1,4 +1,4 @@
-import Anthropic from '@anthropic-ai/sdk'
+import OpenAI from 'openai'
 import { ChartData } from './chart-generator'
 
 export interface ExtractedChartData {
@@ -9,7 +9,7 @@ export interface ExtractedChartData {
 }
 
 /**
- * Extracts chart data from PDF content using Claude AI
+ * Extracts chart data from PDF content using OpenAI
  * Focuses on finding numerical data suitable for bar charts
  * @param pdfContent The text content from the PDF
  * @param maxCharts Maximum number of charts to extract (default: 3)
@@ -19,74 +19,103 @@ export async function extractChartDataFromPDF(
   pdfContent: string,
   maxCharts: number = 3
 ): Promise<ExtractedChartData[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY
+  const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured')
+    console.warn('OPENAI_API_KEY is not configured, skipping chart extraction')
+    return []
   }
 
-  const anthropic = new Anthropic({ apiKey })
+  const openai = new OpenAI({ apiKey })
+  // Use environment variable or fallback to gpt-4o (excellent for structured data extraction)
+  const modelName = process.env.CHART_EXTRACTION_MODEL || 'gpt-4o'
 
   const prompt = `Analyze the following medical/scientific document and extract up to ${maxCharts} sets of numerical data that would be suitable for data visualization as bar charts, line graphs, or scatter plots.
 
 CRITICAL REQUIREMENTS:
 1. Extract ONLY data that is explicitly present in the document - DO NOT make up or estimate any numbers
 2. Prefer data that shows comparisons, trends, or statistical outcomes
-3. For each chart, extract:
-   - Chart title (concise, descriptive)
+3. ALL TEXT MUST BE IN POLISH (chart titles, labels, dataset names)
+4. For each chart, extract:
+   - Chart title (concise, descriptive, IN POLISH)
    - Chart type (bar, line, or scatter - prefer bar charts)
-   - Labels (x-axis categories or groups)
+   - Labels (x-axis categories or groups - keep formula names in English, but descriptive text in Polish)
    - Values (exact numbers from the document)
-   - Dataset label (what the values represent)
-   - Source description (where in the document this data came from)
+   - Dataset label (what the values represent - IN POLISH, e.g., "Odchylenie standardowe (D)" or "Procent oczu w granicach ±0.5 D")
+   - Source description (for internal reference - IN POLISH)
+5. If the document contains tables with numerical data, extract those
+6. If the document mentions statistical results (means, standard deviations, p-values), extract those
+7. Focus on data that would be meaningful for ophthalmology professionals
 
-4. If the document contains tables with numerical data, extract those
-5. If the document mentions statistical results (means, standard deviations, p-values), extract those
-6. Focus on data that would be meaningful for ophthalmology professionals
-
-Return ONLY a valid JSON array with this exact structure:
-[
-  {
-    "chartTitle": "Clear, concise title",
-    "chartType": "bar",
-    "sourceDescription": "Table 1: Comparison of IOL formulas",
-    "data": {
-      "labels": ["Label1", "Label2", "Label3"],
-      "datasets": [
-        {
-          "label": "Dataset name",
-          "data": [12.5, 15.3, 18.7]
-        }
-      ]
+Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
+{
+  "charts": [
+    {
+      "chartTitle": "Porównanie odchylenia standardowego błędów predykcji dla formuł IOL",
+      "chartType": "bar",
+      "sourceDescription": "Wartości SD porównujące różne formuły obliczeniowe IOL",
+      "data": {
+        "labels": ["Cooke K6", "Pearl-DGS", "EVO"],
+        "datasets": [
+          {
+            "label": "Odchylenie standardowe (D)",
+            "data": [0.44, 0.46, 0.47]
+          }
+        ]
+      }
     }
-  }
-]
+  ]
+}
 
-If NO suitable numerical data is found in the document, return an empty array: []
+IMPORTANT:
+- All chart titles MUST be in Polish
+- All dataset labels MUST be in Polish (e.g., "Odchylenie standardowe (D)", "Procent oczu (%)", "RMSAE", etc.)
+- Formula names in x-axis labels can stay in English (e.g., "Cooke K6", "Barrett", "Kane")
+- The sourceDescription is for internal tracking only. The final article will use sequential figure numbering (Rysunek 1, Rysunek 2, Rysunek 3).
+
+If NO suitable numerical data is found in the document, return: {"charts": []}
 
 Document content:
 ${pdfContent}
 
-Return ONLY the JSON array, no additional text or markdown.`
-
-  const message = await anthropic.messages.create({
-    model: 'claude-sonnet-4-20250514',
-    max_tokens: 4000,
-    messages: [
-      { role: 'user', content: prompt },
-    ],
-  })
-
-  const responseText = message.content[0].type === 'text' ? message.content[0].text : '[]'
-
-  // Extract JSON from response
-  const jsonMatch = responseText.match(/\[[\s\S]*\]/)
-  const jsonStr = jsonMatch ? jsonMatch[0] : '[]'
+Return ONLY the JSON object, no additional text or markdown.`
 
   try {
-    const extractedData: ExtractedChartData[] = JSON.parse(jsonStr)
+    const completion = await openai.chat.completions.create({
+      model: modelName,
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a precise data extraction assistant. Extract only factual numerical data from documents. Never hallucinate or make up numbers. ALL chart titles and labels must be in Polish (język polski).'
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3,
+      max_tokens: 4000,
+      response_format: { type: 'json_object' }
+    })
+
+    const responseText = completion.choices[0]?.message?.content || '{}'
+
+    // Parse the JSON response
+    let parsedResponse: any
+    try {
+      parsedResponse = JSON.parse(responseText)
+    } catch {
+      console.warn('[chart-extractor] Failed to parse JSON response')
+      return []
+    }
+
+    // Handle both direct array or object with 'charts' key
+    const extractedData: ExtractedChartData[] = Array.isArray(parsedResponse)
+      ? parsedResponse
+      : (parsedResponse.charts || [])
+
     return extractedData.slice(0, maxCharts)
   } catch (error) {
-    console.error('Failed to parse chart data extraction:', error)
+    console.error('Failed to extract chart data:', error)
     return []
   }
 }

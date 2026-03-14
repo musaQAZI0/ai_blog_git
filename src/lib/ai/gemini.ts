@@ -246,6 +246,33 @@ export async function generateArticleWithGemini(
 
   const validCategories = targetAudience === 'patient' ? PATIENT_CATEGORIES : PROFESSIONAL_CATEGORIES
 
+  // Extract chart data FIRST for professional articles so we can tell the AI what charts are available
+  let extractedChartData: any[] = []
+  let chartContext = ''
+  if (targetAudience === 'professional') {
+    try {
+      console.log('[gemini] Pre-extracting chart data to inform article generation...')
+      const { extractChartDataFromPDF } = await import('@/lib/charts/data-extractor')
+      extractedChartData = await extractChartDataFromPDF(pdfContent, 3)
+
+      if (extractedChartData.length > 0) {
+        console.log(`[gemini] Found ${extractedChartData.length} charts to include in article`)
+        chartContext = `\n\nAVAILABLE CHARTS TO REFERENCE IN YOUR ARTICLE:
+${extractedChartData.map((chart, i) => `
+Chart ${i + 1}: ${chart.chartTitle}
+Type: ${chart.chartType}
+Data: ${JSON.stringify(chart.data.labels)} with values ${JSON.stringify(chart.data.datasets[0]?.data)}
+Source: ${chart.sourceDescription}
+Placeholder: ${getFigurePlaceholderUrl(i + 1)}
+`).join('\n')}
+
+CRITICAL: Write your article content to reference these specific charts. Place each chart placeholder (e.g., ${getFigurePlaceholderUrl(1)}) in your content where you discuss the corresponding data. Write text that introduces and explains what the chart shows.`
+      }
+    } catch (error) {
+      console.warn('[gemini] Chart pre-extraction failed, continuing without chart context:', error)
+    }
+  }
+
   const figureInstructions =
     targetAudience === 'professional'
       ? `3. Include 1-3 figures. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize REAL DATA from the PDF source document.
@@ -281,7 +308,7 @@ export async function generateArticleWithGemini(
 Target word count: ~400 words for the main content (aim for 380-450).
 IMPORTANT: word count refers ONLY to the "content" field (the markdown article body), excluding title, excerpt, SEO meta, tags/categories, and excluding URLs/placeholders.
 
-Document content: ${normalizedPdfContent}
+Document content: ${normalizedPdfContent}${chartContext}
 
 CRITICAL RULES — you MUST follow ALL of these:
 1. Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
@@ -547,30 +574,54 @@ Required JSON format:
 
   // For professional articles: Use Chart.js to generate accurate data charts
   // For patient articles: Use AI image generation for clean anatomical illustrations
-  if (targetAudience === 'professional') {
+  if (targetAudience === 'professional' && extractedChartData.length > 0) {
     try {
-      console.log('[gemini] Extracting and generating charts for professional article...')
-      const generatedCharts = await extractGenerateAndUploadCharts(pdfContent, 3)
+      console.log('[gemini] Generating chart images from pre-extracted data...')
+      const { generateAndUploadChart } = await import('@/lib/charts/chart-uploader')
+      const { validateChartData } = await import('@/lib/charts/data-extractor')
 
-      if (generatedCharts.length > 0) {
-        console.log(`[gemini] Successfully generated ${generatedCharts.length} charts`)
+      for (let i = 0; i < extractedChartData.length; i++) {
+        const extractedChart = extractedChartData[i]
 
-        // Inject generated charts into content
-        for (const chart of generatedCharts) {
-          const captionLine = chart.caption ? `\n\n*${chart.caption}*` : ''
-          const markdownImage = `![${chart.alt}](${chart.url})${captionLine}`
-
-          if (content.includes(chart.placeholder)) {
-            content = content.split(chart.placeholder).join(markdownImage)
-          }
+        // Validate chart data to prevent AI hallucination
+        if (!validateChartData(extractedChart)) {
+          console.warn(`[gemini] Chart ${i + 1} failed validation, skipping`)
+          continue
         }
-      } else {
-        console.log('[gemini] No chart data found in PDF, skipping chart generation')
+
+        try {
+          const chartId = `chart-${i + 1}`
+          const placeholder = getFigurePlaceholderUrl(i + 1)
+
+          console.log(`[gemini] Generating chart ${i + 1}: ${extractedChart.chartTitle}`)
+          const url = await generateAndUploadChart(
+            extractedChart.data,
+            extractedChart.chartTitle,
+            chartId
+          )
+
+          const alt = `Wykres: ${extractedChart.chartTitle}`
+          const captionLine = extractedChart.sourceDescription ? `\n\n*${extractedChart.sourceDescription}*` : ''
+          const markdownImage = `![${alt}](${url})${captionLine}`
+
+          if (content.includes(placeholder)) {
+            content = content.split(placeholder).join(markdownImage)
+            console.log(`[gemini] Chart ${i + 1} injected into content: ${url}`)
+          } else {
+            console.warn(`[gemini] Placeholder ${placeholder} not found in content`)
+          }
+        } catch (error) {
+          console.error(`[gemini] Failed to generate/upload chart ${i + 1}:`, error)
+        }
       }
     } catch (error) {
       console.error('[gemini] Chart generation failed:', error)
     }
-  } else {
+  } else if (targetAudience === 'professional') {
+    console.log('[gemini] No chart data found in PDF, skipping chart generation')
+  }
+
+  if (targetAudience === 'patient') {
     // Patient articles: use AI image generation for anatomical illustrations
     const limitedFigures = figures.slice(0, 3)
     for (let i = 0; i < limitedFigures.length; i++) {

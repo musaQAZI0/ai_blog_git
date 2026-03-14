@@ -9,10 +9,12 @@ The chart generation system extracts numerical data from PDF documents and gener
 ## Architecture
 
 ### 1. Data Extraction (`data-extractor.ts`)
-- Uses Claude AI to extract structured numerical data from PDF content
+- Uses OpenAI (GPT-4o by default) to extract structured numerical data from PDF content
 - Identifies tables, statistical results, and comparison data
 - Returns structured data suitable for Chart.js (labels, datasets, values)
 - Validates extracted data to prevent AI hallucination
+- Charts are numbered sequentially in the article (Rysunek 1, Rysunek 2, Rysunek 3) regardless of source table numbers
+- All chart titles and labels are generated in Polish for professional articles
 
 ### 2. Chart Generation (`chart-generator.ts`)
 - Uses Chart.js and chartjs-node-canvas for server-side chart rendering
@@ -102,8 +104,11 @@ interface ChartData {
 
 ## Configuration
 
-No additional configuration required. The system uses the existing:
-- `ANTHROPIC_API_KEY`: For data extraction with Claude AI
+Environment variables used:
+- `OPENAI_API_KEY`: For data extraction with OpenAI (required)
+- `CHART_EXTRACTION_MODEL`: OpenAI model to use (default: `gpt-4o`)
+  - Recommended chat models: `gpt-4o` (fast, accurate), `o1` or `o1-pro` (reasoning)
+  - Note: GPT-5.x-pro models use legacy completions API, not supported yet
 - `AI_STORAGE_PROVIDER`: For chart image upload (Cloudinary or local)
 
 ## Example Output
@@ -123,8 +128,9 @@ Kane       | 0.15 D    | 0.32 D
 - Type: Bar chart
 - X-axis: ["Cooke K6", "Barrett II", "Kane"]
 - Y-axis: [0.34, 0.28, 0.32]
-- Title: "IOL Formula Performance - Standard Deviation"
-- Caption: "Table 1: Comparison of IOL prediction error"
+- Title: "Porównanie odchylenia standardowego dla formuł IOL"
+- Dataset Label: "Odchylenie standardowe (D)"
+- Caption: "Rysunek 1: Porównanie odchylenia standardowego dla formuł IOL"
 
 ## Differences from AI Image Generation
 

@@ -22,7 +22,11 @@
       "Bash(node test-firebase.js:*)",
       "Bash(git reset:*)",
       "Bash(git restore:*)",
-      "Bash(jobs)"
+      "Bash(jobs)",
+      "Bash(rm:*)",
+      "Bash(curl:*)",
+      "Bash(node -e:*)",
+      "Bash(npm rebuild:*)"
     ]
   }
 }

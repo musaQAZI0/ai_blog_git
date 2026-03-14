@@ -1,6 +1,28 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   output: 'standalone',
+  webpack: (config, { isServer }) => {
+    if (isServer) {
+      // Externalize canvas and chartjs-node-canvas for server-side rendering
+      // This prevents webpack from trying to bundle native modules
+      config.externals = [
+        ...(Array.isArray(config.externals) ? config.externals : [config.externals]),
+        'canvas',
+        'chartjs-node-canvas',
+        {
+          'canvas': 'commonjs canvas',
+          'chartjs-node-canvas': 'commonjs chartjs-node-canvas'
+        },
+      ]
+
+      // Ignore dynamic require warnings
+      config.ignoreWarnings = [
+        ...(config.ignoreWarnings || []),
+        /Critical dependency: the request of a dependency is an expression/,
+      ]
+    }
+    return config
+  },
   images: {
     remotePatterns: [
       {

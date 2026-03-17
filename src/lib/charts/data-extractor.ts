@@ -29,11 +29,15 @@ export async function extractChartDataFromPDF(
   // Use environment variable or fallback to gpt-4o (excellent for structured data extraction)
   const modelName = process.env.CHART_EXTRACTION_MODEL || 'gpt-4o'
 
-  const prompt = `Analyze the following medical/scientific document and extract up to ${maxCharts} sets of numerical data that would be suitable for data visualization as bar charts, line graphs, or scatter plots.
+  const prompt = `Analyze the following medical/scientific document and extract EXACTLY ${maxCharts} of the MOST IMPORTANT and CLINICALLY RELEVANT sets of numerical data for data visualization as bar charts, line graphs, or scatter plots.
 
 CRITICAL REQUIREMENTS:
 1. Extract ONLY data that is explicitly present in the document - DO NOT make up or estimate any numbers
-2. Prefer data that shows comparisons, trends, or statistical outcomes
+2. PRIORITIZE in this order:
+   a) PRIMARY ENDPOINTS and main findings/results mentioned in the abstract or conclusion
+   b) Data with STATISTICALLY SIGNIFICANT differences (P < .05)
+   c) Key comparisons that show the strongest clinical impact
+   d) Data that answers the main research question
 3. ALL TEXT MUST BE IN POLISH (chart titles, labels, dataset names)
 4. For each chart, extract:
    - Chart title (concise, descriptive, IN POLISH)

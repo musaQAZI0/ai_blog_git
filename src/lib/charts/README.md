@@ -10,10 +10,12 @@ The chart generation system extracts numerical data from PDF documents and gener
 
 ### 1. Data Extraction (`data-extractor.ts`)
 - Uses OpenAI (GPT-4o by default) to extract structured numerical data from PDF content
+- Extracts MAXIMUM 2 charts focusing on PRIMARY ENDPOINTS and KEY FINDINGS
+- Prioritizes statistically significant results (P < .05) and clinically relevant data
 - Identifies tables, statistical results, and comparison data
 - Returns structured data suitable for Chart.js (labels, datasets, values)
 - Validates extracted data to prevent AI hallucination
-- Charts are numbered sequentially in the article (Rysunek 1, Rysunek 2, Rysunek 3) regardless of source table numbers
+- Charts are numbered sequentially in the article (Rysunek 1, Rysunek 2) regardless of source table numbers
 - All chart titles and labels are generated in Polish for professional articles
 
 ### 2. Chart Generation (`chart-generator.ts`)

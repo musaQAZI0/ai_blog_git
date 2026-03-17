@@ -253,7 +253,7 @@ export async function generateArticleWithGemini(
     try {
       console.log('[gemini] Pre-extracting chart data to inform article generation...')
       const { extractChartDataFromPDF } = await import('@/lib/charts/data-extractor')
-      extractedChartData = await extractChartDataFromPDF(pdfContent, 3)
+      extractedChartData = await extractChartDataFromPDF(pdfContent, 2)
 
       if (extractedChartData.length > 0) {
         console.log(`[gemini] Found ${extractedChartData.length} charts to include in article`)
@@ -275,11 +275,12 @@ CRITICAL: Write your article content to reference these specific charts. Place e
 
   const figureInstructions =
     targetAudience === 'professional'
-      ? `3. Include 1-3 figures. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize REAL DATA from the PDF source document.
+      ? `3. Include MAXIMUM 2 figures that show the MOST IMPORTANT results. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize PRIMARY ENDPOINTS and KEY FINDINGS from the PDF source document.
 3a. CRITICAL for charts/graphs: Include data labels and text ONLY if they come from the source document. Use EXACT values from the PDF - do NOT make up or estimate numbers.
 3b. Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg", "Cooke K6", "Barrett Universal II").
 3c. Focus on DATA VISUALIZATION (charts showing statistics, results, comparisons) rather than anatomical illustrations.
-3d. In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.`
+3d. Only include charts that are clinically relevant and directly support the main conclusions.
+3e. In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.`
       : `3. Include 1-3 figures (simple anatomical illustrations ONLY). In "content", place each figure placeholder exactly once, e.g. ${getFigurePlaceholderUrl(1)}.
 3a. CRITICAL: ALL figures MUST be completely clean - NO TEXT, NO LABELS, NO WORDS, NO NUMBERS, NO DATA.
 3b. Request only pure visual illustrations without any text elements.

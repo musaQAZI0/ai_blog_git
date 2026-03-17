@@ -26,7 +26,8 @@
       "Bash(rm:*)",
       "Bash(curl:*)",
       "Bash(node -e:*)",
-      "Bash(npm rebuild:*)"
+      "Bash(npm rebuild:*)",
+      "Bash(find:*)"
     ]
   }
 }

@@ -3,21 +3,21 @@ import { ChartData } from './chart-generator'
 
 export interface ExtractedChartData {
   chartTitle: string
-  chartType: 'bar' | 'line' | 'scatter'
+  chartType: 'bar' | 'line' | 'scatter' | 'pie' | 'doughnut' | 'radar' | 'polarArea'
   data: ChartData
   sourceDescription: string
 }
 
 /**
  * Extracts chart data from PDF content using OpenAI
- * Focuses on finding numerical data suitable for bar charts
+ * Intelligently selects appropriate chart types based on data characteristics
  * @param pdfContent The text content from the PDF
- * @param maxCharts Maximum number of charts to extract (default: 3)
+ * @param maxCharts Maximum number of charts to extract (default: 2)
  * @returns Array of extracted chart data
  */
 export async function extractChartDataFromPDF(
   pdfContent: string,
-  maxCharts: number = 3
+  maxCharts: number = 2
 ): Promise<ExtractedChartData[]> {
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
@@ -29,7 +29,7 @@ export async function extractChartDataFromPDF(
   // Use environment variable or fallback to gpt-4o (excellent for structured data extraction)
   const modelName = process.env.CHART_EXTRACTION_MODEL || 'gpt-4o'
 
-  const prompt = `Analyze the following medical/scientific document and extract EXACTLY ${maxCharts} of the MOST IMPORTANT and CLINICALLY RELEVANT sets of numerical data for data visualization as bar charts, line graphs, or scatter plots.
+  const prompt = `Analyze the following medical/scientific document and extract EXACTLY ${maxCharts} of the MOST IMPORTANT and CLINICALLY RELEVANT sets of numerical data for data visualization.
 
 CRITICAL REQUIREMENTS:
 1. Extract ONLY data that is explicitly present in the document - DO NOT make up or estimate any numbers
@@ -41,7 +41,14 @@ CRITICAL REQUIREMENTS:
 3. ALL TEXT MUST BE IN POLISH (chart titles, labels, dataset names)
 4. For each chart, extract:
    - Chart title (concise, descriptive, IN POLISH)
-   - Chart type (bar, line, or scatter - prefer bar charts)
+   - Chart type - INTELLIGENTLY CHOOSE based on data characteristics:
+     * 'bar' - Comparing values across categories (e.g., comparing different IOL formulas, treatment groups)
+     * 'line' - Showing trends over time or continuous progression (e.g., visual acuity over months, age-related changes)
+     * 'pie' - Showing parts of a whole, percentages that sum to 100% (e.g., distribution of complications, patient demographics)
+     * 'doughnut' - Similar to pie but with emphasis on proportions (e.g., success rates vs failures)
+     * 'radar' - Comparing multiple variables across categories (e.g., multi-dimensional performance metrics)
+     * 'scatter' - Showing correlation or relationship between two variables (e.g., age vs outcome, SE vs prediction error)
+     * 'polarArea' - Showing cyclic or periodic data with magnitude (rarely used in medical contexts)
    - Labels (x-axis categories or groups - keep formula names in English, but descriptive text in Polish)
    - Values (exact numbers from the document)
    - Dataset label (what the values represent - IN POLISH, e.g., "Odchylenie standardowe (D)" or "Procent oczu w granicach ±0.5 D")
@@ -49,6 +56,7 @@ CRITICAL REQUIREMENTS:
 5. If the document contains tables with numerical data, extract those
 6. If the document mentions statistical results (means, standard deviations, p-values), extract those
 7. Focus on data that would be meaningful for ophthalmology professionals
+8. IMPORTANT: Use different chart types when appropriate - do NOT default to bar charts for all data
 
 Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
 {
@@ -66,9 +74,30 @@ Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
           }
         ]
       }
+    },
+    {
+      "chartTitle": "Rozkład powikłań pooperacyjnych",
+      "chartType": "pie",
+      "sourceDescription": "Procent pacjentów z różnymi powikłaniami",
+      "data": {
+        "labels": ["Brak powikłań", "Łagodne", "Umiarkowane", "Ciężkie"],
+        "datasets": [
+          {
+            "label": "Procent pacjentów",
+            "data": [75, 15, 8, 2]
+          }
+        ]
+      }
     }
   ]
 }
+
+EXAMPLES OF APPROPRIATE CHART TYPE SELECTION:
+- Comparison data (IOL formulas, treatment groups) → 'bar'
+- Time series (follow-up over months) → 'line'
+- Percentage breakdown (complication types, demographics) → 'pie' or 'doughnut'
+- Correlation (age vs error, SE vs outcome) → 'scatter'
+- Multi-dimensional comparison → 'radar'
 
 IMPORTANT:
 - All chart titles MUST be in Polish

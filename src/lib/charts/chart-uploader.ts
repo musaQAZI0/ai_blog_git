@@ -40,18 +40,20 @@ export async function uploadChartImage(
  * @param chartData Chart data (labels, datasets, etc.)
  * @param chartTitle Title for the chart
  * @param chartId Unique ID for this chart
+ * @param chartType Type of chart (bar, line, scatter, pie, doughnut, radar)
  * @returns Public URL of uploaded chart
  */
 export async function generateAndUploadChart(
   chartData: ChartData,
   chartTitle: string,
-  chartId: string
+  chartId: string,
+  chartType: 'bar' | 'line' | 'scatter' | 'pie' | 'doughnut' | 'radar' | 'polarArea' = 'bar'
 ): Promise<string> {
   const chartBuffer = await generateChartImage(chartData, {
     title: chartTitle,
     width: 800,
     height: 600,
-    type: 'bar',
+    type: chartType,
   })
 
   return uploadChartImage(chartBuffer, chartId, 'ai-chart')
@@ -60,12 +62,12 @@ export async function generateAndUploadChart(
 /**
  * Main function: Extract chart data from PDF, generate charts, and upload them
  * @param pdfContent Text content from PDF
- * @param maxCharts Maximum number of charts to generate (default: 3)
+ * @param maxCharts Maximum number of charts to generate (default: 2)
  * @returns Array of generated charts with URLs and metadata
  */
 export async function extractGenerateAndUploadCharts(
   pdfContent: string,
-  maxCharts: number = 3
+  maxCharts: number = 2
 ): Promise<GeneratedChart[]> {
   console.log('[chart-pipeline] Extracting chart data from PDF...')
   const extractedCharts = await extractChartDataFromPDF(pdfContent, maxCharts)
@@ -92,11 +94,12 @@ export async function extractGenerateAndUploadCharts(
       const chartId = `chart-${i + 1}`
       const placeholder = `https://www.google.com/search?q=%7B%7BFIGURE_${i + 1}_URL%7D%7D`
 
-      console.log(`[chart-pipeline] Generating chart ${i + 1}: ${extractedChart.chartTitle}`)
+      console.log(`[chart-pipeline] Generating chart ${i + 1}: ${extractedChart.chartTitle} (${extractedChart.chartType})`)
       const url = await generateAndUploadChart(
         extractedChart.data,
         extractedChart.chartTitle,
-        chartId
+        chartId,
+        extractedChart.chartType
       )
 
       generatedCharts.push({

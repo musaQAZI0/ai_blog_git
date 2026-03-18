@@ -60,6 +60,11 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/scripts/verify-env.js ./scripts/verify-env.js
 
+# Explicitly copy canvas and chartjs-node-canvas modules (native modules not included in standalone)
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/canvas ./node_modules/canvas
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/chartjs-node-canvas ./node_modules/chartjs-node-canvas
+COPY --from=builder --chown=nextjs:nodejs /app/node_modules/chart.js ./node_modules/chart.js
+
 # Create cache directory with proper permissions
 RUN mkdir -p .next/cache/images && chown -R nextjs:nodejs .next
 

@@ -2,11 +2,9 @@ services:
   # Main Web Service
   - type: web
     name: medical-blog-skrzypecki
-    env: node
+    runtime: docker
     region: frankfurt  # Options: oregon, frankfurt, singapore
     plan: free  # Options: free, starter, standard, pro
-    buildCommand: npm install && npm run build
-    startCommand: npm start
     healthCheckPath: /api/health
 
     # Auto-deploy on push to main branch

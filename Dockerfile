@@ -3,13 +3,19 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Install dependencies required for sharp and other native modules
+# Install dependencies required for sharp, canvas, and other native modules
 RUN apk add --no-cache \
     libc6-compat \
     python3 \
     make \
     g++ \
-    vips-dev
+    vips-dev \
+    cairo-dev \
+    pango-dev \
+    jpeg-dev \
+    giflib-dev \
+    librsvg-dev \
+    pixman-dev
 
 # Copy package files
 COPY package*.json ./
@@ -34,8 +40,15 @@ WORKDIR /app
 ENV NODE_ENV=production
 ENV SKIP_ENV_CHECK=0
 
-# Install runtime dependencies for sharp
-RUN apk add --no-cache vips
+# Install runtime dependencies for sharp and canvas
+RUN apk add --no-cache \
+    vips \
+    cairo \
+    pango \
+    jpeg \
+    giflib \
+    librsvg \
+    pixman
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

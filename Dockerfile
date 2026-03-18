@@ -15,7 +15,10 @@ RUN apk add --no-cache \
     jpeg-dev \
     giflib-dev \
     librsvg-dev \
-    pixman-dev
+    pixman-dev \
+    fontconfig \
+    ttf-dejavu \
+    font-noto
 
 # Copy package files
 COPY package*.json ./
@@ -48,7 +51,13 @@ RUN apk add --no-cache \
     jpeg \
     giflib \
     librsvg \
-    pixman
+    pixman \
+    fontconfig \
+    ttf-dejavu \
+    font-noto
+
+# Rebuild font cache to ensure fonts are available
+RUN fc-cache -f -v
 
 # Create non-root user
 RUN addgroup --system --gid 1001 nodejs

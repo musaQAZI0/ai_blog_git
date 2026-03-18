@@ -102,7 +102,7 @@ export async function generateChartImage(
           font: {
             size: 20,
             weight: 'bold',
-            family: "'Segoe UI', 'Arial', sans-serif",
+            family: "'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif",
           },
           padding: {
             top: 10,
@@ -116,7 +116,7 @@ export async function generateChartImage(
           labels: {
             font: {
               size: 13,
-              family: "'Segoe UI', 'Arial', sans-serif",
+              family: "'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif",
             },
             padding: 15,
             color: '#374151', // gray-700
@@ -151,7 +151,7 @@ export async function generateChartImage(
             ticks: {
               font: {
                 size: 12,
-                family: "'Segoe UI', 'Arial', sans-serif",
+                family: "'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif",
               },
               color: '#6b7280', // gray-500
               padding: 8,
@@ -168,7 +168,7 @@ export async function generateChartImage(
             ticks: {
               font: {
                 size: 12,
-                family: "'Segoe UI', 'Arial', sans-serif",
+                family: "'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif",
               },
               color: '#6b7280', // gray-500
               padding: 8,
@@ -199,7 +199,7 @@ export async function generateChartImage(
             pointLabels: {
               font: {
                 size: 12,
-                family: "'Segoe UI', 'Arial', sans-serif",
+                family: "'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif",
               },
               color: '#374151',
             },

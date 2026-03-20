@@ -177,20 +177,30 @@ Return ONLY the JSON object, no additional text or markdown.`
       ? parsedResponse
       : (parsedResponse.charts || [])
 
+    // Log what AI returned
+    console.log('[chart-extractor] ===== EXTRACTED CHART TYPES =====')
+    extractedData.forEach((chart, i) => {
+      console.log(`[chart-extractor] Chart ${i + 1}: "${chart.chartTitle}" → TYPE: "${chart.chartType}"`)
+    })
+
     // ENFORCE VARIETY: Reject if both charts are the same type
     if (extractedData.length === 2 && extractedData[0].chartType === extractedData[1].chartType) {
-      console.warn(`[chart-extractor] REJECTED: Both charts are '${extractedData[0].chartType}'. Forcing variety...`)
+      console.error(`[chart-extractor] ⚠️ REJECTED: Both charts are '${extractedData[0].chartType}'. Forcing variety...`)
 
-      // Force the second chart to be different
+      // Force the second chart to be different - RANDOM selection for max variety
       const alternativeTypes: Array<'line' | 'pie' | 'doughnut' | 'scatter' | 'radar'> =
         ['line', 'pie', 'doughnut', 'scatter', 'radar']
 
       const firstType = extractedData[0].chartType
       const differentTypes = alternativeTypes.filter(t => t !== firstType)
 
-      // Choose the first alternative that's different
-      extractedData[1].chartType = differentTypes[0]
-      console.log(`[chart-extractor] Changed Chart 2 from '${firstType}' to '${extractedData[1].chartType}'`)
+      // Randomly choose from alternatives for maximum variety
+      const randomIndex = Math.floor(Math.random() * differentTypes.length)
+      const oldType = extractedData[1].chartType
+      extractedData[1].chartType = differentTypes[randomIndex]
+      console.error(`[chart-extractor] ✅ FIXED: Changed Chart 2 from '${oldType}' to '${extractedData[1].chartType}' (random selection)`)
+    } else if (extractedData.length === 2) {
+      console.log(`[chart-extractor] ✅ VARIETY CONFIRMED: Chart 1 is '${extractedData[0].chartType}', Chart 2 is '${extractedData[1].chartType}'`)
     }
 
     return extractedData.slice(0, maxCharts)

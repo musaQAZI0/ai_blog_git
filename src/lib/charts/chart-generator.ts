@@ -89,6 +89,15 @@ export async function generateChartImage(
     type = 'bar'
   } = options
 
+  // DEBUG: Log chart type and verify controller registration
+  console.log(`[chart-generator] 🎨 Generating chart with type: "${type}"`)
+  console.log(`[chart-generator] 📊 Chart.js registered controllers:`, Chart.registry.controllers.keys())
+
+  // Verify the requested controller exists
+  const controllerName = type.charAt(0).toUpperCase() + type.slice(1) + 'Controller'
+  const hasController = Array.from(Chart.registry.controllers.keys()).some(key => key.includes(type))
+  console.log(`[chart-generator] ✓ Controller "${controllerName}" registered:`, hasController)
+
   const chartJSNodeCanvas = new ChartJSNodeCanvas({
     width,
     height,
@@ -97,6 +106,8 @@ export async function generateChartImage(
 
   // For pie/doughnut/polarArea charts, use multiple colors for each segment
   const isPieStyle = ['pie', 'doughnut', 'polarArea'].includes(type)
+
+  console.log(`[chart-generator] 🔧 Creating configuration with type: "${type}", isPieStyle: ${isPieStyle}`)
 
   const configuration: ChartConfiguration = {
     type,

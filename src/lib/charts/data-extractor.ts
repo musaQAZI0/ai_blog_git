@@ -3,7 +3,7 @@ import { ChartData } from './chart-generator'
 
 export interface ExtractedChartData {
   chartTitle: string
-  chartType: 'line' | 'scatter' | 'pie' | 'doughnut' | 'radar' | 'polarArea'  // 'bar' REMOVED
+  chartType: 'bar' | 'line' | 'scatter' | 'pie' | 'doughnut' | 'radar' | 'polarArea'
   data: ChartData
   sourceDescription: string
 }
@@ -31,13 +31,13 @@ export async function extractChartDataFromPDF(
 
   const prompt = `Analyze the following medical/scientific document and extract EXACTLY ${maxCharts} of the MOST IMPORTANT and CLINICALLY RELEVANT sets of numerical data for data visualization.
 
-🚫 BAR CHARTS ARE BANNED 🚫
-You are NOT ALLOWED to use 'bar' charts. This option does not exist.
-Choose from: 'line', 'pie', 'doughnut', 'scatter', 'radar', 'polarArea'
-Your goal is to MAXIMIZE VARIETY in chart types. If generating 2 charts, they MUST be DIFFERENT types.
+🎨 MANDATORY CHART VARIETY RULE 🎨
+When extracting 2 charts, you are ABSOLUTELY REQUIRED to use 2 DIFFERENT chart types!
+If you select 'bar' for Chart 1, you CANNOT use 'bar' for Chart 2 - you MUST choose from: line, pie, doughnut, scatter, radar, or polarArea.
 
-⚠️ CRITICAL CHART TYPE SELECTION RULE ⚠️
-You MUST choose the MOST APPROPRIATE chart type for each dataset. Think creatively about how to visualize the data!
+⚠️ CRITICAL: BOTH CHARTS CANNOT BE THE SAME TYPE ⚠️
+This is your PRIMARY directive. Chart variety is MORE important than finding the "perfect" chart type.
+Better to use a slightly less optimal chart type than to repeat the same type twice!
 
 DECISION TREE FOR CHART TYPE:
 1. Does the data show change over TIME or progression? → USE 'line'
@@ -52,13 +52,13 @@ DECISION TREE FOR CHART TYPE:
 4. Are you comparing MULTIPLE METRICS across categories? → USE 'radar'
    Examples: "Porównanie precyzji, dokładności i stabilności dla 3 formuł"
 
-5. For categorical comparisons → USE 'doughnut' or 'radar'
-   Examples: "Porównanie MAE dla 3 formuł IOL" → doughnut chart showing relative proportions
-   Example: "Comparing multiple metrics across categories" → radar chart
+5. For categorical comparisons → FIRST CHOICE: 'bar', BUT if you already used 'bar' → USE 'doughnut' or 'radar'
+   Examples: "Porównanie MAE dla 3 formuł IOL" → bar OR doughnut (depending on what you used for Chart 1)
 
-🎯 AVAILABLE CHART TYPES (BAR IS NOT AN OPTION):
+🎯 AVAILABLE CHART TYPES:
+- 'bar' - Categorical comparisons (OK to use, but ONLY ONCE if generating 2 charts)
 - 'line' - Sequential/temporal data, progression
-- 'pie' or 'doughnut' - Percentages, proportions, categorical comparisons
+- 'pie' or 'doughnut' - Percentages, proportions, can also work for categorical comparisons
 - 'scatter' - Correlations, relationships between variables
 - 'radar' - Multi-dimensional comparisons
 - 'polarArea' - Cyclic data with magnitude
@@ -81,8 +81,10 @@ CRITICAL REQUIREMENTS:
 5. If the document contains tables with numerical data, extract those
 6. If the document mentions statistical results (means, standard deviations, p-values), extract those
 7. Focus on data that would be meaningful for ophthalmology professionals
-8. 🔴 MANDATORY VARIETY RULE 🔴: If extracting 2 charts, you MUST use 2 DIFFERENT chart types. Never use the same type twice!
-9. Remember: 'bar' charts are BANNED. Choose from line, pie, doughnut, scatter, radar, or polarArea.
+8. 🔴 ABSOLUTELY MANDATORY 🔴: If extracting 2 charts, you MUST use 2 DIFFERENT chart types!
+   - Example: If Chart 1 is 'bar', Chart 2 MUST be 'line', 'pie', 'doughnut', 'scatter', 'radar', or 'polarArea'
+   - Example: If Chart 1 is 'line', Chart 2 can be anything EXCEPT 'line'
+9. CHECKING YOUR WORK: Before returning the JSON, verify that chartType for Chart 1 ≠ chartType for Chart 2
 
 Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
 {
@@ -118,14 +120,15 @@ Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
   ]
 }
 
-REAL-WORLD EXAMPLES OF CHART TYPE SELECTION:
-✓ "Visual acuity at 1, 3, 6, 12 months" → 'line' (time series)
-✓ "Complication rate: 75% none, 15% mild, 10% severe" → 'pie' (percentage breakdown)
-✓ "Age vs prediction error" → 'scatter' (correlation)
-✓ "Compare MAE for 3 IOL formulas" → 'doughnut' (show relative proportions)
-✓ "Precision, accuracy, stability for 4 methods" → 'radar' (multi-metric comparison)
+REAL-WORLD EXAMPLES WITH VARIETY ENFORCED:
+✓ Chart 1: "Compare MAE for 3 IOL formulas" → 'bar' + Chart 2: "Compare centroid error" → 'doughnut' or 'radar' (NOT bar again!)
+✓ Chart 1: "Visual acuity at 1, 3, 6, 12 months" → 'line' + Chart 2: "Complication rate distribution" → 'pie'
+✓ Chart 1: "Treatment A vs B outcomes" → 'bar' + Chart 2: "Age correlation with outcomes" → 'scatter'
+✓ Chart 1: "Success rates" → 'doughnut' + Chart 2: "Performance metrics" → 'radar'
 
-⚠️ 'bar' CHARTS ARE BANNED - DO NOT USE THEM! ⚠️
+❌ WRONG: Chart 1: 'bar' + Chart 2: 'bar' - THIS IS NOT ALLOWED!
+❌ WRONG: Chart 1: 'line' + Chart 2: 'line' - THIS IS NOT ALLOWED!
+✓ CORRECT: Chart 1: 'bar' + Chart 2: 'doughnut' - DIFFERENT TYPES!
 
 IMPORTANT:
 - All chart titles MUST be in Polish
@@ -153,7 +156,7 @@ Return ONLY the JSON object, no additional text or markdown.`
           content: prompt
         }
       ],
-      temperature: 0.5,
+      temperature: 0.7,
       max_tokens: 4000,
       response_format: { type: 'json_object' }
     })

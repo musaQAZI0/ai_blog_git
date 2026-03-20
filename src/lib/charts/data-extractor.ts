@@ -31,6 +31,25 @@ export async function extractChartDataFromPDF(
 
   const prompt = `Analyze the following medical/scientific document and extract EXACTLY ${maxCharts} of the MOST IMPORTANT and CLINICALLY RELEVANT sets of numerical data for data visualization.
 
+⚠️ CRITICAL CHART TYPE SELECTION RULE ⚠️
+You MUST choose the MOST APPROPRIATE chart type for each dataset. DO NOT default to 'bar' for everything!
+
+DECISION TREE FOR CHART TYPE:
+1. Does the data show change over TIME or progression? → USE 'line'
+   Examples: "Poprawa ostrości wzroku po 1, 3, 6 miesiącach", "Zmiany ciśnienia wewnątrzgałkowego w czasie"
+
+2. Do the values represent PERCENTAGES that sum to ~100%? → USE 'pie' or 'doughnut'
+   Examples: "Rozkład powikłań: 70% brak, 20% łagodne, 10% ciężkie", "Odsetek pacjentów w grupach wiekowych"
+
+3. Does the data show CORRELATION between two continuous variables? → USE 'scatter'
+   Examples: "Zależność między wiekiem a błędem refrakcyjnym", "Korelacja SE z błędem predykcji"
+
+4. Are you comparing MULTIPLE METRICS across categories? → USE 'radar'
+   Examples: "Porównanie precyzji, dokładności i stabilności dla 3 formuł"
+
+5. ONLY if comparing 2-5 discrete categories with single metric → USE 'bar'
+   Examples: "Porównanie MAE dla 3 formuł IOL", "Wyniki w grupie A vs B"
+
 CRITICAL REQUIREMENTS:
 1. Extract ONLY data that is explicitly present in the document - DO NOT make up or estimate any numbers
 2. PRIORITIZE in this order:
@@ -41,14 +60,7 @@ CRITICAL REQUIREMENTS:
 3. ALL TEXT MUST BE IN POLISH (chart titles, labels, dataset names)
 4. For each chart, extract:
    - Chart title (concise, descriptive, IN POLISH)
-   - Chart type - INTELLIGENTLY CHOOSE based on data characteristics:
-     * 'bar' - Comparing values across categories (e.g., comparing different IOL formulas, treatment groups)
-     * 'line' - Showing trends over time or continuous progression (e.g., visual acuity over months, age-related changes)
-     * 'pie' - Showing parts of a whole, percentages that sum to 100% (e.g., distribution of complications, patient demographics)
-     * 'doughnut' - Similar to pie but with emphasis on proportions (e.g., success rates vs failures)
-     * 'radar' - Comparing multiple variables across categories (e.g., multi-dimensional performance metrics)
-     * 'scatter' - Showing correlation or relationship between two variables (e.g., age vs outcome, SE vs prediction error)
-     * 'polarArea' - Showing cyclic or periodic data with magnitude (rarely used in medical contexts)
+   - Chart type - FOLLOW THE DECISION TREE ABOVE! Choose based on data structure, not convenience
    - Labels (x-axis categories or groups - keep formula names in English, but descriptive text in Polish)
    - Values (exact numbers from the document)
    - Dataset label (what the values represent - IN POLISH, e.g., "Odchylenie standardowe (D)" or "Procent oczu w granicach ±0.5 D")
@@ -56,21 +68,21 @@ CRITICAL REQUIREMENTS:
 5. If the document contains tables with numerical data, extract those
 6. If the document mentions statistical results (means, standard deviations, p-values), extract those
 7. Focus on data that would be meaningful for ophthalmology professionals
-8. IMPORTANT: Use different chart types when appropriate - do NOT default to bar charts for all data
+8. VARIETY IS IMPORTANT: If extracting 2 charts, try to use DIFFERENT chart types when both are appropriate
 
 Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
 {
   "charts": [
     {
-      "chartTitle": "Porównanie odchylenia standardowego błędów predykcji dla formuł IOL",
-      "chartType": "bar",
-      "sourceDescription": "Wartości SD porównujące różne formuły obliczeniowe IOL",
+      "chartTitle": "Zmiany ciśnienia wewnątrzgałkowego w czasie",
+      "chartType": "line",
+      "sourceDescription": "IOP w baseline, 3 i 6 miesięcy",
       "data": {
-        "labels": ["Cooke K6", "Pearl-DGS", "EVO"],
+        "labels": ["Baseline", "3 miesiące", "6 miesięcy"],
         "datasets": [
           {
-            "label": "Odchylenie standardowe (D)",
-            "data": [0.44, 0.46, 0.47]
+            "label": "Ciśnienie wewnątrzgałkowe (mmHg)",
+            "data": [20.5, 16.8, 15.2]
           }
         ]
       }
@@ -78,12 +90,12 @@ Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
     {
       "chartTitle": "Rozkład powikłań pooperacyjnych",
       "chartType": "pie",
-      "sourceDescription": "Procent pacjentów z różnymi powikłaniami",
+      "sourceDescription": "Procent pacjentów z różnymi poziomami powikłań",
       "data": {
         "labels": ["Brak powikłań", "Łagodne", "Umiarkowane", "Ciężkie"],
         "datasets": [
           {
-            "label": "Procent pacjentów",
+            "label": "Procent pacjentów (%)",
             "data": [75, 15, 8, 2]
           }
         ]
@@ -92,12 +104,14 @@ Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
   ]
 }
 
-EXAMPLES OF APPROPRIATE CHART TYPE SELECTION:
-- Comparison data (IOL formulas, treatment groups) → 'bar'
-- Time series (follow-up over months) → 'line'
-- Percentage breakdown (complication types, demographics) → 'pie' or 'doughnut'
-- Correlation (age vs error, SE vs outcome) → 'scatter'
-- Multi-dimensional comparison → 'radar'
+REAL-WORLD EXAMPLES OF CHART TYPE SELECTION:
+✓ "Visual acuity at 1, 3, 6, 12 months" → 'line' (time series)
+✓ "Complication rate: 75% none, 15% mild, 10% severe" → 'pie' (percentage breakdown)
+✓ "Age vs prediction error" → 'scatter' (correlation)
+✓ "Compare MAE for 3 IOL formulas" → 'bar' (categorical comparison)
+✓ "Precision, accuracy, stability for 4 methods" → 'radar' (multi-metric comparison)
+
+⚠️ AVOID USING 'bar' UNLESS IT'S CLEARLY THE BEST CHOICE! ⚠️
 
 IMPORTANT:
 - All chart titles MUST be in Polish

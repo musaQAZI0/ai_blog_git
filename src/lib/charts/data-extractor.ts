@@ -3,7 +3,7 @@ import { ChartData } from './chart-generator'
 
 export interface ExtractedChartData {
   chartTitle: string
-  chartType: 'bar' | 'line' | 'scatter' | 'pie' | 'doughnut' | 'radar' | 'polarArea'
+  chartType: 'line' | 'scatter' | 'pie' | 'doughnut' | 'radar' | 'polarArea'  // 'bar' REMOVED
   data: ChartData
   sourceDescription: string
 }
@@ -31,9 +31,10 @@ export async function extractChartDataFromPDF(
 
   const prompt = `Analyze the following medical/scientific document and extract EXACTLY ${maxCharts} of the MOST IMPORTANT and CLINICALLY RELEVANT sets of numerical data for data visualization.
 
-🚫 BAR CHART RESTRICTION 🚫
-You are STRONGLY DISCOURAGED from using 'bar' charts. Only use 'bar' as a LAST RESORT when NO other chart type fits the data.
-Your goal is to MAXIMIZE VARIETY in chart types. If generating 2 charts, they MUST be DIFFERENT types whenever possible.
+🚫 BAR CHARTS ARE BANNED 🚫
+You are NOT ALLOWED to use 'bar' charts. This option does not exist.
+Choose from: 'line', 'pie', 'doughnut', 'scatter', 'radar', 'polarArea'
+Your goal is to MAXIMIZE VARIETY in chart types. If generating 2 charts, they MUST be DIFFERENT types.
 
 ⚠️ CRITICAL CHART TYPE SELECTION RULE ⚠️
 You MUST choose the MOST APPROPRIATE chart type for each dataset. Think creatively about how to visualize the data!
@@ -51,16 +52,16 @@ DECISION TREE FOR CHART TYPE:
 4. Are you comparing MULTIPLE METRICS across categories? → USE 'radar'
    Examples: "Porównanie precyzji, dokładności i stabilności dla 3 formuł"
 
-5. ONLY as a LAST RESORT if comparing 2-5 discrete categories with single metric AND no other type fits → USE 'bar'
-   Examples: "Porównanie MAE dla 3 formuł IOL"
-   BUT CONSIDER: Could this be shown as a doughnut (% distribution)? As a scatter (if there's correlation)? As a radar (if comparing multiple attributes)?
+5. For categorical comparisons → USE 'doughnut' or 'radar'
+   Examples: "Porównanie MAE dla 3 formuł IOL" → doughnut chart showing relative proportions
+   Example: "Comparing multiple metrics across categories" → radar chart
 
-🎯 PRIORITY ORDER (USE THIS ORDER):
-1st choice: 'line' (for any sequential/temporal data)
-2nd choice: 'pie' or 'doughnut' (for any percentage/proportion data)
-3rd choice: 'scatter' (for any relationship between variables)
-4th choice: 'radar' (for multi-dimensional comparisons)
-5th choice: 'bar' (ONLY if absolutely nothing else works)
+🎯 AVAILABLE CHART TYPES (BAR IS NOT AN OPTION):
+- 'line' - Sequential/temporal data, progression
+- 'pie' or 'doughnut' - Percentages, proportions, categorical comparisons
+- 'scatter' - Correlations, relationships between variables
+- 'radar' - Multi-dimensional comparisons
+- 'polarArea' - Cyclic data with magnitude
 
 CRITICAL REQUIREMENTS:
 1. Extract ONLY data that is explicitly present in the document - DO NOT make up or estimate any numbers
@@ -81,7 +82,7 @@ CRITICAL REQUIREMENTS:
 6. If the document mentions statistical results (means, standard deviations, p-values), extract those
 7. Focus on data that would be meaningful for ophthalmology professionals
 8. 🔴 MANDATORY VARIETY RULE 🔴: If extracting 2 charts, you MUST use 2 DIFFERENT chart types. Never use the same type twice!
-9. If you find yourself choosing 'bar' for both charts, STOP and reconsider. At least one MUST be line/pie/doughnut/scatter/radar.
+9. Remember: 'bar' charts are BANNED. Choose from line, pie, doughnut, scatter, radar, or polarArea.
 
 Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
 {
@@ -121,10 +122,10 @@ REAL-WORLD EXAMPLES OF CHART TYPE SELECTION:
 ✓ "Visual acuity at 1, 3, 6, 12 months" → 'line' (time series)
 ✓ "Complication rate: 75% none, 15% mild, 10% severe" → 'pie' (percentage breakdown)
 ✓ "Age vs prediction error" → 'scatter' (correlation)
-✓ "Compare MAE for 3 IOL formulas" → 'bar' (categorical comparison)
+✓ "Compare MAE for 3 IOL formulas" → 'doughnut' (show relative proportions)
 ✓ "Precision, accuracy, stability for 4 methods" → 'radar' (multi-metric comparison)
 
-⚠️ AVOID USING 'bar' UNLESS IT'S CLEARLY THE BEST CHOICE! ⚠️
+⚠️ 'bar' CHARTS ARE BANNED - DO NOT USE THEM! ⚠️
 
 IMPORTANT:
 - All chart titles MUST be in Polish

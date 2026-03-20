@@ -145,7 +145,7 @@ Required JSON format:
   if (targetAudience === 'professional') {
     try {
       console.log('[claude] Extracting and generating charts for professional article...')
-      const generatedCharts = await extractGenerateAndUploadCharts(pdfContent, 3)
+      const generatedCharts = await extractGenerateAndUploadCharts(pdfContent, 2)
 
       if (generatedCharts.length > 0) {
         console.log(`[claude] Successfully generated ${generatedCharts.length} charts`)

@@ -31,8 +31,12 @@ export async function extractChartDataFromPDF(
 
   const prompt = `Analyze the following medical/scientific document and extract EXACTLY ${maxCharts} of the MOST IMPORTANT and CLINICALLY RELEVANT sets of numerical data for data visualization.
 
+🚫 BAR CHART RESTRICTION 🚫
+You are STRONGLY DISCOURAGED from using 'bar' charts. Only use 'bar' as a LAST RESORT when NO other chart type fits the data.
+Your goal is to MAXIMIZE VARIETY in chart types. If generating 2 charts, they MUST be DIFFERENT types whenever possible.
+
 ⚠️ CRITICAL CHART TYPE SELECTION RULE ⚠️
-You MUST choose the MOST APPROPRIATE chart type for each dataset. DO NOT default to 'bar' for everything!
+You MUST choose the MOST APPROPRIATE chart type for each dataset. Think creatively about how to visualize the data!
 
 DECISION TREE FOR CHART TYPE:
 1. Does the data show change over TIME or progression? → USE 'line'
@@ -47,8 +51,16 @@ DECISION TREE FOR CHART TYPE:
 4. Are you comparing MULTIPLE METRICS across categories? → USE 'radar'
    Examples: "Porównanie precyzji, dokładności i stabilności dla 3 formuł"
 
-5. ONLY if comparing 2-5 discrete categories with single metric → USE 'bar'
-   Examples: "Porównanie MAE dla 3 formuł IOL", "Wyniki w grupie A vs B"
+5. ONLY as a LAST RESORT if comparing 2-5 discrete categories with single metric AND no other type fits → USE 'bar'
+   Examples: "Porównanie MAE dla 3 formuł IOL"
+   BUT CONSIDER: Could this be shown as a doughnut (% distribution)? As a scatter (if there's correlation)? As a radar (if comparing multiple attributes)?
+
+🎯 PRIORITY ORDER (USE THIS ORDER):
+1st choice: 'line' (for any sequential/temporal data)
+2nd choice: 'pie' or 'doughnut' (for any percentage/proportion data)
+3rd choice: 'scatter' (for any relationship between variables)
+4th choice: 'radar' (for multi-dimensional comparisons)
+5th choice: 'bar' (ONLY if absolutely nothing else works)
 
 CRITICAL REQUIREMENTS:
 1. Extract ONLY data that is explicitly present in the document - DO NOT make up or estimate any numbers
@@ -68,7 +80,8 @@ CRITICAL REQUIREMENTS:
 5. If the document contains tables with numerical data, extract those
 6. If the document mentions statistical results (means, standard deviations, p-values), extract those
 7. Focus on data that would be meaningful for ophthalmology professionals
-8. VARIETY IS IMPORTANT: If extracting 2 charts, try to use DIFFERENT chart types when both are appropriate
+8. 🔴 MANDATORY VARIETY RULE 🔴: If extracting 2 charts, you MUST use 2 DIFFERENT chart types. Never use the same type twice!
+9. If you find yourself choosing 'bar' for both charts, STOP and reconsider. At least one MUST be line/pie/doughnut/scatter/radar.
 
 Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
 {
@@ -139,7 +152,7 @@ Return ONLY the JSON object, no additional text or markdown.`
           content: prompt
         }
       ],
-      temperature: 0.3,
+      temperature: 0.5,
       max_tokens: 4000,
       response_format: { type: 'json_object' }
     })

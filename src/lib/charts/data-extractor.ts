@@ -177,6 +177,22 @@ Return ONLY the JSON object, no additional text or markdown.`
       ? parsedResponse
       : (parsedResponse.charts || [])
 
+    // ENFORCE VARIETY: Reject if both charts are the same type
+    if (extractedData.length === 2 && extractedData[0].chartType === extractedData[1].chartType) {
+      console.warn(`[chart-extractor] REJECTED: Both charts are '${extractedData[0].chartType}'. Forcing variety...`)
+
+      // Force the second chart to be different
+      const alternativeTypes: Array<'line' | 'pie' | 'doughnut' | 'scatter' | 'radar'> =
+        ['line', 'pie', 'doughnut', 'scatter', 'radar']
+
+      const firstType = extractedData[0].chartType
+      const differentTypes = alternativeTypes.filter(t => t !== firstType)
+
+      // Choose the first alternative that's different
+      extractedData[1].chartType = differentTypes[0]
+      console.log(`[chart-extractor] Changed Chart 2 from '${firstType}' to '${extractedData[1].chartType}'`)
+    }
+
     return extractedData.slice(0, maxCharts)
   } catch (error) {
     console.error('Failed to extract chart data:', error)

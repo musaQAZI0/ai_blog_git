@@ -1,5 +1,46 @@
-import { ChartConfiguration } from 'chart.js'
+import {
+  Chart,
+  ChartConfiguration,
+  BarController,
+  LineController,
+  ScatterController,
+  PieController,
+  DoughnutController,
+  RadarController,
+  PolarAreaController,
+  CategoryScale,
+  LinearScale,
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Title
+} from 'chart.js'
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas'
+
+// Register all chart types and components
+Chart.register(
+  BarController,
+  LineController,
+  ScatterController,
+  PieController,
+  DoughnutController,
+  RadarController,
+  PolarAreaController,
+  CategoryScale,
+  LinearScale,
+  RadialLinearScale,
+  PointElement,
+  LineElement,
+  BarElement,
+  ArcElement,
+  Tooltip,
+  Legend,
+  Title
+)
 
 export interface ChartData {
   labels: string[]

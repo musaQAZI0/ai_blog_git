@@ -91,12 +91,14 @@ export async function generateChartImage(
 
   // DEBUG: Log chart type and verify controller registration
   console.log(`[chart-generator] 🎨 Generating chart with type: "${type}"`)
-  console.log(`[chart-generator] 📊 Chart.js registered controllers:`, Chart.registry.controllers.keys())
 
-  // Verify the requested controller exists
-  const controllerName = type.charAt(0).toUpperCase() + type.slice(1) + 'Controller'
-  const hasController = Array.from(Chart.registry.controllers.keys()).some(key => key.includes(type))
-  console.log(`[chart-generator] ✓ Controller "${controllerName}" registered:`, hasController)
+  // Verify the requested controller exists by checking if Chart.js can create it
+  try {
+    const testController = Chart.registry.getController(type)
+    console.log(`[chart-generator] ✓ Controller for "${type}" is registered:`, !!testController)
+  } catch (error) {
+    console.error(`[chart-generator] ❌ Controller for "${type}" NOT found! Chart will fail to render.`)
+  }
 
   const chartJSNodeCanvas = new ChartJSNodeCanvas({
     width,

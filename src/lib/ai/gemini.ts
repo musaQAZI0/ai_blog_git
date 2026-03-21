@@ -594,11 +594,12 @@ Required JSON format:
           const chartId = `chart-${i + 1}`
           const placeholder = getFigurePlaceholderUrl(i + 1)
 
-          console.log(`[gemini] Generating chart ${i + 1}: ${extractedChart.chartTitle}`)
+          console.log(`[gemini] Generating chart ${i + 1}: ${extractedChart.chartTitle} (${extractedChart.chartType})`)
           const url = await generateAndUploadChart(
             extractedChart.data,
             extractedChart.chartTitle,
-            chartId
+            chartId,
+            extractedChart.chartType  // Pass the AI-selected chart type
           )
 
           const alt = `Wykres: ${extractedChart.chartTitle}`

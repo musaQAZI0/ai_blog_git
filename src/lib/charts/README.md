@@ -32,6 +32,7 @@ The chart generation system extracts numerical data from PDF documents and gener
 - All Chart.js controllers are registered for proper rendering
 - Professional color palette optimized for medical/scientific publications
 - Special styling for each chart type (smooth curves for line charts, filled areas for radar, etc.)
+- **Pie/Doughnut charts**: Legend shows percentages (e.g., "Barrett: 79.7 (20.1%)") for clear data interpretation
 - Font support for Polish characters (DejaVu Sans, Noto Sans)
 - Configurable chart options (title, dimensions, colors)
 

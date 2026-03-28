@@ -166,7 +166,7 @@ export async function generateChartImage(
         },
         legend: {
           display: chartData.datasets.length > 1 || isPieStyle,
-          position: 'top',
+          position: isPieStyle ? 'right' : 'top',
           labels: {
             font: {
               size: 13,
@@ -176,6 +176,28 @@ export async function generateChartImage(
             color: '#374151', // gray-700
             usePointStyle: true,
             pointStyle: 'circle',
+            // For pie/doughnut charts, show values in legend
+            generateLabels: isPieStyle ? (chart) => {
+              const data = chart.data
+              if (data.labels && data.datasets && data.datasets.length > 0) {
+                const dataset = data.datasets[0]
+                const total = (dataset.data as number[]).reduce((acc, val) => acc + val, 0)
+
+                return (data.labels as string[]).map((label, i) => {
+                  const value = (dataset.data as number[])[i]
+                  const percentage = ((value / total) * 100).toFixed(1)
+                  return {
+                    text: `${label}: ${value} (${percentage}%)`,
+                    fillStyle: Array.isArray(dataset.backgroundColor)
+                      ? dataset.backgroundColor[i]
+                      : dataset.backgroundColor,
+                    hidden: false,
+                    index: i,
+                  }
+                })
+              }
+              return []
+            } : undefined,
           },
         },
         tooltip: {

@@ -4,13 +4,20 @@ This module provides accurate data visualization for professional medical articl
 
 ## Overview
 
-The chart generation system extracts numerical data from PDF documents and generates accurate bar charts, line graphs, and scatter plots using Chart.js. This ensures 100% accuracy of data labels and values, eliminating the problem of AI-generated images with made-up or gibberish text.
+The chart generation system extracts numerical data from PDF documents and generates accurate charts using Chart.js with **intelligent chart type selection**. Supports: bar, line, scatter, pie, doughnut, radar, and polarArea charts. The AI automatically selects the most appropriate chart type based on data characteristics and **enforces variety** (no duplicate chart types when generating 2 charts). This ensures 100% accuracy of data labels and values, eliminating the problem of AI-generated images with made-up or gibberish text.
 
 ## Architecture
 
 ### 1. Data Extraction (`data-extractor.ts`)
 - Uses OpenAI (GPT-4o by default) to extract structured numerical data from PDF content
-- Extracts MAXIMUM 2 charts focusing on PRIMARY ENDPOINTS and KEY FINDINGS
+- Extracts EXACTLY 2 charts focusing on PRIMARY ENDPOINTS and KEY FINDINGS
+- **Intelligently selects chart type** based on data characteristics:
+  - `line` - Temporal/sequential data showing change over time
+  - `pie`/`doughnut` - Percentages or proportions
+  - `scatter` - Correlations between variables
+  - `radar` - Multi-dimensional comparisons
+  - `bar` - Categorical comparisons (default)
+- **ENFORCES CHART VARIETY**: When generating 2 charts, they MUST be different types
 - Prioritizes statistically significant results (P < .05) and clinically relevant data
 - Identifies tables, statistical results, and comparison data
 - Returns structured data suitable for Chart.js (labels, datasets, values)
@@ -21,7 +28,11 @@ The chart generation system extracts numerical data from PDF documents and gener
 ### 2. Chart Generation (`chart-generator.ts`)
 - Uses Chart.js and chartjs-node-canvas for server-side chart rendering
 - Generates PNG images from chart data
-- Supports bar charts, line graphs, and scatter plots
+- **Supports 7 chart types**: bar, line, scatter, pie, doughnut, radar, polarArea
+- All Chart.js controllers are registered for proper rendering
+- Professional color palette optimized for medical/scientific publications
+- Special styling for each chart type (smooth curves for line charts, filled areas for radar, etc.)
+- Font support for Polish characters (DejaVu Sans, Noto Sans)
 - Configurable chart options (title, dimensions, colors)
 
 ### 3. Chart Upload (`chart-uploader.ts`)
@@ -53,8 +64,9 @@ For **patient articles**, the system:
 ```typescript
 // Automatic flow in article generation
 if (targetAudience === 'professional') {
-  const generatedCharts = await extractGenerateAndUploadCharts(pdfContent, 3)
+  const generatedCharts = await extractGenerateAndUploadCharts(pdfContent, 2)
   // Charts are automatically injected into content
+  // AI selects appropriate chart types and enforces variety
 }
 ```
 
@@ -93,11 +105,15 @@ interface ChartData {
 ## Key Features
 
 ✅ **100% Accurate Data**: Uses exact values from PDF, no AI hallucination
-✅ **Professional Charts**: Clean, publication-quality bar charts and graphs
+✅ **Intelligent Chart Selection**: AI chooses the best chart type for each dataset
+✅ **Enforced Variety**: No duplicate chart types when generating 2 charts
+✅ **7 Chart Types Supported**: bar, line, scatter, pie, doughnut, radar, polarArea
+✅ **Professional Styling**: Publication-quality charts with color-coded datasets
+✅ **Polish Language Support**: Proper rendering of Polish diacritics in labels/titles
 ✅ **Real Data Labels**: Only includes text/labels that exist in source document
-✅ **Client Preference**: Prioritizes bar charts (most preferred format)
-✅ **Automatic Integration**: Works seamlessly with all AI providers
+✅ **Automatic Integration**: Works seamlessly with all AI providers (OpenAI, Gemini, Claude)
 ✅ **Fallback Safety**: Gracefully handles cases where no chart data is found
+✅ **Debug Logging**: Comprehensive logs for troubleshooting chart generation
 
 ## Dependencies
 

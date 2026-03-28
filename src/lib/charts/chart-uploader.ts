@@ -49,10 +49,15 @@ export async function generateAndUploadChart(
   chartId: string,
   chartType: 'bar' | 'line' | 'scatter' | 'pie' | 'doughnut' | 'radar' | 'polarArea' = 'bar'
 ): Promise<string> {
+  // Pie/doughnut charts need more width for legend on the right
+  const isPieStyle = ['pie', 'doughnut', 'polarArea'].includes(chartType)
+  const width = isPieStyle ? 1000 : 800
+  const height = isPieStyle ? 600 : 600
+
   const chartBuffer = await generateChartImage(chartData, {
     title: chartTitle,
-    width: 800,
-    height: 600,
+    width,
+    height,
     type: chartType,
   })
 

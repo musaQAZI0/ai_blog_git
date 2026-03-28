@@ -6,6 +6,8 @@ import { getRequestUser } from '@/lib/auth/server'
 import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
+// Increase timeout for article generation with charts (Vercel only, Render has 30s hard limit on free tier)
+export const maxDuration = 60 // 60 seconds max for article generation
 
 function getClientIp(request: NextRequest): string {
   const xff = request.headers.get('x-forwarded-for')
@@ -67,6 +69,7 @@ export async function POST(request: NextRequest) {
     )
 
     // Extract text from PDFs
+    console.log('[api/generate] Extracting text from PDFs...')
     const pdfContent = await extractTextFromMultiplePDFs(buffers)
 
     if (!pdfContent || pdfContent.trim().length < 100) {
@@ -75,6 +78,9 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       )
     }
+
+    console.log(`[api/generate] Extracted ${pdfContent.length} characters from PDF`)
+    console.log(`[api/generate] Starting article generation with ${provider} for ${targetAudience} audience...`)
 
     // Generate article using AI
     const generatedContent = await generateArticle({
@@ -85,18 +91,29 @@ export async function POST(request: NextRequest) {
       generateImage: true,
     })
 
+    console.log('[api/generate] Article generation completed successfully')
+
     return NextResponse.json({
       success: true,
       data: generatedContent,
     })
   } catch (error) {
-    console.error('AI generation error:', error)
+    console.error('[api/generate] Error:', error)
+
+    // Better error messages for common timeout/network issues
+    const errorMessage = error instanceof Error ? error.message : 'Błąd generowania artykułu'
+    const isTimeout = errorMessage.toLowerCase().includes('timeout') ||
+                      errorMessage.toLowerCase().includes('aborted') ||
+                      errorMessage.toLowerCase().includes('etimedout')
+
     return NextResponse.json(
       {
         success: false,
-        error: error instanceof Error ? error.message : 'Błąd generowania artykułu',
+        error: isTimeout
+          ? 'Przekroczono limit czasu generowania. Spróbuj ponownie lub użyj krótszego dokumentu PDF.'
+          : errorMessage,
       },
-      { status: 500 }
+      { status: isTimeout ? 504 : 500 }
     )
   }
 }

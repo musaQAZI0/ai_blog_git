@@ -140,9 +140,13 @@ export async function generateChartImage(
           }),
           ...(type === 'radar' && {
             fill: true,
-            tension: 0.2,
-            pointRadius: 3,
-            pointHoverRadius: 5,
+            tension: 0.1,
+            pointRadius: 5,
+            pointHoverRadius: 7,
+            pointStyle: 'circle',
+            borderWidth: 3,
+            // Override background color for radar - much more transparent
+            backgroundColor: (typeof dataset.backgroundColor === 'string' ? dataset.backgroundColor : colors[0].bg).replace('0.75', '0.2'),
           }),
         }
       }),
@@ -259,25 +263,35 @@ export async function generateChartImage(
         scales: {
           r: {
             beginAtZero: true,
+            min: 0,
             grid: {
-              color: 'rgba(0, 0, 0, 0.1)',
+              color: 'rgba(0, 0, 0, 0.15)',
+              lineWidth: 1.5,
+              circular: true,
             },
             angleLines: {
-              color: 'rgba(0, 0, 0, 0.1)',
+              color: 'rgba(0, 0, 0, 0.15)',
+              lineWidth: 1.5,
             },
             ticks: {
               font: {
                 size: 11,
-              },
-              color: '#6b7280',
-              backdropColor: 'rgba(255, 255, 255, 0.75)',
-            },
-            pointLabels: {
-              font: {
-                size: 12,
                 family: "'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif",
               },
               color: '#374151',
+              backdropColor: 'rgba(255, 255, 255, 0.9)',
+              backdropPadding: 3,
+              stepSize: undefined, // Auto-calculate
+              showLabelBackdrop: true,
+            },
+            pointLabels: {
+              font: {
+                size: 13,
+                weight: 'bold',
+                family: "'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif",
+              },
+              color: '#1f2937',
+              padding: 10,
             },
           },
         },

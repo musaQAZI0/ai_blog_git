@@ -72,37 +72,55 @@ function CreateArticleContent() {
       formData.append('targetAudience', lockedTargetAudience || targetAudience)
 
       const idToken = await firebaseUser?.getIdToken?.()
-      const response = await fetch('/api/ai/generate', {
-        method: 'POST',
-        body: formData,
-        headers: idToken ? { authorization: `Bearer ${idToken}` } : undefined,
-      })
 
-      if (!response.ok) {
+      // Create AbortController with longer timeout for mobile (2 minutes)
+      const controller = new AbortController()
+      const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minutes
+
+      try {
+        const response = await fetch('/api/ai/generate', {
+          method: 'POST',
+          body: formData,
+          headers: idToken ? { authorization: `Bearer ${idToken}` } : undefined,
+          signal: controller.signal,
+        })
+
+        clearTimeout(timeoutId)
+
+        if (!response.ok) {
+          const data = await response.json()
+          throw new Error(data.error || 'Błąd generowania artykułu')
+        }
+
         const data = await response.json()
-        throw new Error(data.error || 'Błąd generowania artykułu')
+        const sanitized = (() => {
+          const payload = normalizeAIGenerationResponse(data.data as AIGenerationResponse)
+          // Clamp SEO fields to form limits to avoid validation errors.
+          const seoTitle = (payload.seoMeta?.title || payload.title || '').slice(0, 60)
+          const seoDescription = (payload.seoMeta?.description || payload.excerpt || '')
+            .slice(0, 160)
+          return {
+            ...payload,
+            seoMeta: {
+              ...payload.seoMeta,
+              title: seoTitle,
+              description: seoDescription,
+            },
+          } as AIGenerationResponse
+        })()
+
+        setGeneratedContent(sanitized)
+        setStep('edit')
+      } catch (fetchErr) {
+        clearTimeout(timeoutId)
+        // Handle abort/timeout errors with user-friendly message
+        if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+          throw new Error('Generowanie trwało zbyt długo (>2 min). Spróbuj z mniejszym plikiem PDF lub lepszym połączeniem internetowym.')
+        }
+        throw fetchErr
       }
-
-      const data = await response.json()
-      const sanitized = (() => {
-        const payload = normalizeAIGenerationResponse(data.data as AIGenerationResponse)
-        // Clamp SEO fields to form limits to avoid validation errors.
-        const seoTitle = (payload.seoMeta?.title || payload.title || '').slice(0, 60)
-        const seoDescription = (payload.seoMeta?.description || payload.excerpt || '')
-          .slice(0, 160)
-        return {
-          ...payload,
-          seoMeta: {
-            ...payload.seoMeta,
-            title: seoTitle,
-            description: seoDescription,
-          },
-        } as AIGenerationResponse
-      })()
-
-      setGeneratedContent(sanitized)
-      setStep('edit')
     } catch (err) {
+      console.error('[create-article] Generation error:', err)
       setError(err instanceof Error ? err.message : 'Wystapil blad')
     } finally {
       setGenerating(false)

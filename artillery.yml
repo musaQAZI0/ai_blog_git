@@ -1,0 +1,50 @@
+config:
+  target: "http://localhost:3000"
+  phases:
+    # Warm-up phase
+    - duration: 30
+      arrivalRate: 1
+      name: "Warm up"
+    # Ramp-up phase
+    - duration: 60
+      arrivalRate: 2
+      rampTo: 5
+      name: "Ramp up load"
+    # Sustained load
+    - duration: 120
+      arrivalRate: 5
+      name: "Sustained load"
+
+  # Global settings
+  timeout: 180 # 3 minutes timeout for article generation
+
+  # Processor for custom logic
+  processor: "./scripts/load-test-processor.js"
+
+scenarios:
+  # Test article generation with sample PDF
+  - name: "Generate Professional Article"
+    weight: 1
+    flow:
+      - post:
+          url: "/api/ai/generate"
+          headers:
+            Content-Type: "multipart/form-data"
+          beforeRequest: "setFormData"
+          capture:
+            - json: "$.success"
+              as: "success"
+            - json: "$.data.title"
+              as: "articleTitle"
+          expect:
+            - statusCode: 200
+            - hasProperty: "success"
+
+  # Test health endpoint (lightweight)
+  - name: "Health Check"
+    weight: 5
+    flow:
+      - get:
+          url: "/api/health"
+          expect:
+            - statusCode: 200

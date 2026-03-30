@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "next lint",
     "verify-env": "node scripts/verify-env.js",
-    "test:sendgrid": "node scripts/test-sendgrid.js"
+    "test:sendgrid": "node scripts/test-sendgrid.js",
+    "load-test": "node scripts/simple-load-test.js",
+    "load-test:full": "node scripts/load-test.js"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.18.0",

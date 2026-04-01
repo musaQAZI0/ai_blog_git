@@ -73,9 +73,15 @@ function CreateArticleContent() {
 
       const idToken = await firebaseUser?.getIdToken?.()
 
-      // Create AbortController with longer timeout for mobile (2 minutes)
+      // Detect mobile and adjust timeout accordingly
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
+      const timeoutDuration = isMobile ? 180000 : 120000 // 3 min for mobile, 2 min for desktop
+
+      // Create AbortController with adaptive timeout
       const controller = new AbortController()
-      const timeoutId = setTimeout(() => controller.abort(), 120000) // 2 minutes
+      const timeoutId = setTimeout(() => controller.abort(), timeoutDuration)
+
+      console.log(`[create-article] Starting generation (${isMobile ? 'mobile' : 'desktop'}, ${timeoutDuration/1000}s timeout)`)
 
       try {
         const response = await fetch('/api/ai/generate', {
@@ -115,7 +121,13 @@ function CreateArticleContent() {
         clearTimeout(timeoutId)
         // Handle abort/timeout errors with user-friendly message
         if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
-          throw new Error('Generowanie trwało zbyt długo (>2 min). Spróbuj z mniejszym plikiem PDF lub lepszym połączeniem internetowym.')
+          const minutes = Math.floor(timeoutDuration / 60000)
+          throw new Error(
+            `Generowanie trwało zbyt długo (>${minutes} min). ` +
+            (isMobile
+              ? 'Spróbuj połączyć się z WiFi lub użyj krótszego pliku PDF.'
+              : 'Spróbuj z mniejszym plikiem PDF lub szybszym połączeniem.')
+          )
         }
         throw fetchErr
       }

@@ -28,7 +28,8 @@
       "Bash(node -e:*)",
       "Bash(npm rebuild:*)",
       "Bash(find:*)",
-      "Bash(cd:*)"
+      "Bash(cd:*)",
+      "Bash(npm run load-test:*)"
     ]
   }
 }

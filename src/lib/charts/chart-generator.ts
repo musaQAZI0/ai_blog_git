@@ -42,6 +42,66 @@ Chart.register(
   Title
 )
 
+// Custom plugin to draw tick labels on EVERY spoke of radar charts
+const radarAllSpokeTicksPlugin = {
+  id: 'radarAllSpokeTicks',
+  afterDraw(chart: any) {
+    if (chart.config.type !== 'radar') return
+
+    const rScale = chart.scales.r
+    if (!rScale) return
+
+    const ctx = chart.ctx
+    const centerX = rScale.xCenter
+    const centerY = rScale.yCenter
+    const ticks = rScale.ticks
+    const labels = chart.data.labels || []
+    const numLabels = labels.length
+
+    if (numLabels === 0 || !ticks || ticks.length === 0) return
+
+    ctx.save()
+    ctx.font = "11px 'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif"
+    ctx.fillStyle = '#374151'
+    ctx.textAlign = 'center'
+    ctx.textBaseline = 'middle'
+
+    // For each spoke (skip the first one at index 0 since Chart.js already draws ticks there)
+    for (let spokeIndex = 1; spokeIndex < numLabels; spokeIndex++) {
+      // Calculate the angle for this spoke
+      // Chart.js radar starts at top (negative Y) and goes clockwise
+      const angle = (Math.PI * 2 * spokeIndex) / numLabels - Math.PI / 2
+
+      // For each tick value, draw the label along this spoke
+      for (let tickIndex = 0; tickIndex < ticks.length; tickIndex++) {
+        const tick = ticks[tickIndex]
+        if (tick.label === undefined || tick.label === '' || tick.label === '0') continue
+
+        // Calculate the distance from center for this tick
+        const tickValue = tick.value
+        const distanceRatio = (tickValue - rScale.min) / (rScale.max - rScale.min)
+        const distance = distanceRatio * rScale.drawingArea
+
+        // Calculate position along the spoke
+        const x = centerX + Math.cos(angle) * distance
+        const y = centerY + Math.sin(angle) * distance
+
+        // Draw backdrop (white background behind text)
+        const tickLabel = typeof tick.label === 'string' ? tick.label : String(tick.value)
+        const textWidth = ctx.measureText(tickLabel).width
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)'
+        ctx.fillRect(x - textWidth / 2 - 3, y - 7, textWidth + 6, 14)
+
+        // Draw the tick label
+        ctx.fillStyle = '#374151'
+        ctx.fillText(tickLabel, x, y)
+      }
+    }
+
+    ctx.restore()
+  },
+}
+
 export interface ChartData {
   labels: string[]
   datasets: {
@@ -140,11 +200,13 @@ export async function generateChartImage(
           }),
           ...(type === 'radar' && {
             fill: true,
-            tension: 0.1,
+            tension: 0, // Straight lines to ensure clean closing of polygon
+            spanGaps: false, // Ensure line closes all the way around
             pointRadius: 5,
             pointHoverRadius: 7,
             pointStyle: 'circle',
             borderWidth: 3,
+            borderJoinStyle: 'round' as const, // Smooth joins at each vertex
             // Override background color for radar - much more transparent
             backgroundColor: (typeof dataset.backgroundColor === 'string' ? dataset.backgroundColor : colors[0].bg).replace('0.75', '0.2'),
           }),
@@ -283,6 +345,7 @@ export async function generateChartImage(
               backdropPadding: 3,
               stepSize: undefined, // Auto-calculate
               showLabelBackdrop: true,
+              // Keep default ticks on first spoke visible
             },
             pointLabels: {
               font: {
@@ -306,6 +369,14 @@ export async function generateChartImage(
         },
       },
     },
+  }
+
+  // Add the custom plugin for radar charts to show tick labels on all spokes
+  if (type === 'radar') {
+    if (!configuration.plugins) {
+      configuration.plugins = []
+    }
+    configuration.plugins.push(radarAllSpokeTicksPlugin)
   }
 
   const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration)

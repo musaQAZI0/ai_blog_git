@@ -1,5 +1,5 @@
 import { generateFileName, uploadFile, uploadFileToProvider, type StorageProvider } from '@/lib/storage'
-import { generateChartImage, generateSimpleBarChart, type ChartData } from './chart-generator'
+import { generateChartImage, generateSimpleBarChart, type ChartData, type ChartType } from './chart-generator'
 import { extractChartDataFromPDF, validateChartData, type ExtractedChartData } from './data-extractor'
 
 export interface GeneratedChart {
@@ -40,22 +40,27 @@ export async function uploadChartImage(
  * @param chartData Chart data (labels, datasets, etc.)
  * @param chartTitle Title for the chart
  * @param chartId Unique ID for this chart
- * @param chartType Type of chart (bar, line, scatter, pie, doughnut, radar)
+ * @param chartType Type of chart
  * @returns Public URL of uploaded chart
  */
 export async function generateAndUploadChart(
   chartData: ChartData,
   chartTitle: string,
   chartId: string,
-  chartType: 'bar' | 'line' | 'scatter' | 'pie' | 'doughnut' | 'radar' | 'polarArea' = 'bar'
+  chartType: ChartType = 'bar'
 ): Promise<string> {
   // Pie/doughnut charts need more width for legend on the right
-  const isPieStyle = ['pie', 'doughnut', 'polarArea'].includes(chartType)
+  const isPieStyle = ['pie', 'doughnut'].includes(chartType)
+  // Horizontal bars need more width for long formula names
+  const isHorizontalBar = chartType === 'horizontalBar'
+  // Box plots benefit from more height
+  const isBoxPlot = chartType === 'boxplot'
+  // Stacked bars with legend need extra width
+  const isStackedBar = chartType === 'stackedBar'
 
-  // Optimize dimensions for faster generation and smaller file size
-  // Mobile-friendly resolution (reduces generation time by ~30%)
-  const width = isPieStyle ? 900 : 750
-  const height = 500
+  // Optimize dimensions for each chart type
+  const width = isPieStyle ? 900 : isHorizontalBar ? 850 : isStackedBar ? 850 : 750
+  const height = isBoxPlot ? 550 : isHorizontalBar ? 550 : 500
 
   const chartBuffer = await generateChartImage(chartData, {
     title: chartTitle,

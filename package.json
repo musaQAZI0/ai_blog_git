@@ -17,6 +17,7 @@
     "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.3.4",
     "@radix-ui/react-slot": "^1.0.2",
+    "@sgratzl/chartjs-chart-boxplot": "^4.4.5",
     "@types/marked": "^5.0.2",
     "canvas": "^3.2.1",
     "chart.js": "^4.5.1",

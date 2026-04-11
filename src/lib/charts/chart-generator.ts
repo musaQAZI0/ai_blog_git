@@ -3,11 +3,9 @@ import {
   ChartConfiguration,
   BarController,
   LineController,
-  ScatterController,
   PieController,
   DoughnutController,
   RadarController,
-  PolarAreaController,
   CategoryScale,
   LinearScale,
   RadialLinearScale,
@@ -17,29 +15,32 @@ import {
   ArcElement,
   Tooltip,
   Legend,
-  Title
+  Title,
+  Filler
 } from 'chart.js'
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas'
+import { BoxPlotController, BoxAndWiskers } from '@sgratzl/chartjs-chart-boxplot'
 
 // Register all chart types and components
 Chart.register(
   BarController,
   LineController,
-  ScatterController,
   PieController,
   DoughnutController,
   RadarController,
-  PolarAreaController,
+  BoxPlotController,
   CategoryScale,
   LinearScale,
   RadialLinearScale,
   PointElement,
   LineElement,
   BarElement,
+  BoxAndWiskers,
   ArcElement,
   Tooltip,
   Legend,
-  Title
+  Title,
+  Filler
 )
 
 // Custom plugin to draw tick labels on EVERY spoke of radar charts
@@ -102,22 +103,34 @@ const radarAllSpokeTicksPlugin = {
   },
 }
 
+// Box plot data point format: { min, q1, median, q3, max }
+export interface BoxPlotDataPoint {
+  min: number
+  q1: number
+  median: number
+  q3: number
+  max: number
+}
+
 export interface ChartData {
   labels: string[]
   datasets: {
     label: string
-    data: number[]
+    data: number[] | BoxPlotDataPoint[]
     backgroundColor?: string | string[]
     borderColor?: string | string[]
     borderWidth?: number
   }[]
 }
 
+// All supported chart types
+export type ChartType = 'bar' | 'line' | 'pie' | 'doughnut' | 'radar' | 'stackedBar' | 'horizontalBar' | 'boxplot'
+
 export interface ChartOptions {
   title?: string
   width?: number
   height?: number
-  type?: 'bar' | 'line' | 'scatter' | 'pie' | 'doughnut' | 'radar' | 'polarArea'
+  type?: ChartType
 }
 
 /**
@@ -149,15 +162,21 @@ export async function generateChartImage(
     type = 'bar'
   } = options
 
+  // Map our custom types to Chart.js native types
+  const isStackedBar = type === 'stackedBar'
+  const isHorizontalBar = type === 'horizontalBar'
+  const isBoxPlot = type === 'boxplot'
+  const chartJsType = isStackedBar || isHorizontalBar ? 'bar' : isBoxPlot ? 'boxplot' : type
+
   // DEBUG: Log chart type and verify controller registration
-  console.log(`[chart-generator] 🎨 Generating chart with type: "${type}"`)
+  console.log(`[chart-generator] 🎨 Generating chart with type: "${type}" (Chart.js type: "${chartJsType}")`)
 
   // Verify the requested controller exists by checking if Chart.js can create it
   try {
-    const testController = Chart.registry.getController(type)
-    console.log(`[chart-generator] ✓ Controller for "${type}" is registered:`, !!testController)
+    const testController = Chart.registry.getController(chartJsType)
+    console.log(`[chart-generator] ✓ Controller for "${chartJsType}" is registered:`, !!testController)
   } catch (error) {
-    console.error(`[chart-generator] ❌ Controller for "${type}" NOT found! Chart will fail to render.`)
+    console.error(`[chart-generator] ❌ Controller for "${chartJsType}" NOT found! Chart will fail to render.`)
   }
 
   const chartJSNodeCanvas = new ChartJSNodeCanvas({
@@ -166,13 +185,13 @@ export async function generateChartImage(
     backgroundColour: 'white'
   })
 
-  // For pie/doughnut/polarArea charts, use multiple colors for each segment
-  const isPieStyle = ['pie', 'doughnut', 'polarArea'].includes(type)
+  // For pie/doughnut charts, use multiple colors for each segment
+  const isPieStyle = ['pie', 'doughnut'].includes(type)
 
-  console.log(`[chart-generator] 🔧 Creating configuration with type: "${type}", isPieStyle: ${isPieStyle}`)
+  console.log(`[chart-generator] 🔧 Creating configuration with type: "${chartJsType}", isPieStyle: ${isPieStyle}`)
 
   const configuration: ChartConfiguration = {
-    type,
+    type: chartJsType as any,
     data: {
       labels: chartData.labels,
       datasets: chartData.datasets.map((dataset, datasetIndex) => {
@@ -183,13 +202,17 @@ export async function generateChartImage(
 
         return {
           label: dataset.label,
-          data: dataset.data,
+          data: dataset.data as any,
           backgroundColor: dataset.backgroundColor || (isPieStyle
             ? colors.map(c => c.bg)
-            : colors[0].bg),
+            : isBoxPlot
+              ? PROFESSIONAL_COLORS[datasetIndex % PROFESSIONAL_COLORS.length].bg
+              : colors[0].bg),
           borderColor: dataset.borderColor || (isPieStyle
             ? colors.map(c => c.border)
-            : colors[0].border),
+            : isBoxPlot
+              ? PROFESSIONAL_COLORS[datasetIndex % PROFESSIONAL_COLORS.length].border
+              : colors[0].border),
           borderWidth: dataset.borderWidth || 2,
           // Additional styling for different chart types
           ...(type === 'line' && {
@@ -210,11 +233,22 @@ export async function generateChartImage(
             // Override background color for radar - much more transparent
             backgroundColor: (typeof dataset.backgroundColor === 'string' ? dataset.backgroundColor : colors[0].bg).replace('0.75', '0.2'),
           }),
+          // Box plot styling
+          ...(isBoxPlot && {
+            borderWidth: 2,
+            outlierBackgroundColor: 'rgba(239, 68, 68, 0.8)',
+            outlierBorderColor: 'rgba(239, 68, 68, 1)',
+            outlierRadius: 4,
+            medianColor: 'rgba(0, 0, 0, 0.9)',
+            itemRadius: 0, // Hide individual data points
+          }),
         }
       }),
     },
     options: {
       responsive: false,
+      // Horizontal bar: flip the axis
+      ...(isHorizontalBar && { indexAxis: 'y' as const }),
       plugins: {
         title: {
           display: !!title,
@@ -231,7 +265,7 @@ export async function generateChartImage(
           color: '#1f2937', // gray-800
         },
         legend: {
-          display: chartData.datasets.length > 1 || isPieStyle,
+          display: chartData.datasets.length > 1 || isPieStyle || isStackedBar,
           position: isPieStyle ? 'right' : 'top',
           labels: {
             font: {
@@ -281,11 +315,13 @@ export async function generateChartImage(
           displayColors: true,
         },
       },
-      // Scales only apply to cartesian charts (not pie/doughnut/polarArea)
+      // Scales for cartesian charts (bar, line, stackedBar, horizontalBar, boxplot)
       ...(!isPieStyle && type !== 'radar' && {
         scales: {
           y: {
             beginAtZero: true,
+            // Stacked bar: stack the Y axis
+            ...(isStackedBar && { stacked: true }),
             grid: {
               color: 'rgba(0, 0, 0, 0.08)',
               lineWidth: 1,
@@ -303,8 +339,10 @@ export async function generateChartImage(
             },
           },
           x: {
+            // Stacked bar: stack the X axis
+            ...(isStackedBar && { stacked: true }),
             grid: {
-              display: type !== 'bar', // Hide x-grid for bar charts
+              display: type !== 'bar' && !isStackedBar && !isHorizontalBar,
               color: 'rgba(0, 0, 0, 0.08)',
             },
             ticks: {
@@ -314,7 +352,7 @@ export async function generateChartImage(
               },
               color: '#6b7280', // gray-500
               padding: 8,
-              maxRotation: 45,
+              maxRotation: isHorizontalBar ? 0 : 45,
               minRotation: 0,
             },
           },
@@ -363,9 +401,9 @@ export async function generateChartImage(
       layout: {
         padding: {
           top: 20,
-          right: 30,
+          right: isHorizontalBar ? 40 : 30, // Extra right padding for horizontal labels
           bottom: 20,
-          left: 30,
+          left: isHorizontalBar ? 20 : 30, // Less left padding for horizontal bars
         },
       },
     },

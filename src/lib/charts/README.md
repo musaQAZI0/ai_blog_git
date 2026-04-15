@@ -4,20 +4,22 @@ This module provides accurate data visualization for professional medical articl
 
 ## Overview
 
-The chart generation system extracts numerical data from PDF documents and generates accurate charts using Chart.js with **intelligent chart type selection**. Supports: bar, line, scatter, pie, doughnut, radar, and polarArea charts. The AI automatically selects the most appropriate chart type based on data characteristics and **enforces variety** (no duplicate chart types when generating 2 charts). This ensures 100% accuracy of data labels and values, eliminating the problem of AI-generated images with made-up or gibberish text.
+The chart generation system extracts numerical data from PDF documents with OpenAI Structured Outputs and generates accurate charts using Chart.js with **intelligent chart type selection**. Supports: bar, horizontalBar, stackedBar, boxplot, line, pie, doughnut, and radar charts. The extractor selects the most appropriate chart type based on data characteristics and **enforces variety**: when 2 charts are generated, only one can be bar-family (`bar`, `horizontalBar`, or `stackedBar`). This keeps labels and values tied to the source PDF instead of relying on AI-generated chart images.
 
 ## Architecture
 
 ### 1. Data Extraction (`data-extractor.ts`)
-- Uses OpenAI (GPT-4o by default) to extract structured numerical data from PDF content
+- Uses OpenAI Structured Outputs to extract structured numerical data from PDF content
 - Extracts EXACTLY 2 charts focusing on PRIMARY ENDPOINTS and KEY FINDINGS
 - **Intelligently selects chart type** based on data characteristics:
   - `line` - Temporal/sequential data showing change over time
   - `pie`/`doughnut` - Percentages or proportions
-  - `scatter` - Correlations between variables
+  - `horizontalBar` - Many-category comparisons
+  - `stackedBar` - Composition data across groups
+  - `boxplot` - Distribution statistics
   - `radar` - Multi-dimensional comparisons
   - `bar` - Categorical comparisons (default)
-- **ENFORCES CHART VARIETY**: When generating 2 charts, they MUST be different types
+- **ENFORCES CHART VARIETY**: When generating 2 charts, only one chart may be bar-family (`bar`, `horizontalBar`, or `stackedBar`)
 - Prioritizes statistically significant results (P < .05) and clinically relevant data
 - Identifies tables, statistical results, and comparison data
 - Returns structured data suitable for Chart.js (labels, datasets, values)
@@ -28,7 +30,7 @@ The chart generation system extracts numerical data from PDF documents and gener
 ### 2. Chart Generation (`chart-generator.ts`)
 - Uses Chart.js and chartjs-node-canvas for server-side chart rendering
 - Generates PNG images from chart data
-- **Supports 7 chart types**: bar, line, scatter, pie, doughnut, radar, polarArea
+- **Supports 8 chart types**: bar, horizontalBar, stackedBar, boxplot, line, pie, doughnut, radar
 - All Chart.js controllers are registered for proper rendering
 - Professional color palette optimized for medical/scientific publications
 - Special styling for each chart type (smooth curves for line charts, filled areas for radar, etc.)
@@ -45,10 +47,7 @@ The chart generation system extracts numerical data from PDF documents and gener
 
 ### In AI Article Generation
 
-The chart generation is automatically integrated into all AI providers:
-- **OpenAI** ([openai.ts](../ai/openai.ts))
-- **Gemini** ([gemini.ts](../ai/gemini.ts))
-- **Claude** ([claude.ts](../ai/claude.ts))
+The professional article flow is Gemini for article writing, OpenAI for chart data extraction, and Chart.js for chart rendering.
 
 For **professional articles**, the system:
 1. Extracts chart data from the PDF
@@ -107,12 +106,12 @@ interface ChartData {
 
 ✅ **100% Accurate Data**: Uses exact values from PDF, no AI hallucination
 ✅ **Intelligent Chart Selection**: AI chooses the best chart type for each dataset
-✅ **Enforced Variety**: No duplicate chart types when generating 2 charts
-✅ **7 Chart Types Supported**: bar, line, scatter, pie, doughnut, radar, polarArea
+✅ **Enforced Variety**: No duplicate chart types and no two bar-family charts when generating 2 charts
+✅ **8 Chart Types Supported**: bar, horizontalBar, stackedBar, boxplot, line, pie, doughnut, radar
 ✅ **Professional Styling**: Publication-quality charts with color-coded datasets
 ✅ **Polish Language Support**: Proper rendering of Polish diacritics in labels/titles
 ✅ **Real Data Labels**: Only includes text/labels that exist in source document
-✅ **Automatic Integration**: Works seamlessly with all AI providers (OpenAI, Gemini, Claude)
+✅ **Provider Split**: Gemini writes professional articles, OpenAI extracts chart data, and Chart.js renders the final images
 ✅ **Fallback Safety**: Gracefully handles cases where no chart data is found
 ✅ **Debug Logging**: Comprehensive logs for troubleshooting chart generation
 
@@ -124,10 +123,9 @@ interface ChartData {
 ## Configuration
 
 Environment variables used:
-- `OPENAI_API_KEY`: For data extraction with OpenAI (required)
-- `CHART_EXTRACTION_MODEL`: OpenAI model to use (default: `gpt-4o`)
-  - Recommended chat models: `gpt-4o` (fast, accurate), `o1` or `o1-pro` (reasoning)
-  - Note: GPT-5.x-pro models use legacy completions API, not supported yet
+- `OPENAI_API_KEY`: For chart data extraction with OpenAI (required)
+- `OPENAI_CHART_EXTRACTION_MODEL`: Optional OpenAI model override for chart extraction (default: `gpt-5.4`)
+- `GEMINI_API_KEY`: For professional article text and image generation
 - `AI_STORAGE_PROVIDER`: For chart image upload (Cloudinary or local)
 
 ## Example Output

@@ -46,16 +46,16 @@ function DashboardContent() {
   const draftCount = articles.filter((a) => a.status === 'draft').length
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
       {/* Header */}
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-3xl font-bold">Panel użytkownika</h1>
-          <p className="mt-1 text-muted-foreground">Witaj, {user?.name}</p>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold sm:text-3xl">Panel użytkownika</h1>
+          <p className="mt-1 break-words text-muted-foreground">Witaj, {user?.name}</p>
         </div>
         {isAdmin ? (
           <Button asChild className="w-full sm:w-auto">
-            <Link href="/dashboard/create">
+            <Link href="/dashboard/create" className="min-w-0">
               <Plus className="mr-2 h-4 w-4" />
               Nowy artykul
             </Link>
@@ -110,29 +110,29 @@ function DashboardContent() {
       <div className="mb-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {isAdmin ? (
           <>
-            <Link href="/dashboard/create">
+            <Link href="/dashboard/create" className="block min-w-0">
               <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-                <CardContent className="flex items-center gap-4 p-6">
-                  <div className="rounded-lg bg-primary/10 p-3">
+                <CardContent className="flex min-w-0 flex-col items-start gap-4 p-4 sm:flex-row sm:items-center sm:p-6">
+                  <div className="shrink-0 rounded-lg bg-primary/10 p-3">
                     <Plus className="h-6 w-6 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold">Utworz artykul z AI</h3>
-                    <p className="text-sm text-muted-foreground">Wgraj PDF i wygeneruj treść</p>
+                  <div className="min-w-0">
+                    <h3 className="break-words font-semibold">Utworz artykul z AI</h3>
+                    <p className="break-words text-sm text-muted-foreground">Wgraj PDF i wygeneruj treść</p>
                   </div>
                 </CardContent>
               </Card>
             </Link>
 
-            <Link href="/dashboard/articles">
+            <Link href="/dashboard/articles" className="block min-w-0">
               <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-                <CardContent className="flex items-center gap-4 p-6">
-                  <div className="rounded-lg bg-primary/10 p-3">
+                <CardContent className="flex min-w-0 flex-col items-start gap-4 p-4 sm:flex-row sm:items-center sm:p-6">
+                  <div className="shrink-0 rounded-lg bg-primary/10 p-3">
                     <FileText className="h-6 w-6 text-primary" />
                   </div>
-                  <div>
-                    <h3 className="font-semibold">Moje artykuly</h3>
-                    <p className="text-sm text-muted-foreground">Zarządzaj swoimi artykulami</p>
+                  <div className="min-w-0">
+                    <h3 className="break-words font-semibold">Moje artykuly</h3>
+                    <p className="break-words text-sm text-muted-foreground">Zarządzaj swoimi artykulami</p>
                   </div>
                 </CardContent>
               </Card>
@@ -141,23 +141,23 @@ function DashboardContent() {
         ) : (
           <Card className="sm:col-span-2 lg:col-span-2">
             <CardContent className="p-6">
-              <h3 className="font-semibold">Dostęp tylko do czytania</h3>
-              <p className="mt-1 text-sm text-muted-foreground">
+              <h3 className="break-words font-semibold">Dostęp tylko do czytania</h3>
+              <p className="mt-1 break-words text-sm text-muted-foreground">
                 Tworzenie i edycja artykulow jest dostepne tylko dla administratora.
               </p>
             </CardContent>
           </Card>
         )}
 
-        <Link href="/dashboard/settings">
+        <Link href="/dashboard/settings" className="block min-w-0">
           <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-            <CardContent className="flex items-center gap-4 p-6">
-              <div className="rounded-lg bg-primary/10 p-3">
+            <CardContent className="flex min-w-0 flex-col items-start gap-4 p-4 sm:flex-row sm:items-center sm:p-6">
+              <div className="shrink-0 rounded-lg bg-primary/10 p-3">
                 <Settings className="h-6 w-6 text-primary" />
               </div>
-              <div>
-                <h3 className="font-semibold">Ustawienia</h3>
-                <p className="text-sm text-muted-foreground">
+              <div className="min-w-0">
+                <h3 className="break-words font-semibold">Ustawienia</h3>
+                <p className="break-words text-sm text-muted-foreground">
                   Zarządzaj kontem i preferencjami
                 </p>
               </div>
@@ -187,11 +187,11 @@ function DashboardContent() {
                 {articles.slice(0, 5).map((article) => (
                   <div
                     key={article.id}
-                    className="flex flex-col gap-3 border-b pb-4 last:border-0 sm:flex-row sm:items-center sm:justify-between"
+                    className="flex min-w-0 flex-col gap-3 border-b pb-4 last:border-0 sm:flex-row sm:items-center sm:justify-between"
                   >
-                    <div>
-                      <h4 className="font-medium">{article.title}</h4>
-                      <p className="text-sm text-muted-foreground">
+                    <div className="min-w-0">
+                      <h4 className="break-words font-medium">{article.title}</h4>
+                      <p className="break-words text-sm text-muted-foreground">
                         {article.status === 'published' ? 'Opublikowany' : 'Wersja robocza'} •{' '}
                         {article.viewCount} wyswietlen
                       </p>

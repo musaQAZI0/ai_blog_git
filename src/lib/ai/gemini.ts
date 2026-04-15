@@ -2,7 +2,6 @@ import { GoogleGenerativeAI } from '@google/generative-ai'
 import { AIGenerationResponse, TargetAudience } from '@/types'
 import { generateAndUploadImagen, type ImagenPurpose } from '@/lib/ai/gemini-imagen'
 import { findCoverImageUrl } from '@/lib/images/cover-search'
-import { extractGenerateAndUploadCharts } from '@/lib/charts/chart-uploader'
 
 function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY
@@ -246,14 +245,17 @@ export async function generateArticleWithGemini(
 
   const validCategories = targetAudience === 'patient' ? PATIENT_CATEGORIES : PROFESSIONAL_CATEGORIES
 
-  // Extract chart data FIRST for professional articles so we can tell the AI what charts are available
+  // Extract chart data first with OpenAI for professional articles so Gemini can reference available charts.
   let extractedChartData: any[] = []
   let chartContext = ''
-  if (targetAudience === 'professional') {
+  console.log(`[gemini] Chart pre-extraction check: generateImage=${generateImage}, targetAudience=${targetAudience}`)
+  if (generateImage && targetAudience === 'professional') {
     try {
-      console.log('[gemini] Pre-extracting chart data to inform article generation...')
+      console.log('[gemini] Pre-extracting chart data with OpenAI to inform article generation...')
+      console.log(`[gemini] PDF content length for OpenAI chart extraction: ${pdfContent.length} chars`)
       const { extractChartDataFromPDF } = await import('@/lib/charts/data-extractor')
       extractedChartData = await extractChartDataFromPDF(pdfContent, 2)
+      console.log(`[gemini] OpenAI chart extraction returned ${extractedChartData.length} chart(s)`)
 
       if (extractedChartData.length > 0) {
         console.log(`[gemini] Found ${extractedChartData.length} charts to include in article`)
@@ -559,7 +561,7 @@ Required JSON format:
   }
 
   // Cover fallback via internet search if Imagen fails or is disabled.
-  if (!generatedImageUrl) {
+  if (generateImage && !generatedImageUrl) {
     try {
       coverFallbackUrl = await findCoverImageUrl({
         title,
@@ -575,20 +577,25 @@ Required JSON format:
 
   // For professional articles: Use Chart.js to generate accurate data charts
   // For patient articles: Use AI image generation for clean anatomical illustrations
-  if (targetAudience === 'professional' && extractedChartData.length > 0) {
+  console.log(`[gemini] Chart rendering check: generateImage=${generateImage}, targetAudience=${targetAudience}, extractedChartData.length=${extractedChartData.length}`)
+  if (generateImage && targetAudience === 'professional' && extractedChartData.length > 0) {
     try {
       console.log('[gemini] Generating chart images from pre-extracted data...')
       const { generateAndUploadChart } = await import('@/lib/charts/chart-uploader')
-      const { validateChartData } = await import('@/lib/charts/data-extractor')
+      const { enforceChartTypeVariety, validateChartData } = await import('@/lib/charts/data-extractor')
+      const renderableCharts = enforceChartTypeVariety(
+        extractedChartData.filter((extractedChart, index) => {
+          // Validate chart data to prevent AI hallucination
+          if (!validateChartData(extractedChart)) {
+            console.warn(`[gemini] Chart ${index + 1} failed validation, skipping`)
+            return false
+          }
+          return true
+        })
+      )
 
-      for (let i = 0; i < extractedChartData.length; i++) {
-        const extractedChart = extractedChartData[i]
-
-        // Validate chart data to prevent AI hallucination
-        if (!validateChartData(extractedChart)) {
-          console.warn(`[gemini] Chart ${i + 1} failed validation, skipping`)
-          continue
-        }
+      for (let i = 0; i < renderableCharts.length; i++) {
+        const extractedChart = renderableCharts[i]
 
         try {
           const chartId = `chart-${i + 1}`
@@ -619,11 +626,11 @@ Required JSON format:
     } catch (error) {
       console.error('[gemini] Chart generation failed:', error)
     }
-  } else if (targetAudience === 'professional') {
+  } else if (generateImage && targetAudience === 'professional') {
     console.log('[gemini] No chart data found in PDF, skipping chart generation')
   }
 
-  if (targetAudience === 'patient') {
+  if (generateImage && targetAudience === 'patient') {
     // Patient articles: use AI image generation for anatomical illustrations
     const limitedFigures = figures.slice(0, 3)
     for (let i = 0; i < limitedFigures.length; i++) {

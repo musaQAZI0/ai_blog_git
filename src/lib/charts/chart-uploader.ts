@@ -1,6 +1,11 @@
 import { generateFileName, uploadFile, uploadFileToProvider, type StorageProvider } from '@/lib/storage'
 import { generateChartImage, generateSimpleBarChart, type ChartData, type ChartType } from './chart-generator'
-import { extractChartDataFromPDF, validateChartData, type ExtractedChartData } from './data-extractor'
+import {
+  enforceChartTypeVariety,
+  extractChartDataFromPDF,
+  validateChartData,
+  type ExtractedChartData,
+} from './data-extractor'
 
 export interface GeneratedChart {
   id: string
@@ -92,16 +97,19 @@ export async function extractGenerateAndUploadCharts(
 
   console.log(`[chart-pipeline] Found ${extractedCharts.length} charts to generate`)
 
+  const validCharts = extractedCharts.filter((extractedChart, index) => {
+    if (!validateChartData(extractedChart)) {
+      console.warn(`[chart-pipeline] Chart ${index + 1} failed validation, skipping`)
+      return false
+    }
+    return true
+  })
+
+  const renderableCharts = enforceChartTypeVariety(validCharts)
   const generatedCharts: GeneratedChart[] = []
 
-  for (let i = 0; i < extractedCharts.length; i++) {
-    const extractedChart = extractedCharts[i]
-
-    // Validate chart data to prevent AI hallucination
-    if (!validateChartData(extractedChart)) {
-      console.warn(`[chart-pipeline] Chart ${i + 1} failed validation, skipping`)
-      continue
-    }
+  for (let i = 0; i < renderableCharts.length; i++) {
+    const extractedChart = renderableCharts[i]
 
     try {
       const chartId = `chart-${i + 1}`

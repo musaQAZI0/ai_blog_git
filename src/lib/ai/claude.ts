@@ -1,6 +1,5 @@
 import Anthropic from '@anthropic-ai/sdk'
 import { AIGenerationResponse, TargetAudience } from '@/types'
-import { extractGenerateAndUploadCharts } from '@/lib/charts/chart-uploader'
 
 function getAnthropicClient() {
   const apiKey = process.env.ANTHROPIC_API_KEY
@@ -45,7 +44,8 @@ Ground all claims strictly in the provided document. Do not hallucinate data.`
 
 export async function generateArticleWithClaude(
   pdfContent: string,
-  targetAudience: TargetAudience
+  targetAudience: TargetAudience,
+  generateImage: boolean = true
 ): Promise<AIGenerationResponse> {
   const systemPrompt = targetAudience === 'patient'
     ? PATIENT_SYSTEM_PROMPT
@@ -53,7 +53,7 @@ export async function generateArticleWithClaude(
 
   const figureInstructions =
     targetAudience === 'professional'
-      ? `- Include up to 3 figures. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize REAL DATA from the PDF source document.
+      ? `- Include MAXIMUM 2 figures. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize REAL DATA from the PDF source document.
 - CRITICAL for charts/graphs: Include data labels and text ONLY if they come from the source document. Use EXACT values from the PDF - do NOT make up or estimate numbers.
 - Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg", "Cooke K6", "Barrett Universal II").
 - Focus on DATA VISUALIZATION (charts showing statistics, results, comparisons) rather than anatomical illustrations.`
@@ -140,35 +140,6 @@ Required JSON format:
   const articleData = JSON.parse(jsonStr)
 
   let content: string = articleData.content || ''
-
-  // For professional articles: Use Chart.js to generate accurate data charts
-  if (targetAudience === 'professional') {
-    try {
-      console.log('[claude] Extracting and generating charts for professional article...')
-      const generatedCharts = await extractGenerateAndUploadCharts(pdfContent, 2)
-
-      if (generatedCharts.length > 0) {
-        console.log(`[claude] Successfully generated ${generatedCharts.length} charts`)
-
-        // Inject generated charts into content
-        for (const chart of generatedCharts) {
-          const captionLine = chart.caption ? `\n\n*${chart.caption}*` : ''
-          const markdownImage = `![${chart.alt}](${chart.url})${captionLine}`
-
-          if (content.includes(chart.placeholder)) {
-            content = content.split(chart.placeholder).join(markdownImage)
-          } else {
-            // If placeholder not in content, append the chart
-            content += `\n\n${markdownImage}\n`
-          }
-        }
-      } else {
-        console.log('[claude] No chart data found in PDF, skipping chart generation')
-      }
-    } catch (error) {
-      console.error('[claude] Chart generation failed:', error)
-    }
-  }
 
   // Safety net: remove any leftover figure placeholders
   content = content

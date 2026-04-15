@@ -5,9 +5,7 @@ import { Article } from '@/types'
 import { getArticles, searchArticles } from '@/lib/firebase/articles'
 import { ArticleGrid } from '@/components/blog/ArticleGrid'
 import { SearchBar } from '@/components/blog/SearchBar'
-import { NewsletterForm } from '@/components/blog/NewsletterForm'
 import { Button } from '@/components/ui'
-import { useAuth } from '@/context/AuthContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 import { ChevronDown, Grid3X3, List } from 'lucide-react'
 import { cn } from '@/lib/utils'
@@ -58,7 +56,6 @@ function ProfessionalBlogContent() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
   const [isSortOpen, setIsSortOpen] = useState(false)
   const sortMenuRef = useRef<HTMLDivElement>(null)
-  const { user } = useAuth()
 
   const fetchArticles = useCallback(async () => {
     setLoading(true)
@@ -106,7 +103,7 @@ function ProfessionalBlogContent() {
   return (
     <div className="mx-auto w-full max-w-[1320px] px-4 py-8 sm:px-6 lg:px-8">
       <div className="pb-8">
-        <div className="flex items-start justify-between gap-4">
+        <div>
           <div>
             <p className="text-xs font-medium uppercase tracking-[0.2em] text-black/40">
               Blog dla Specjalistow
@@ -118,12 +115,6 @@ function ProfessionalBlogContent() {
               Podsumowania kliniczne, badania i przypadki dla profesjonalistow medycznych.
             </p>
           </div>
-          {user && (
-            <div className="hidden shrink-0 items-center gap-2 rounded-full bg-black/[0.03] px-3 py-1.5 sm:flex">
-              <span className="h-2 w-2 rounded-full bg-emerald-500" />
-              <span className="text-xs text-black/50">{user.name}</span>
-            </div>
-          )}
         </div>
       </div>
 
@@ -207,12 +198,6 @@ function ProfessionalBlogContent() {
         basePath="/professional"
         viewMode={viewMode}
       />
-
-      <div className="mt-14 pt-10">
-        <div className="max-w-lg">
-          <NewsletterForm variant="card" />
-        </div>
-      </div>
 
       {!loading && visibleArticles.length > 0 && (
         <div className="mt-12 flex justify-center">

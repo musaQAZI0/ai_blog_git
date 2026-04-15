@@ -78,6 +78,7 @@ const requiredEnvVars = {
 const optionalEnvVars = [
   'OPENAI_TEXT_MODEL',
   'OPENAI_API_KEY',
+  'OPENAI_CHART_EXTRACTION_MODEL',
   'ANTHROPIC_API_KEY',
   'GEMINI_API_KEY',
   'GEMINI_TEXT_MODEL',

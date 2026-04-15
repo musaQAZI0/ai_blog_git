@@ -110,10 +110,10 @@ function AdminDashboardContent() {
   }
 
   return (
-    <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+    <div className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 sm:py-12 lg:px-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Panel administratora</h1>
-        <p className="mt-1 text-muted-foreground">
+        <h1 className="text-2xl font-bold sm:text-3xl">Panel administratora</h1>
+        <p className="mt-1 break-words text-muted-foreground">
           Zarządzaj użytkownikami i treściami
         </p>
       </div>
@@ -186,13 +186,13 @@ function AdminDashboardContent() {
 
       {/* Quick Links */}
       <div className="mb-8 grid gap-4 sm:grid-cols-3">
-        <Link href="/admin/users">
+        <Link href="/admin/users" className="block min-w-0">
           <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-            <CardContent className="flex items-center gap-4 p-6">
-              <Users className="h-8 w-8 text-primary" />
-              <div>
-                <h3 className="font-semibold">Zarządzaj użytkownikami</h3>
-                <p className="text-sm text-muted-foreground">
+            <CardContent className="flex min-w-0 flex-col items-start gap-4 p-4 sm:flex-row sm:items-center sm:p-6">
+              <Users className="h-8 w-8 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <h3 className="break-words font-semibold">Zarządzaj użytkownikami</h3>
+                <p className="break-words text-sm text-muted-foreground">
                   Przeglądaj i edytuj użytkowników
                 </p>
               </div>
@@ -200,13 +200,13 @@ function AdminDashboardContent() {
           </Card>
         </Link>
 
-        <Link href="/admin/articles">
+        <Link href="/admin/articles" className="block min-w-0">
           <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-            <CardContent className="flex items-center gap-4 p-6">
-              <FileText className="h-8 w-8 text-primary" />
-              <div>
-                <h3 className="font-semibold">Zarządzaj artykulami</h3>
-                <p className="text-sm text-muted-foreground">
+            <CardContent className="flex min-w-0 flex-col items-start gap-4 p-4 sm:flex-row sm:items-center sm:p-6">
+              <FileText className="h-8 w-8 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <h3 className="break-words font-semibold">Zarządzaj artykulami</h3>
+                <p className="break-words text-sm text-muted-foreground">
                   Moderuj i edytuj artykuly
                 </p>
               </div>
@@ -214,13 +214,13 @@ function AdminDashboardContent() {
           </Card>
         </Link>
 
-        <Link href="/admin/settings">
+        <Link href="/admin/settings" className="block min-w-0">
           <Card className="cursor-pointer transition-colors hover:bg-muted/50">
-            <CardContent className="flex items-center gap-4 p-6">
-              <Settings className="h-8 w-8 text-primary" />
-              <div>
-                <h3 className="font-semibold">Ustawienia</h3>
-                <p className="text-sm text-muted-foreground">
+            <CardContent className="flex min-w-0 flex-col items-start gap-4 p-4 sm:flex-row sm:items-center sm:p-6">
+              <Settings className="h-8 w-8 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <h3 className="break-words font-semibold">Ustawienia</h3>
+                <p className="break-words text-sm text-muted-foreground">
                   Konfiguracja systemu
                 </p>
               </div>
@@ -233,8 +233,8 @@ function AdminDashboardContent() {
       {/* Pending Approvals */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5" />
+          <CardTitle className="flex min-w-0 items-center gap-2 text-base leading-snug sm:text-lg">
+            <Clock className="h-5 w-5 shrink-0" />
             Oczekujący na zatwierdzenie ({pendingApprovals.length})
           </CardTitle>
         </CardHeader>
@@ -250,11 +250,11 @@ function AdminDashboardContent() {
               {pendingApprovals.map((approval) => (
                 <div
                   key={approval.userId}
-                  className="flex flex-col gap-4 rounded-lg border bg-muted/50 p-4 md:flex-row md:items-center md:justify-between"
+                  className="flex min-w-0 flex-col gap-4 rounded-lg border bg-muted/50 p-4 md:flex-row md:items-center md:justify-between"
                 >
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="font-medium">{approval.userData.name}</span>
+                  <div className="min-w-0 space-y-1">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span className="min-w-0 break-words font-medium">{approval.userData.name}</span>
                       <Badge variant="secondary">
                         {approval.userData.professionalType === 'lekarz'
                           ? 'Lekarz'
@@ -263,26 +263,26 @@ function AdminDashboardContent() {
                           : approval.userData.otherProfessionalType || 'Inny'}
                       </Badge>
                     </div>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="break-all text-sm text-muted-foreground">
                       {approval.userData.email}
                     </p>
-                    <p className="text-sm text-muted-foreground">
+                    <p className="break-words text-sm text-muted-foreground">
                       PWZ/Nr rej.: {approval.userData.registrationNumber}
                     </p>
                     {approval.userData.specialization && (
-                      <p className="text-sm text-muted-foreground">
+                      <p className="break-words text-sm text-muted-foreground">
                         Specjalizacja: {approval.userData.specialization}
                       </p>
                     )}
                   </div>
 
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex w-full flex-wrap gap-2 md:w-auto md:justify-end">
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => handleReject(approval)}
                       disabled={actionLoading === approval.userId}
-                      className="flex-1 sm:flex-none"
+                      className="min-w-0 flex-1 sm:flex-none"
                     >
                       <XCircle className="mr-1 h-4 w-4" />
                       Odrzuc
@@ -291,7 +291,7 @@ function AdminDashboardContent() {
                       size="sm"
                       onClick={() => handleApprove(approval)}
                       disabled={actionLoading === approval.userId}
-                      className="flex-1 sm:flex-none"
+                      className="min-w-0 flex-1 sm:flex-none"
                     >
                       <CheckCircle className="mr-1 h-4 w-4" />
                       Zatwierdz

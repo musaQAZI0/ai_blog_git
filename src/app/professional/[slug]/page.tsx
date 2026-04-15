@@ -6,7 +6,6 @@ import { Article } from '@/types'
 import { getArticleBySlug } from '@/lib/firebase/articles'
 import { ArticleView } from '@/components/blog/ArticleView'
 import { Skeleton } from '@/components/ui'
-import { NewsletterForm } from '@/components/blog/NewsletterForm'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
 
 function ProfessionalArticleContent() {
@@ -72,15 +71,7 @@ function ProfessionalArticleContent() {
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
-      <div className="grid gap-8 lg:grid-cols-4">
-        <div className="lg:col-span-3">
-          <ArticleView article={article} backPath="/professional" />
-        </div>
-
-        <aside className="space-y-6">
-          <NewsletterForm variant="card" />
-        </aside>
-      </div>
+      <ArticleView article={article} backPath="/professional" />
     </div>
   )
 }

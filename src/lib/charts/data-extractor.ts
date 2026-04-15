@@ -8,6 +8,367 @@ export interface ExtractedChartData {
   sourceDescription: string
 }
 
+const BAR_LIKE_CHART_TYPES = new Set<ChartType>(['bar', 'horizontalBar', 'stackedBar'])
+const OPENAI_FALLBACK_CHART_EXTRACTION_MODEL = 'gpt-4o'
+
+const CHART_EXTRACTION_RESPONSE_FORMAT = {
+  type: 'json_schema',
+  name: 'chart_extraction_result',
+  strict: true,
+  schema: {
+    type: 'object',
+    additionalProperties: false,
+    required: ['charts'],
+    properties: {
+      charts: {
+        type: 'array',
+        items: {
+          type: 'object',
+          additionalProperties: false,
+          required: ['chartTitle', 'chartType', 'sourceDescription', 'data'],
+          properties: {
+            chartTitle: { type: 'string' },
+            chartType: {
+              type: 'string',
+              enum: ['bar', 'line', 'pie', 'doughnut', 'radar', 'stackedBar', 'horizontalBar', 'boxplot'],
+            },
+            sourceDescription: { type: 'string' },
+            data: {
+              type: 'object',
+              additionalProperties: false,
+              required: ['labels', 'datasets'],
+              properties: {
+                labels: {
+                  type: 'array',
+                  items: { type: 'string' },
+                },
+                datasets: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    additionalProperties: false,
+                    required: ['label', 'data'],
+                    properties: {
+                      label: { type: 'string' },
+                      data: {
+                        type: 'array',
+                        items: {
+                          anyOf: [
+                            { type: 'number' },
+                            {
+                              type: 'object',
+                              additionalProperties: false,
+                              required: ['min', 'q1', 'median', 'q3', 'max'],
+                              properties: {
+                                min: { type: 'number' },
+                                q1: { type: 'number' },
+                                median: { type: 'number' },
+                                q3: { type: 'number' },
+                                max: { type: 'number' },
+                              },
+                            },
+                          ],
+                        },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  },
+} as const
+
+function isBarLikeChartType(chartType: ChartType): boolean {
+  return BAR_LIKE_CHART_TYPES.has(chartType)
+}
+
+function getNumericDatasets(chart: ExtractedChartData): number[][] | null {
+  const datasets = chart.data?.datasets || []
+  const numericDatasets: number[][] = []
+
+  for (const dataset of datasets) {
+    if (!Array.isArray(dataset.data)) return null
+    if (dataset.data.some((value) => typeof value !== 'number' || Number.isNaN(value))) {
+      return null
+    }
+    numericDatasets.push(dataset.data as number[])
+  }
+
+  return numericDatasets.length > 0 ? numericDatasets : null
+}
+
+function canUsePieLikeChart(chart: ExtractedChartData): boolean {
+  const datasets = getNumericDatasets(chart)
+  if (!datasets || datasets.length !== 1) return false
+  const values = datasets[0]
+  return values.length >= 2 && values.some((value) => value > 0) && values.every((value) => value >= 0)
+}
+
+function canUseRadarChart(chart: ExtractedChartData): boolean {
+  const datasets = getNumericDatasets(chart)
+  if (!datasets || chart.data.labels.length < 3) return false
+  return datasets.every((values) => values.every((value) => value >= 0))
+}
+
+function isCompatibleChartType(chart: ExtractedChartData, chartType: ChartType): boolean {
+  if (chartType === 'line') return Boolean(getNumericDatasets(chart))
+  if (chartType === 'pie' || chartType === 'doughnut') return canUsePieLikeChart(chart)
+  if (chartType === 'radar') return canUseRadarChart(chart)
+  if (chartType === 'boxplot') {
+    return chart.data.datasets.every((dataset) =>
+      Array.isArray(dataset.data) && dataset.data.every(isBoxPlotDataPoint)
+    )
+  }
+  return true
+}
+
+function pickAlternativeChartType(
+  chart: ExtractedChartData,
+  blockedTypes: Set<ChartType>,
+  blockBarLike: boolean
+): ChartType {
+  const candidates: ChartType[] = ['line', 'doughnut', 'radar', 'pie', 'boxplot', 'bar']
+  return (
+    candidates.find((candidate) =>
+      !blockedTypes.has(candidate) &&
+      (!blockBarLike || !isBarLikeChartType(candidate)) &&
+      isCompatibleChartType(chart, candidate)
+    ) || chart.chartType
+  )
+}
+
+function isOpenAIModelUnavailable(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error || '').toLowerCase()
+  return (
+    message.includes('model') &&
+    (message.includes('not found') ||
+      message.includes('does not exist') ||
+      message.includes('not supported') ||
+      message.includes('invalid'))
+  )
+}
+
+function supportsReasoningParameter(model: string): boolean {
+  const normalized = model.toLowerCase()
+  return normalized.startsWith('gpt-5') || normalized.startsWith('o1') || normalized.startsWith('o3') || normalized.startsWith('o4')
+}
+
+function numberAppearsInSource(value: number, normalizedPdf: string): boolean {
+  const rawValue = String(value)
+  const variants = new Set<string>([rawValue, rawValue.replace('.', ',')])
+
+  if (rawValue.startsWith('0.')) {
+    variants.add(rawValue.slice(1))
+    variants.add(rawValue.slice(1).replace('.', ','))
+  } else if (rawValue.startsWith('-0.')) {
+    variants.add(`-${rawValue.slice(2)}`)
+    variants.add(`-${rawValue.slice(2).replace('.', ',')}`)
+  }
+
+  return Array.from(variants).some((variant) => normalizedPdf.includes(variant))
+}
+
+async function extractChartsWithOpenAI(
+  openai: OpenAI,
+  model: string,
+  prompt: string
+): Promise<Record<string, any>> {
+  console.log(`[chart-extractor] Calling OpenAI chart extraction model: ${model}`)
+
+  const response = await openai.responses.create({
+    model,
+    instructions:
+      'You are a precise medical data extraction assistant. Extract only factual numerical data that appears verbatim in the source document. Return only structured data matching the schema.',
+    input: prompt,
+    max_output_tokens: 4000,
+    text: {
+      format: CHART_EXTRACTION_RESPONSE_FORMAT,
+    },
+    ...(supportsReasoningParameter(model) && {
+      reasoning: {
+        effort: 'medium',
+      },
+    }),
+  } as any)
+
+  const responseText = response.output_text || '{}'
+  try {
+    return JSON.parse(responseText)
+  } catch (error) {
+    console.warn('[chart-extractor] OpenAI returned non-parseable structured output:', responseText.slice(0, 1000))
+    throw error
+  }
+}
+
+async function extractChartsWithModelFallback(
+  openai: OpenAI,
+  modelName: string,
+  prompt: string
+): Promise<Record<string, any>> {
+  try {
+    return await extractChartsWithOpenAI(openai, modelName, prompt)
+  } catch (error) {
+    if (modelName !== OPENAI_FALLBACK_CHART_EXTRACTION_MODEL && isOpenAIModelUnavailable(error)) {
+      console.warn(
+        `[chart-extractor] Model "${modelName}" is unavailable for this key; falling back to "${OPENAI_FALLBACK_CHART_EXTRACTION_MODEL}"`
+      )
+      return extractChartsWithOpenAI(openai, OPENAI_FALLBACK_CHART_EXTRACTION_MODEL, prompt)
+    }
+
+    throw error
+  }
+}
+
+export function enforceChartTypeVariety(charts: ExtractedChartData[]): ExtractedChartData[] {
+  const usedTypes = new Set<ChartType>()
+  let hasBarLikeChart = false
+
+  for (let i = 0; i < charts.length; i++) {
+    const chart = charts[i]
+    const isDuplicateType = usedTypes.has(chart.chartType)
+    const isSecondBarLike = isBarLikeChartType(chart.chartType) && hasBarLikeChart
+
+    if (isDuplicateType || isSecondBarLike) {
+      const oldType = chart.chartType
+      chart.chartType = pickAlternativeChartType(chart, usedTypes, hasBarLikeChart)
+      console.warn(
+        `[chart-variety] Changed chart ${i + 1} from '${oldType}' to '${chart.chartType}' to avoid repeated bar-style charts`
+      )
+    }
+
+    usedTypes.add(chart.chartType)
+    if (isBarLikeChartType(chart.chartType)) {
+      hasBarLikeChart = true
+    }
+  }
+
+  return charts
+}
+
+function getChartsFromResponse(parsedResponse: any): ExtractedChartData[] {
+  return Array.isArray(parsedResponse) ? parsedResponse : (parsedResponse.charts || [])
+}
+
+function sanitizeSupportedChartTypes(extractedData: ExtractedChartData[]): ExtractedChartData[] {
+  const supportedTypes = new Set<ChartType>(['bar', 'line', 'pie', 'doughnut', 'radar', 'stackedBar', 'horizontalBar', 'boxplot'])
+
+  for (const chart of extractedData) {
+    if (!supportedTypes.has(chart.chartType)) {
+      console.error(`[chart-extractor] Unsupported chart type '${chart.chartType}' -> forcing to 'bar'`)
+      chart.chartType = 'bar'
+    }
+  }
+
+  return extractedData
+}
+
+function hasUsefulVariation(values: number[]): boolean {
+  return values.length >= 2 && values.some((value) => value !== values[0])
+}
+
+function createCompanionChartFromExisting(chart: ExtractedChartData): ExtractedChartData | null {
+  const labels = chart.data?.labels || []
+  const numericDatasets = getNumericDatasets(chart)
+  if (!numericDatasets || labels.length < 2) return null
+
+  const datasets = chart.data.datasets
+    .map((dataset, index) => ({
+      label: dataset.label,
+      data: numericDatasets[index],
+    }))
+    .filter((dataset) => dataset.data.length === labels.length && hasUsefulVariation(dataset.data))
+
+  if (datasets.length === 0) return null
+
+  const companionType: ChartType = isBarLikeChartType(chart.chartType)
+    ? 'line'
+    : labels.length >= 7
+      ? 'horizontalBar'
+      : 'bar'
+
+  return {
+    chartTitle: `${chart.chartTitle} - ujęcie alternatywne`,
+    chartType: companionType,
+    sourceDescription: `${chart.sourceDescription}; alternatywna wizualizacja zweryfikowanych danych`,
+    data: {
+      labels: [...labels],
+      datasets: datasets.map((dataset) => ({
+        label: dataset.label,
+        data: [...dataset.data],
+      })),
+    },
+  }
+}
+
+function ensureRequestedChartCount(charts: ExtractedChartData[], maxCharts: number): ExtractedChartData[] {
+  const completedCharts = enforceChartTypeVariety([...charts])
+
+  while (completedCharts.length < maxCharts && completedCharts.length > 0) {
+    const sourceChart = completedCharts[completedCharts.length - 1]
+    const companionChart = createCompanionChartFromExisting(sourceChart)
+    if (!companionChart) break
+
+    completedCharts.push(companionChart)
+    enforceChartTypeVariety(completedCharts)
+    console.warn(
+      `[chart-extractor] OpenAI returned only ${completedCharts.length - 1} chart(s); added a '${companionChart.chartType}' companion chart from verified source data`
+    )
+  }
+
+  return completedCharts.slice(0, maxCharts)
+}
+
+function buildSupplementalChartPrompt(
+  pdfContent: string,
+  existingCharts: ExtractedChartData[],
+  neededCharts: number
+): string {
+  const existingSummary = existingCharts.map((chart, index) =>
+    `Chart ${index + 1}: "${chart.chartTitle}" (${chart.chartType}) from ${chart.sourceDescription}`
+  ).join('\n')
+  const hasBarLikeChart = existingCharts.some((chart) => isBarLikeChartType(chart.chartType))
+
+  return `Analyze the same medical/scientific document and extract exactly ${neededCharts} ADDITIONAL chart(s).
+
+Existing chart(s) already selected:
+${existingSummary || 'None'}
+
+Rules:
+- Do NOT repeat the same endpoint, title, labels, or source table already listed above.
+- Every number must appear verbatim in the document.
+- Return only clinically relevant numerical data.
+- If an existing chart is bar-family, the new chart MUST NOT be bar, horizontalBar, or stackedBar.
+- If there is no existing bar-family chart, still choose a visually different type from existing chart types.
+- Allowed chart types: bar, horizontalBar, stackedBar, boxplot, line, pie, doughnut, radar.
+- Do not use scatter or polarArea.
+- If no truly additional numerical data exists, return {"charts": []}.
+${hasBarLikeChart ? '- Because a bar-family chart already exists, prefer line, doughnut, pie, radar, or boxplot.' : ''}
+
+Return ONLY a valid JSON object with this structure:
+{
+  "charts": [
+    {
+      "chartTitle": "Polish title",
+      "chartType": "line",
+      "sourceDescription": "Source table/result in Polish",
+      "data": {
+        "labels": ["Label 1", "Label 2"],
+        "datasets": [
+          { "label": "Metric", "data": [1, 2] }
+        ]
+      }
+    }
+  ]
+}
+
+Document content:
+${pdfContent}`
+}
+
 /**
  * Extracts chart data from PDF content using OpenAI
  * Intelligently selects appropriate chart types based on data characteristics
@@ -19,63 +380,74 @@ export async function extractChartDataFromPDF(
   pdfContent: string,
   maxCharts: number = 2
 ): Promise<ExtractedChartData[]> {
+  console.log(`[chart-extractor] extractChartDataFromPDF called, pdfContent length: ${pdfContent?.length}, maxCharts: ${maxCharts}`)
   const apiKey = process.env.OPENAI_API_KEY
   if (!apiKey) {
-    console.warn('OPENAI_API_KEY is not configured, skipping chart extraction')
+    console.warn('[chart-extractor] OPENAI_API_KEY is not configured, skipping chart extraction')
     return []
   }
+  console.log('[chart-extractor] OPENAI_API_KEY present, proceeding with extraction...')
 
   const openai = new OpenAI({ apiKey })
-  // Use environment variable or fallback to gpt-4o (excellent for structured data extraction)
-  const modelName = process.env.CHART_EXTRACTION_MODEL || 'gpt-4o'
+  const modelName = process.env.OPENAI_CHART_EXTRACTION_MODEL || 'gpt-5.4'
+  if (!process.env.OPENAI_CHART_EXTRACTION_MODEL && process.env.CHART_EXTRACTION_MODEL) {
+    console.warn('[chart-extractor] Ignoring legacy CHART_EXTRACTION_MODEL; using default OPENAI chart extraction model gpt-5.4')
+  }
 
   const prompt = `Analyze the following medical/scientific document and extract EXACTLY ${maxCharts} of the MOST IMPORTANT and CLINICALLY RELEVANT sets of numerical data for data visualization.
 
-🎨 MANDATORY CHART VARIETY RULE 🎨
-When extracting 2 charts, you are ABSOLUTELY REQUIRED to use 2 DIFFERENT chart types!
-If you select 'bar' for Chart 1, you CANNOT use 'bar' for Chart 2 - you MUST choose from the other types.
+ABSOLUTE ANTI-HALLUCINATION RULES
+- EVERY single number you output MUST appear verbatim in the document below.
+- If a number does NOT appear in the document text, DO NOT include it.
+- DO NOT round, estimate, interpolate, or extrapolate any values.
+- DO NOT combine numbers from different tables/contexts into one chart.
+- If you cannot find at least 2 data points with exact numbers from the document, return {"charts": []}.
 
-⚠️ CRITICAL: BOTH CHARTS CANNOT BE THE SAME TYPE ⚠️
-This is your PRIMARY directive. Chart variety is MORE important than finding the "perfect" chart type.
-Better to use a slightly less optimal chart type than to repeat the same type twice!
+MANDATORY CHART VARIETY RULE
+When extracting 2 charts, you are ABSOLUTELY REQUIRED to use 2 VISUALLY DIFFERENT chart families.
+BAR-FAMILY means 'bar', 'horizontalBar', and 'stackedBar'. If Chart 1 uses any BAR-FAMILY type, Chart 2 MUST use a non-bar type: 'line', 'pie', 'doughnut', 'radar', or 'boxplot'.
+
+CRITICAL: BOTH CHARTS CANNOT BE THE SAME TYPE
+This is your PRIMARY directive. Chart visual variety is MORE important than finding the "perfect" chart type.
+Better to use a slightly less optimal non-bar chart type than to return two bar-style charts.
 
 DECISION TREE FOR CHART TYPE:
-1. Does the data show DISTRIBUTION STATISTICS (min, Q1, median, Q3, max) for groups? → USE 'boxplot'
+1. Does the data show DISTRIBUTION STATISTICS (min, Q1, median, Q3, max) for groups? USE 'boxplot'
    Examples: "Rozkład błędu predykcji dla Barrett, Kane, Cooke K6", "Rozkład ciśnienia wewnątrzgałkowego w grupach"
-   ⚠️ boxplot requires EXACTLY this data format for each group: {"min": number, "q1": number, "median": number, "q3": number, "max": number}
+   boxplot requires EXACTLY this data format for each group: {"min": number, "q1": number, "median": number, "q3": number, "max": number}
 
-2. Does the data show MULTIPLE PERCENTAGES summing to ~100% for EACH formula/group? → USE 'stackedBar'
-   Examples: "% oczu w granicach ±0.25D, ±0.50D, ±1.0D dla każdej formuły", "Rozkład ciężkości powikłań na grupę"
-   ⚠️ stackedBar requires MULTIPLE datasets (one per stack layer), each with ONE value per label
+2. Does the data show MULTIPLE PERCENTAGES summing to ~100% for EACH formula/group? USE 'stackedBar'
+   Examples: "% oczu w granicach +/-0.25D, +/-0.50D, +/-1.0D dla każdej formuły", "Rozkład ciężkości powikłań na grupę"
+   stackedBar requires MULTIPLE datasets (one per stack layer), each with ONE value per label
 
-3. Does the data compare 7 or MORE categories? → USE 'horizontalBar'
+3. Does the data compare 7 or MORE categories? USE 'horizontalBar'
    Examples: "Porównanie MAE dla 8+ formuł IOL", "Ranking formuł wg dokładności"
 
-4. Does the data show change over TIME or progression? → USE 'line'
+4. Does the data show change over TIME or progression? USE 'line'
    Examples: "Poprawa ostrości wzroku po 1, 3, 6 miesiącach", "Zmiany ciśnienia wewnątrzgałkowego w czasie"
 
-5. Do the values represent PERCENTAGES that sum to ~100%? → USE 'pie' or 'doughnut'
+5. Do the values represent PERCENTAGES that sum to ~100%? USE 'pie' or 'doughnut'
    Examples: "Rozkład powikłań: 70% brak, 20% łagodne, 10% ciężkie", "Odsetek pacjentów w grupach wiekowych"
 
-6. Are you comparing MULTIPLE METRICS across categories? → USE 'radar'
+6. Are you comparing MULTIPLE METRICS across categories? USE 'radar'
    Examples: "Porównanie precyzji, dokładności i stabilności dla 3 formuł"
 
-7. For categorical comparisons with fewer than 7 categories → USE 'bar'
+7. For categorical comparisons with fewer than 7 categories USE 'bar'
    Examples: "Porównanie MAE dla 3-6 formuł IOL"
 
 🎯 AVAILABLE CHART TYPES (ONLY THESE 8 ARE ALLOWED):
 - 'bar' - Vertical bar chart for categorical comparisons (< 7 categories)
 - 'horizontalBar' - Horizontal bar chart for comparing many categories (7+ categories), better readability for long names
-- 'stackedBar' - Stacked bar chart showing composition (e.g., % eyes within ±0.25D / ±0.50D / ±1.0D per formula)
-- 'boxplot' - Box-and-whisker plot showing data distribution (min, Q1, median, Q3, max) — GOLD STANDARD for medical papers
+- 'stackedBar' - Stacked bar chart showing composition (e.g., % eyes within +/-0.25D / +/-0.50D / +/-1.0D per formula)
+- 'boxplot' - Box-and-whisker plot showing data distribution (min, Q1, median, Q3, max) - GOLD STANDARD for medical papers
 - 'line' - Sequential/temporal data, progression
 - 'pie' or 'doughnut' - Percentages, proportions
 - 'radar' - Multi-dimensional comparisons
 
-🚫 DO NOT USE: 'scatter' or 'polarArea' — these chart types are NOT supported!
+DO NOT USE: 'scatter' or 'polarArea' - these chart types are NOT supported!
 
 CRITICAL REQUIREMENTS:
-1. Extract ONLY data that is explicitly present in the document - DO NOT make up or estimate any numbers
+1. Extract ONLY data that is explicitly present in the document - DO NOT make up, estimate, round, or infer any numbers. Every value MUST be copy-pasted from the source.
 2. PRIORITIZE in this order:
    a) PRIMARY ENDPOINTS and main findings/results mentioned in the abstract or conclusion
    b) Data with STATISTICALLY SIGNIFICANT differences (P < .05)
@@ -92,8 +464,8 @@ CRITICAL REQUIREMENTS:
 5. If the document contains tables with numerical data, extract those
 6. If the document mentions statistical results (means, standard deviations, p-values), extract those
 7. Focus on data that would be meaningful for ophthalmology professionals
-8. 🔴 ABSOLUTELY MANDATORY 🔴: If extracting 2 charts, you MUST use 2 DIFFERENT chart types!
-9. CHECKING YOUR WORK: Before returning the JSON, verify that chartType for Chart 1 ≠ chartType for Chart 2
+8. ABSOLUTELY MANDATORY: If extracting 2 charts, you MUST use 2 visually different chart families!
+9. CHECKING YOUR WORK: Before returning the JSON, verify that you did NOT return two bar-family charts. 'bar' + 'horizontalBar' is WRONG. 'bar' + 'stackedBar' is WRONG.
 
 Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
 {
@@ -101,7 +473,7 @@ Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
     {
       "chartTitle": "Porównanie MAE formuł IOL",
       "chartType": "bar",
-      "sourceDescription": "Tabela 2 — MAE dla każdej formuły",
+      "sourceDescription": "Tabela 2 - MAE dla każdej formuły",
       "data": {
         "labels": ["Barrett", "Cooke K6", "Kane", "EVO"],
         "datasets": [
@@ -114,21 +486,21 @@ Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
     },
     {
       "chartTitle": "Procent oczu w granicach błędu predykcji",
-      "chartType": "stackedBar",
-      "sourceDescription": "Tabela 3 — procent oczu w granicach ±0.25D, ±0.50D, ±1.0D",
+      "chartType": "line",
+      "sourceDescription": "Tabela 3 - procent oczu w granicach +/-0.25D, +/-0.50D, +/-1.0D",
       "data": {
         "labels": ["Barrett", "Cooke K6", "Kane", "EVO"],
         "datasets": [
           {
-            "label": "±0.25 D (%)",
+            "label": "+/-0.25 D (%)",
             "data": [42, 48, 45, 40]
           },
           {
-            "label": "±0.50 D (%)",
+            "label": "+/-0.50 D (%)",
             "data": [72, 78, 75, 70]
           },
           {
-            "label": "±1.0 D (%)",
+            "label": "+/-1.0 D (%)",
             "data": [95, 97, 96, 93]
           }
         ]
@@ -174,14 +546,15 @@ EXAMPLE FOR HORIZONTAL BAR (when many formulas are compared):
 }
 
 REAL-WORLD EXAMPLES WITH VARIETY ENFORCED:
-✓ Chart 1: "Compare MAE for IOL formulas" → 'bar' + Chart 2: "% eyes within refractive targets" → 'stackedBar'
-✓ Chart 1: "MAE ranking for 8+ formulas" → 'horizontalBar' + Chart 2: "Distribution of prediction errors" → 'boxplot'
-✓ Chart 1: "Visual acuity at 1, 3, 6, 12 months" → 'line' + Chart 2: "Complication rate distribution" → 'pie'
-✓ Chart 1: "Success rates" → 'doughnut' + Chart 2: "Multi-metric comparison" → 'radar'
+OK: Chart 1: "Compare MAE for IOL formulas" -> 'bar' + Chart 2: "% eyes within refractive targets" -> 'doughnut'
+OK: Chart 1: "MAE ranking for 8+ formulas" -> 'horizontalBar' + Chart 2: "Distribution of prediction errors" -> 'boxplot'
+OK: Chart 1: "Visual acuity at 1, 3, 6, 12 months" -> 'line' + Chart 2: "Complication rate distribution" -> 'pie'
+OK: Chart 1: "Success rates" -> 'doughnut' + Chart 2: "Multi-metric comparison" -> 'radar'
 
-❌ WRONG: Chart 1: 'bar' + Chart 2: 'bar' - THIS IS NOT ALLOWED!
-❌ WRONG: Chart 1: 'line' + Chart 2: 'line' - THIS IS NOT ALLOWED!
-✓ CORRECT: Chart 1: 'bar' + Chart 2: 'stackedBar' - DIFFERENT TYPES!
+WRONG: Chart 1: 'bar' + Chart 2: 'bar' - THIS IS NOT ALLOWED!
+WRONG: Chart 1: 'bar' + Chart 2: 'horizontalBar' or 'stackedBar' - BOTH ARE BAR-FAMILY!
+WRONG: Chart 1: 'line' + Chart 2: 'line' - THIS IS NOT ALLOWED!
+CORRECT: Chart 1: 'bar' + Chart 2: 'line' or 'doughnut' - DIFFERENT VISUAL FAMILIES!
 
 IMPORTANT:
 - All chart titles MUST be in Polish
@@ -197,79 +570,101 @@ ${pdfContent}
 Return ONLY the JSON object, no additional text or markdown.`
 
   try {
-    const completion = await openai.chat.completions.create({
-      model: modelName,
-      messages: [
-        {
-          role: 'system',
-          content: 'You are a precise data extraction assistant. Extract only factual numerical data from documents. Never hallucinate or make up numbers. ALL chart titles and labels must be in Polish (język polski).'
-        },
-        {
-          role: 'user',
-          content: prompt
-        }
-      ],
-      temperature: 0.7,
-      max_tokens: 4000,
-      response_format: { type: 'json_object' }
-    })
+    const parsedResponse = await extractChartsWithModelFallback(openai, modelName, prompt)
 
-    const responseText = completion.choices[0]?.message?.content || '{}'
-
-    // Parse the JSON response
-    let parsedResponse: any
-    try {
-      parsedResponse = JSON.parse(responseText)
-    } catch {
-      console.warn('[chart-extractor] Failed to parse JSON response')
-      return []
-    }
-
-    // Handle both direct array or object with 'charts' key
-    const extractedData: ExtractedChartData[] = Array.isArray(parsedResponse)
-      ? parsedResponse
-      : (parsedResponse.charts || [])
+    const extractedData = getChartsFromResponse(parsedResponse)
 
     // Log what AI returned
     console.log('[chart-extractor] ===== EXTRACTED CHART TYPES =====')
     extractedData.forEach((chart, i) => {
-      console.log(`[chart-extractor] Chart ${i + 1}: "${chart.chartTitle}" → TYPE: "${chart.chartType}"`)
+      console.log(`[chart-extractor] Chart ${i + 1}: "${chart.chartTitle}" -> TYPE: "${chart.chartType}"`)
     })
 
-    // SANITIZE: Force any unsupported chart types to 'bar'
-    const SUPPORTED_TYPES = new Set<ChartType>(['bar', 'line', 'pie', 'doughnut', 'radar', 'stackedBar', 'horizontalBar', 'boxplot'])
-    for (const chart of extractedData) {
-      if (!SUPPORTED_TYPES.has(chart.chartType)) {
-        console.error(`[chart-extractor] ⚠️ Unsupported chart type '${chart.chartType}' → forcing to 'bar'`)
-        chart.chartType = 'bar'
+    enforceChartTypeVariety(sanitizeSupportedChartTypes(extractedData))
+
+    // Cross-verify extracted numbers against source PDF content
+    const verifiedData = extractedData.filter(chart => verifyChartDataAgainstSource(chart, pdfContent))
+    if (verifiedData.length < extractedData.length) {
+      console.warn(`[chart-extractor] Removed ${extractedData.length - verifiedData.length} chart(s) that contained hallucinated data`)
+    }
+
+    if (verifiedData.length > 0 && verifiedData.length < maxCharts) {
+      const neededCharts = maxCharts - verifiedData.length
+      console.warn(`[chart-extractor] Only ${verifiedData.length}/${maxCharts} verified chart(s); requesting ${neededCharts} supplemental chart(s) from OpenAI`)
+
+      const supplementalPrompt = buildSupplementalChartPrompt(pdfContent, verifiedData, neededCharts)
+      const supplementalResponse = await extractChartsWithModelFallback(openai, modelName, supplementalPrompt)
+      const supplementalData = sanitizeSupportedChartTypes(getChartsFromResponse(supplementalResponse))
+        .filter((chart) => !verifiedData.some((existingChart) => existingChart.chartTitle === chart.chartTitle))
+
+      enforceChartTypeVariety([...verifiedData, ...supplementalData])
+      const verifiedSupplementalData = supplementalData.filter(chart => verifyChartDataAgainstSource(chart, pdfContent))
+
+      if (verifiedSupplementalData.length > 0) {
+        verifiedData.push(...verifiedSupplementalData)
+        enforceChartTypeVariety(verifiedData)
+        console.log(`[chart-extractor] Added ${verifiedSupplementalData.length} supplemental verified chart(s)`)
       }
     }
 
-    // ENFORCE VARIETY: Reject if both charts are the same type
-    if (extractedData.length === 2 && extractedData[0].chartType === extractedData[1].chartType) {
-      console.error(`[chart-extractor] ⚠️ REJECTED: Both charts are '${extractedData[0].chartType}'. Forcing variety...`)
-
-      // Force the second chart to be different - ONLY safe chart types
-      const alternativeTypes: ChartType[] =
-        ['line', 'pie', 'doughnut', 'radar', 'stackedBar', 'horizontalBar']
-
-      const firstType = extractedData[0].chartType
-      const differentTypes = alternativeTypes.filter(t => t !== firstType)
-
-      // Randomly choose from alternatives for maximum variety
-      const randomIndex = Math.floor(Math.random() * differentTypes.length)
-      const oldType = extractedData[1].chartType
-      extractedData[1].chartType = differentTypes[randomIndex]
-      console.error(`[chart-extractor] ✅ FIXED: Changed Chart 2 from '${oldType}' to '${extractedData[1].chartType}' (random selection)`)
-    } else if (extractedData.length === 2) {
-      console.log(`[chart-extractor] ✅ VARIETY CONFIRMED: Chart 1 is '${extractedData[0].chartType}', Chart 2 is '${extractedData[1].chartType}'`)
-    }
-
-    return extractedData.slice(0, maxCharts)
+    return ensureRequestedChartCount(verifiedData, maxCharts)
   } catch (error) {
     console.error('Failed to extract chart data:', error)
     return []
   }
+}
+
+/**
+ * Verifies that chart data values actually appear in the source PDF content.
+ * Helps catch AI hallucination by cross-referencing extracted numbers.
+ */
+function verifyChartDataAgainstSource(chart: ExtractedChartData, pdfContent: string): boolean {
+  const normalizedPdf = pdfContent.toLowerCase().replace(/\s+/g, ' ')
+
+  for (const dataset of chart.data.datasets) {
+    if (chart.chartType === 'boxplot') {
+      // For boxplot, check that at least some key values appear in the PDF
+      let matchCount = 0
+      let totalValues = 0
+      for (const point of dataset.data) {
+        if (typeof point === 'object' && point !== null) {
+          const bp = point as BoxPlotDataPoint
+          const valuesToCheck = [bp.min, bp.q1, bp.median, bp.q3, bp.max]
+          for (const val of valuesToCheck) {
+            totalValues++
+            if (numberAppearsInSource(val, normalizedPdf)) {
+              matchCount++
+            }
+          }
+        }
+      }
+      // Require at least 30% of boxplot values to be found in the source
+      const matchRatio = totalValues > 0 ? matchCount / totalValues : 0
+      if (matchRatio < 0.3) {
+        console.warn(`[chart-verifier] Boxplot "${chart.chartTitle}": only ${matchCount}/${totalValues} values (${(matchRatio * 100).toFixed(0)}%) found in source PDF - likely hallucinated`)
+        return false
+      }
+      console.log(`[chart-verifier] Boxplot "${chart.chartTitle}": ${matchCount}/${totalValues} values (${(matchRatio * 100).toFixed(0)}%) verified`)
+    } else {
+      // For numeric charts, check that values appear in the source
+      let matchCount = 0
+      const numericData = dataset.data as number[]
+      for (const val of numericData) {
+        if (numberAppearsInSource(val, normalizedPdf)) {
+          matchCount++
+        }
+      }
+      // Require at least 50% of values to be found in the source
+      const matchRatio = numericData.length > 0 ? matchCount / numericData.length : 0
+      if (matchRatio < 0.5) {
+        console.warn(`[chart-verifier] Chart "${chart.chartTitle}": only ${matchCount}/${numericData.length} values (${(matchRatio * 100).toFixed(0)}%) found in source PDF - likely hallucinated`)
+        return false
+      }
+      console.log(`[chart-verifier] Chart "${chart.chartTitle}": ${matchCount}/${numericData.length} values (${(matchRatio * 100).toFixed(0)}%) verified`)
+    }
+  }
+
+  return true
 }
 
 /**
@@ -295,7 +690,7 @@ export function validateChartData(chartData: ExtractedChartData): boolean {
   // Reject unsupported chart types
   const SUPPORTED_TYPES = new Set<ChartType>(['bar', 'line', 'pie', 'doughnut', 'radar', 'stackedBar', 'horizontalBar', 'boxplot'])
   if (!SUPPORTED_TYPES.has(chartData.chartType)) {
-    console.warn(`[chart-validator] ❌ Unsupported chart type: '${chartData.chartType}'`)
+    console.warn(`[chart-validator] Unsupported chart type: '${chartData.chartType}'`)
     return false
   }
 
@@ -305,7 +700,7 @@ export function validateChartData(chartData: ExtractedChartData): boolean {
 
   // Must have at least 2 data points to be a meaningful chart
   if (chartData.data.labels.length < 2) {
-    console.warn(`[chart-validator] ❌ Too few data points: ${chartData.data.labels.length}`)
+    console.warn(`[chart-validator] Too few data points: ${chartData.data.labels.length}`)
     return false
   }
 
@@ -315,14 +710,14 @@ export function validateChartData(chartData: ExtractedChartData): boolean {
 
   // Must have at least 1 dataset
   if (chartData.data.datasets.length === 0) {
-    console.warn('[chart-validator] ❌ No datasets')
+    console.warn('[chart-validator] No datasets')
     return false
   }
 
-  // Stacked bar must have at least 2 datasets (stack layers)
+  // Stacked bar must have at least 2 datasets (stack layers); auto-repair to 'bar' if only 1
   if (chartData.chartType === 'stackedBar' && chartData.data.datasets.length < 2) {
-    console.warn('[chart-validator] ❌ stackedBar requires at least 2 datasets (stack layers)')
-    return false
+    console.warn('[chart-validator] stackedBar has only 1 dataset; auto-downgrading to "bar"')
+    chartData.chartType = 'bar'
   }
 
   for (const dataset of chartData.data.datasets) {
@@ -335,19 +730,19 @@ export function validateChartData(chartData: ExtractedChartData): boolean {
       // Each data point must be a BoxPlotDataPoint object
       for (const val of dataset.data) {
         if (!isBoxPlotDataPoint(val)) {
-          console.warn('[chart-validator] ❌ Invalid boxplot data point — must have {min, q1, median, q3, max}')
+          console.warn('[chart-validator] Invalid boxplot data point; must have {min, q1, median, q3, max}')
           return false
         }
         // Validate ordering: min <= q1 <= median <= q3 <= max
         if (val.min > val.q1 || val.q1 > val.median || val.median > val.q3 || val.q3 > val.max) {
-          console.warn(`[chart-validator] ❌ Invalid boxplot ordering: min(${val.min}) <= q1(${val.q1}) <= median(${val.median}) <= q3(${val.q3}) <= max(${val.max})`)
+          console.warn(`[chart-validator] Invalid boxplot ordering: min(${val.min}) <= q1(${val.q1}) <= median(${val.median}) <= q3(${val.q3}) <= max(${val.max})`)
           return false
         }
       }
 
       // Check that data length matches labels length
       if (dataset.data.length !== chartData.data.labels.length) {
-        console.warn(`[chart-validator] ❌ Data length (${dataset.data.length}) doesn't match labels (${chartData.data.labels.length})`)
+        console.warn(`[chart-validator] Data length (${dataset.data.length}) doesn't match labels (${chartData.data.labels.length})`)
         return false
       }
 
@@ -357,27 +752,27 @@ export function validateChartData(chartData: ExtractedChartData): boolean {
     // Standard numeric validations for non-boxplot charts
     // Check that all values are real numbers
     if (dataset.data.some((val) => typeof val !== 'number' || isNaN(val as number))) {
-      console.warn('[chart-validator] ❌ Non-numeric values found')
+      console.warn('[chart-validator] Non-numeric values found')
       return false
     }
 
     // Check that data length matches labels length
     if (dataset.data.length !== chartData.data.labels.length) {
-      console.warn(`[chart-validator] ❌ Data length (${dataset.data.length}) doesn't match labels (${chartData.data.labels.length})`)
+      console.warn(`[chart-validator] Data length (${dataset.data.length}) doesn't match labels (${chartData.data.labels.length})`)
       return false
     }
 
     // Reject all-zero data (empty chart)
     const allZero = (dataset.data as number[]).every((val) => val === 0)
     if (allZero) {
-      console.warn('[chart-validator] ❌ All values are zero — chart would be empty')
+      console.warn('[chart-validator] All values are zero - chart would be empty')
       return false
     }
 
     // Reject if all values are identical (flat line / useless chart)
     const allSame = (dataset.data as number[]).every((val) => val === (dataset.data as number[])[0])
     if (allSame) {
-      console.warn(`[chart-validator] ❌ All values are identical (${(dataset.data as number[])[0]}) — chart would be meaningless`)
+      console.warn(`[chart-validator] All values are identical (${(dataset.data as number[])[0]}) - chart would be meaningless`)
       return false
     }
   }

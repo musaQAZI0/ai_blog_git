@@ -24,6 +24,26 @@ import { Wand2, FileText, ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { normalizeAIGenerationResponse } from '@/lib/ai/normalize'
 
+type GenerationStage = 'extracting' | 'generating' | 'finalizing'
+
+async function fetchWithTimeout(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+
+  try {
+    return await fetch(input, {
+      ...init,
+      signal: controller.signal,
+    })
+  } finally {
+    clearTimeout(timeoutId)
+  }
+}
+
 function CreateArticleContent() {
   const { user, firebaseUser } = useAuth()
   const router = useRouter()
@@ -31,6 +51,7 @@ function CreateArticleContent() {
   const [files, setFiles] = useState<File[]>([])
   const [targetAudience, setTargetAudience] = useState<TargetAudience>('patient')
   const [generating, setGenerating] = useState(false)
+  const [generationStage, setGenerationStage] = useState<GenerationStage | null>(null)
   const [generatedContent, setGeneratedContent] = useState<AIGenerationResponse | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
@@ -55,10 +76,130 @@ function CreateArticleContent() {
     setError(null)
   }
 
+  const runOptimizedGeneration = async () => {
+    setGenerating(true)
+    setGenerationStage(null)
+    setError(null)
+
+    try {
+      const idToken = await firebaseUser?.getIdToken?.()
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+        navigator.userAgent
+      )
+      const extractTimeout = isMobile ? 180000 : 120000
+      const generateTimeout = isMobile ? 420000 : 300000
+      const headers = idToken ? { authorization: `Bearer ${idToken}` } : undefined
+
+      const formData = new FormData()
+      files.forEach((file) => {
+        formData.append('files', file)
+      })
+      formData.append('action', 'extract')
+      formData.append('targetAudience', lockedTargetAudience || targetAudience)
+
+      setGenerationStage('extracting')
+      let extractedPdfContent = ''
+
+      try {
+        const extractResponse = await fetchWithTimeout(
+          '/api/ai/generate',
+          {
+            method: 'POST',
+            body: formData,
+            headers,
+          },
+          extractTimeout
+        )
+        const extractPayload = await extractResponse.json()
+
+        if (!extractResponse.ok) {
+          throw new Error(extractPayload.error || 'Nie udalo sie przetworzyc pliku PDF')
+        }
+
+        extractedPdfContent = String(extractPayload?.data?.pdfContent || '')
+      } catch (extractErr) {
+        if (extractErr instanceof Error && extractErr.name === 'AbortError') {
+          throw new Error(
+            isMobile
+              ? 'Przetwarzanie PDF trwa zbyt dlugo. Sprobuj polaczyc sie z WiFi lub uzyc krotszego pliku.'
+              : 'Przetwarzanie PDF trwa zbyt dlugo. Sprobuj z mniejszym plikiem PDF.'
+          )
+        }
+        throw extractErr
+      }
+
+      setGenerationStage('generating')
+
+      try {
+        const response = await fetchWithTimeout(
+          '/api/ai/generate',
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              ...(headers || {}),
+            },
+            body: JSON.stringify({
+              action: 'generate',
+              pdfContent: extractedPdfContent,
+              targetAudience: lockedTargetAudience || targetAudience,
+              provider: 'gemini',
+              generateImage: true,
+            }),
+          },
+          generateTimeout
+        )
+        const data = await response.json()
+
+        if (!response.ok) {
+          throw new Error(data.error || 'Blad generowania artykulu')
+        }
+
+        setGenerationStage('finalizing')
+
+        const sanitized = (() => {
+          const payload = normalizeAIGenerationResponse(data.data as AIGenerationResponse)
+          const seoTitle = (payload.seoMeta?.title || payload.title || '').slice(0, 60)
+          const seoDescription = (payload.seoMeta?.description || payload.excerpt || '').slice(0, 160)
+          return {
+            ...payload,
+            seoMeta: {
+              ...payload.seoMeta,
+              title: seoTitle,
+              description: seoDescription,
+            },
+          } as AIGenerationResponse
+        })()
+
+        setGeneratedContent(sanitized)
+        setStep('edit')
+      } catch (generateErr) {
+        if (generateErr instanceof Error && generateErr.name === 'AbortError') {
+          const minutes = Math.floor(generateTimeout / 60000)
+          throw new Error(
+            `Generowanie trwało zbyt długo (> ${minutes} min). System wyłączył obrazy i uruchamia fallback modeli, ale ten dokument nadal jest zbyt ciężki.`
+          )
+        }
+        throw generateErr
+      }
+    } catch (err) {
+      console.error('[create-article] Generation error:', err)
+      setError(err instanceof Error ? err.message : 'Wystapil blad')
+    } finally {
+      setGenerationStage(null)
+      setGenerating(false)
+    }
+  }
+
   const handleGenerate = async () => {
     if (files.length === 0) {
       setError('Wybierz co najmniej jeden plik PDF')
       return
+    }
+
+    const useOptimizedFlow = typeof window !== 'undefined'
+    if (useOptimizedFlow) {
+      return runOptimizedGeneration()
     }
 
     setGenerating(true)
@@ -184,6 +325,14 @@ function CreateArticleContent() {
         </Alert>
       )}
 
+      {generating && generationStage && (
+        <div className="mb-6 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+          {generationStage === 'extracting' && 'Etap 1 z 3: wyodrebnianie tekstu z PDF.'}
+          {generationStage === 'generating' && 'Etap 2 z 3: generowanie artykulu z retry i fallbackiem modeli.'}
+          {generationStage === 'finalizing' && 'Etap 3 z 3: finalizowanie tresci i przygotowanie edytora.'}
+        </div>
+      )}
+
       {step === 'upload' && (
         <Card className="overflow-hidden border-border bg-card/85 shadow-[0_20px_44px_-30px_rgba(0,0,0,0.2)]">
           <CardHeader className="border-b border-border/70 pb-5">
@@ -237,7 +386,11 @@ function CreateArticleContent() {
                 {generating ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generowanie...
+                    {generationStage === 'extracting'
+                      ? 'Wyodrebnianie PDF...'
+                      : generationStage === 'generating'
+                        ? 'Generowanie artykulu...'
+                        : 'Finalizowanie...'}
                   </>
                 ) : (
                   <>

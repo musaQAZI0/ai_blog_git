@@ -2,7 +2,6 @@ import OpenAI from 'openai'
 import { AIGenerationResponse, TargetAudience } from '@/types'
 import { generateAndUploadImagen, type ImagenPurpose } from '@/lib/ai/gemini-imagen'
 import { findCoverImageUrl } from '@/lib/images/cover-search'
-import { extractGenerateAndUploadCharts } from '@/lib/charts/chart-uploader'
 
 function getOpenAIClient() {
   const apiKey = process.env.OPENAI_API_KEY
@@ -64,7 +63,7 @@ export async function generateArticleWithOpenAI(
 
   const figureInstructions =
     targetAudience === 'professional'
-      ? `- Include up to 3 figures. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize REAL DATA from the PDF source document.
+      ? `- Include MAXIMUM 2 figures. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize REAL DATA from the PDF source document.
 - CRITICAL for charts/graphs: Include data labels and text ONLY if they come from the source document. Use EXACT values from the PDF - do NOT make up or estimate numbers.
 - Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg", "Cooke K6", "Barrett Universal II").
 - Focus on DATA VISUALIZATION (charts showing statistics, results, comparisons) rather than anatomical illustrations.`
@@ -257,7 +256,7 @@ Required JSON format:
 
   const canUseGemini = Boolean(process.env.GEMINI_API_KEY)
 
-  if (canUseGemini) {
+  if (canUseGemini && generateImage) {
     try {
       const coverPrompt: string =
         articleData.coverImagePrompt ||
@@ -273,33 +272,7 @@ Required JSON format:
       console.error('Gemini cover image generation failed:', error)
     }
 
-    // For professional articles: Use Chart.js to generate accurate data charts
-    // For patient articles: Use AI image generation for clean anatomical illustrations
-    if (targetAudience === 'professional') {
-      try {
-        console.log('[openai] Extracting and generating charts for professional article...')
-        const generatedCharts = await extractGenerateAndUploadCharts(pdfContent, 2)
-
-        if (generatedCharts.length > 0) {
-          console.log(`[openai] Successfully generated ${generatedCharts.length} charts`)
-
-          // Inject generated charts into content
-          for (const chart of generatedCharts) {
-            content = injectFigure({
-              content,
-              placeholder: chart.placeholder,
-              url: chart.url,
-              alt: chart.alt,
-              caption: chart.caption,
-            })
-          }
-        } else {
-          console.log('[openai] No chart data found in PDF, skipping chart generation')
-        }
-      } catch (error) {
-        console.error('[openai] Chart generation failed:', error)
-      }
-    } else {
+    if (targetAudience === 'patient') {
       // Patient articles: use AI image generation for anatomical illustrations
       const limitedFigures = figures.slice(0, 3)
 
@@ -355,7 +328,7 @@ Required JSON format:
   }
 
   // Final fallback: always provide a cover image URL so cards show a thumbnail even if generation/upload fails.
-  if (!generatedImageUrl) {
+  if (generateImage && !generatedImageUrl) {
     generatedImageUrl = await findCoverImageUrl({
       title: articleData.title || 'medical',
       category: articleData.suggestedCategory,

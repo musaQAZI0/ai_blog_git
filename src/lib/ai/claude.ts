@@ -17,28 +17,34 @@ Every article MUST be complete — never stop mid-sentence or mid-paragraph.
 You MUST fill in ALL JSON fields completely. Empty arrays or generic placeholder values are NOT acceptable.`
 
 const PROFESSIONAL_SYSTEM_PROMPT = `You are the Editor-in-Chief of a high-impact scientific journal specializing in ophthalmology.
-Your task is to extract the **pure essence** of the provided article for a rapid-fire briefing designated for busy ophthalmologists and optometrists.
+Your task is to create a detailed professional review for ophthalmologists and optometrists.
 
 CRITICAL: You must return a complete JSON object with fields: title, content, excerpt, seoMeta, suggestedTags, suggestedCategory, coverImagePrompt, figures.
 
 **Writing Style for the "content" field:**
 1.  **Zero Fluff:** Eliminate all introductory phrases, transitional sentences, and meta-commentary (e.g., avoid "The authors conclude that...", "It is important to note..."). Go straight to the facts.
 2.  **Maximum Density:** Use an economy of words. Prioritize data, p-values, specific anatomical structures, and exact drug dosages over descriptive prose.
-3.  **Length:** Do not expand the content. If the source is short, the output must be short. Quality is measured by information density, not word count.
+3.  **Length:** Aim for 850-1000 words when the source document contains enough substance. Keep the writing dense and evidence-based; expand by covering methodology, endpoints, subgroup findings, limitations, and clinical implications rather than adding filler.
 4.  **Language:** Write in **ultra-precise, academic Polish**. Use professional terminology exclusively.
 
 **Content Structure (these are markdown headings INSIDE the "content" field, NOT JSON keys):**
 
 Under ## Streszczenie redakcyjne:
-Provide exactly 1-2 complex sentences summarizing the primary discovery or argument. No generalizations.
+Provide 2-3 concise paragraphs summarizing the primary discovery, study context, and most important numerical outcomes. No generalizations.
 
-Under ## Kluczowe informacje:
-Use a bulleted list to present the hard evidence.
+Under ## Metodyka i populacja:
+Describe the study design, population, inclusion/exclusion context, interventions, measurements, and endpoints that are explicitly present in the document.
+
+Under ## Kluczowe wyniki:
+Use paragraphs and a short bulleted list to present the hard evidence.
 * Focus strictly on statistical outcomes, specific clinical protocols, or concrete physiological changes.
 * Ignore general background information unless critical for context.
 
-Under ## Znaczenie kliniczne:
-In 1-2 sentences, state the direct actionable application for clinical practice (e.g., "Change first-line therapy to X", "Monitor Y parameter"). If there is no direct application, state "Research relevance only."
+Under ## Interpretacja kliniczna:
+Explain how the findings should be interpreted in professional ophthalmology practice, including where the evidence is strong and where it is only hypothesis-generating.
+
+Under ## Ograniczenia:
+State the methodological limitations, missing data, generalizability issues, or uncertainties explicitly supported by the document.
 
 Ground all claims strictly in the provided document. Do not hallucinate data.`
 
@@ -67,17 +73,24 @@ export async function generateArticleWithClaude(
       ? `AudienceInstructions (professional):
 - In "content" use EXACT section headings in this order:
   ## Streszczenie redakcyjne
-  ## Kluczowe informacje
-  ## Znaczenie kliniczne
+  ## Metodyka i populacja
+  ## Kluczowe wyniki
+  ## Interpretacja kliniczna
+  ## Ograniczenia
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
+- Write a detailed professional review. Use 850-1000 words for the "content" field when the document contains enough information.
 `
       : `AudienceInstructions (patient):
 - Keep language simple and reassuring.
 - Explain any unavoidable medical terms briefly.
 `
 
+  const targetWordCount = targetAudience === 'professional'
+    ? '~900 words for the main content (aim for 850-1000)'
+    : '~400 words for the main content (aim for 380-450)'
+
   const userPrompt = `Based on the following medical document content, create a blog article/review in Polish.
-Target word count: ~400 words for the main content (aim for 380-450).
+Target word count: ${targetWordCount}.
 IMPORTANT: word count refers ONLY to the "content" field (the markdown article body), excluding title, excerpt, SEO meta, tags/categories, and excluding URLs/placeholders.
 
 Document content: ${pdfContent}
@@ -125,7 +138,7 @@ Required JSON format:
 
   const message = await anthropic.messages.create({
     model: 'claude-sonnet-4-20250514',
-    max_tokens: 4000,
+    max_tokens: targetAudience === 'professional' ? 6500 : 4000,
     system: systemPrompt,
     messages: [
       { role: 'user', content: userPrompt },

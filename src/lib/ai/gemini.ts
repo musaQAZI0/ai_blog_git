@@ -157,28 +157,34 @@ Every article MUST be complete — never stop mid-sentence or mid-paragraph.
 You MUST fill in ALL JSON fields completely. Empty arrays or generic placeholder values are NOT acceptable.`
 
 const PROFESSIONAL_SYSTEM_PROMPT = `You are the Editor-in-Chief of a high-impact scientific journal specializing in ophthalmology.
-Your task is to extract the **pure essence** of the provided article for a rapid-fire briefing designated for busy ophthalmologists and optometrists.
+Your task is to create a detailed professional review for ophthalmologists and optometrists.
 
 CRITICAL: You must return a complete JSON object with fields: title, content, excerpt, seoMeta, suggestedTags, suggestedCategory, coverImagePrompt, figures.
 
 **Writing Style for the "content" field:**
 1.  **Zero Fluff:** Eliminate all introductory phrases, transitional sentences, and meta-commentary (e.g., avoid "The authors conclude that...", "It is important to note..."). Go straight to the facts.
 2.  **Maximum Density:** Use an economy of words. Prioritize data, p-values, specific anatomical structures, and exact drug dosages over descriptive prose.
-3.  **Length:** Do not expand the content. If the source is short, the output must be short. Quality is measured by information density, not word count.
+3.  **Length:** Aim for 850-1000 words when the source document contains enough substance. Keep the writing dense and evidence-based; expand by covering methodology, endpoints, subgroup findings, limitations, and clinical implications rather than adding filler.
 4.  **Language:** Write in **ultra-precise, academic Polish**. Use professional terminology exclusively.
 
 **Content Structure (these are markdown headings INSIDE the "content" field, NOT JSON keys):**
 
 Under ## Streszczenie redakcyjne:
-Provide exactly 1-2 complex sentences summarizing the primary discovery or argument. No generalizations.
+Provide 2-3 concise paragraphs summarizing the primary discovery, study context, and most important numerical outcomes. No generalizations.
 
-Under ## Kluczowe informacje:
-Use a bulleted list to present the hard evidence.
+Under ## Metodyka i populacja:
+Describe the study design, population, inclusion/exclusion context, interventions, measurements, and endpoints that are explicitly present in the document.
+
+Under ## Kluczowe wyniki:
+Use paragraphs and a short bulleted list to present the hard evidence.
 * Focus strictly on statistical outcomes, specific clinical protocols, or concrete physiological changes.
 * Ignore general background information unless critical for context.
 
-Under ## Znaczenie kliniczne:
-In 1-2 sentences, state the direct actionable application for clinical practice (e.g., "Change first-line therapy to X", "Monitor Y parameter"). If there is no direct application, state "Research relevance only."
+Under ## Interpretacja kliniczna:
+Explain how the findings should be interpreted in professional ophthalmology practice, including where the evidence is strong and where it is only hypothesis-generating.
+
+Under ## Ograniczenia:
+State the methodological limitations, missing data, generalizability issues, or uncertainties explicitly supported by the document.
 
 Ground all claims strictly in the provided document. Do not hallucinate data.`
 
@@ -220,6 +226,15 @@ function extractPlainText(text: string): string {
   if (!cleaned) return ''
   if ((cleaned.startsWith('{') && cleaned.endsWith('}')) || cleaned.startsWith('[')) return ''
   return cleaned
+}
+
+function countWords(text: string): number {
+  return text
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/[#*_>`\-[\](){}]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length
 }
 
 function deriveTitleFromContent(content: string): string {
@@ -293,9 +308,12 @@ CRITICAL: Write your article content to reference these specific charts. Place e
       ? `AudienceInstructions (professional):
 - In "content" use EXACT section headings in this order:
   ## Streszczenie redakcyjne
-  ## Kluczowe informacje
-  ## Znaczenie kliniczne
+  ## Metodyka i populacja
+  ## Kluczowe wyniki
+  ## Interpretacja kliniczna
+  ## Ograniczenia
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
+- Write a detailed professional review. Use 850-1000 words for the "content" field when the document contains enough information.
 - For "suggestedCategory", pick the BEST match from: ${validCategories.join(', ')}.
 `
       : `AudienceInstructions (patient):
@@ -306,9 +324,15 @@ CRITICAL: Write your article content to reference these specific charts. Place e
 `
 
   const normalizedPdfContent = normalizePdfContent(pdfContent)
+  const targetWordCount = targetAudience === 'professional'
+    ? '~900 words for the main content (aim for 850-1000)'
+    : '~400 words for the main content (aim for 380-450)'
+  const contentWordCountDescription = targetAudience === 'professional'
+    ? '850-1000 words'
+    : '380-450 words'
 
   const userPrompt = `Based on the following medical document content, create a blog article/review in Polish.
-Target word count: ~400 words for the main content (aim for 380-450).
+Target word count: ${targetWordCount}.
 IMPORTANT: word count refers ONLY to the "content" field (the markdown article body), excluding title, excerpt, SEO meta, tags/categories, and excluding URLs/placeholders.
 
 Document content: ${normalizedPdfContent}${chartContext}
@@ -337,7 +361,7 @@ ${audienceInstructions}
 Required JSON format:
 {
   "title": "Descriptive article title in Polish",
-  "content": "Full COMPLETE article in markdown (380-450 words, with ## headings, bullet points, and figure placeholders like ${getFigurePlaceholderUrl(1)})",
+  "content": "Full COMPLETE article in markdown (${contentWordCountDescription}, with ## headings, bullet points, and figure placeholders like ${getFigurePlaceholderUrl(1)})",
   "excerpt": "2-3 sentence summary, max 160 characters",
   "seoMeta": {
     "title": "Short SEO title, max 60 chars",
@@ -465,6 +489,42 @@ Required JSON format:
 
   if (!content || content.trim().length < 80) {
     content = `# ${title}\n\nNie udało sie wygenerować pełnej treści. Spróbuj ponownie z innym dokumentem.`
+  }
+
+  if (targetAudience === 'professional') {
+    const currentWordCount = countWords(content)
+    if (currentWordCount > 0 && currentWordCount < 800) {
+      console.log(`[gemini] Professional article below target length (${currentWordCount} words); expanding to 850-1000 words`)
+      try {
+        const expansion = await generateContentWithFallback({
+          systemPrompt,
+          prefer,
+          prompt:
+            `Expand the following Polish professional ophthalmology article to 850-1000 words while preserving medical accuracy.\n` +
+            `Return ONLY the improved markdown content, not JSON.\n` +
+            `Rules:\n` +
+            `- Use only information supported by the source document below.\n` +
+            `- Do not fabricate studies, citations, values, or clinical claims.\n` +
+            `- Keep any figure placeholder URLs exactly as-is.\n` +
+            `- Keep the professional structure: Streszczenie redakcyjne, Metodyka i populacja, Kluczowe wyniki, Interpretacja kliniczna, Ograniczenia, Zrodlo.\n` +
+            `- Expand with methodology, endpoints, subgroup findings, limitations, and clinical implications.\n\n` +
+            `Source document:\n${normalizedPdfContent}${chartContext}\n\n` +
+            `Article to expand:\n${content}`,
+          generationConfig: {
+            temperature: 0.4,
+            maxOutputTokens: 5000,
+          },
+        })
+
+        const expandedContent = expansion.result.response.text().trim()
+        if (countWords(expandedContent) > currentWordCount) {
+          content = expandedContent
+          console.log(`[gemini] Professional article expanded to ${countWords(content)} words`)
+        }
+      } catch (error) {
+        console.warn('[gemini] Professional article expansion failed:', error)
+      }
+    }
   }
 
   if (!title || title === 'Untitled Article') {
@@ -695,16 +755,20 @@ export async function improveContentWithGemini(
 
   const prefer: 'pro' | 'flash' =
     (process.env.GEMINI_TEXT_MODEL || '').toLowerCase().includes('flash') ? 'flash' : 'pro'
+  const lengthInstruction = targetAudience === 'professional'
+    ? 'For professional content, preserve or expand the article to 850-1000 words using only supported clinical detail. '
+    : ''
 
   const { result } = await generateContentWithFallback({
     systemPrompt,
     prefer,
     prompt:
       `Improve and enhance the following Polish article content while maintaining the same message and information. ` +
+      lengthInstruction +
       `Make it more engaging and well-structured. Return only the improved markdown content:\n\n${content}`,
     generationConfig: {
       temperature: 0.4,
-      maxOutputTokens: 2048,
+      maxOutputTokens: targetAudience === 'professional' ? 5000 : 2048,
     },
   })
 

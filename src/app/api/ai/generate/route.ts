@@ -14,8 +14,69 @@ function getClientIp(request: NextRequest): string {
   return request.headers.get('x-real-ip') || 'unknown'
 }
 
+function looksLikeTableRow(line: string): boolean {
+  const trimmed = line.trim()
+  if (!trimmed) return false
+  const numericMatches = trimmed.match(/[-+]?\d+(?:[.,]\d+)?%?/g) || []
+  const hasFormulaOrStatsTerm = /\b(SD|RMSAE|MAE|MedAE|PE|Cooke|Kane|Barrett|EVO|Hill|Hoffer|Pearl|SRK|Haigis|Holladay|Olsen|Formula|Formu)/i.test(trimmed)
+  return numericMatches.length >= 3 || (numericMatches.length >= 2 && hasFormulaOrStatsTerm)
+}
+
+function looksLikeTableCaption(line: string, nextLine: string): boolean {
+  const trimmed = line.trim()
+  if (!trimmed) return false
+  if (/^\[TABLE:/i.test(trimmed)) return false
+  if (/^(table|tabela)\s*\d+/i.test(trimmed)) return true
+  if (/^(table|tabela)\s*[:.-]/i.test(trimmed)) return true
+  return looksLikeTableRow(nextLine) && /\b(whole|overall|primary|subgroup|short|long|IOL|results|formula|formu|prediction|refractive|eyes|oczu|wynik|tabela)\b/i.test(trimmed)
+}
+
+function wrapDetectedTables(text: string): string {
+  const lines = (text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')
+  const output: string[] = []
+  let inTable = false
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    const trimmed = line.trim()
+    const nextLine = lines[i + 1] || ''
+
+    if (looksLikeTableCaption(trimmed, nextLine)) {
+      if (inTable) {
+        output.push('[END TABLE]')
+      }
+      output.push(`[TABLE: ${trimmed}]`)
+      inTable = true
+      continue
+    }
+
+    if (inTable && !trimmed) {
+      const upcoming = lines.slice(i + 1, i + 4).some((candidate) => looksLikeTableRow(candidate))
+      if (!upcoming) {
+        output.push('[END TABLE]')
+        inTable = false
+      }
+      output.push('')
+      continue
+    }
+
+    output.push(line)
+  }
+
+  if (inTable) {
+    output.push('[END TABLE]')
+  }
+
+  return output.join('\n')
+}
+
 function normalizeExtractedText(text: string): string {
-  return (text || '').replace(/\s+/g, ' ').trim().slice(0, 20000)
+  const withTables = wrapDetectedTables(text || '')
+  return withTables
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{4,}/g, '\n\n\n')
+    .trim()
+    .slice(0, 45000)
 }
 
 function parseProvider(value: string | null | undefined): AIProvider {
@@ -133,6 +194,7 @@ export async function POST(request: NextRequest) {
     }
 
     console.log(`[api/generate] Extracted ${pdfContent.length} characters from PDF`)
+    console.log(`[api/generate] Table tags prepared for AI: ${(pdfContent.match(/\[TABLE:/g) || []).length}`)
     console.log(`[api/generate] Starting article generation with ${provider} for ${targetAudience} audience...`)
 
     const generatedContent = await generateArticle({

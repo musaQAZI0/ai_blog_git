@@ -121,10 +121,18 @@ export interface ChartData {
     borderColor?: string | string[]
     borderWidth?: number
   }[]
+  axisMin?: number
+  axisMax?: number
+  significance?: SignificanceStatus[]
+  significanceSource?: string
+  xAxisLabel?: string
+  yAxisLabel?: string
+  sourceTable?: string
 }
 
 // All supported chart types
 export type ChartType = 'bar' | 'line' | 'pie' | 'doughnut' | 'radar' | 'stackedBar' | 'horizontalBar' | 'boxplot'
+export type SignificanceStatus = 'best' | 'sig_worse' | 'ns'
 
 export interface ChartOptions {
   title?: string
@@ -151,6 +159,64 @@ const PROFESSIONAL_COLORS = [
   { bg: 'rgba(168, 85, 247, 0.75)', border: 'rgba(168, 85, 247, 1)' },      // purple-500
 ]
 
+const SIG_COLORS: Record<SignificanceStatus, { bg: string; border: string; label: string }> = {
+  best: { bg: '#3B6D11', border: '#2C520C', label: 'Najlepsza (p<0,05)' },
+  sig_worse: { bg: '#185FA5', border: '#12477C', label: 'Istotnie gorsza (p<0,05)' },
+  ns: { bg: '#B4B2A9', border: '#8F8C82', label: 'Brak istotnej roznicy' },
+}
+
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function getSignificanceColors(significance: SignificanceStatus[] | undefined, length: number): {
+  backgroundColor: string[]
+  borderColor: string[]
+} | null {
+  if (!Array.isArray(significance) || significance.length !== length) return null
+
+  return {
+    backgroundColor: significance.map((status) => SIG_COLORS[status]?.bg || SIG_COLORS.ns.bg),
+    borderColor: significance.map((status) => SIG_COLORS[status]?.border || SIG_COLORS.ns.border),
+  }
+}
+
+function createSignificanceLegendPlugin(chartData: ChartData) {
+  if (!Array.isArray(chartData.significance) || chartData.significance.length === 0) return null
+
+  return {
+    id: 'significanceLegend',
+    afterDraw(chart: any) {
+      const ctx = chart.ctx
+      const items: SignificanceStatus[] = ['best', 'sig_worse', 'ns']
+      const startX = chart.chartArea.left
+      let x = startX
+      const y = chart.options.plugins?.title?.display ? 58 : 30
+
+      ctx.save()
+      ctx.font = "11px 'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif"
+      ctx.textBaseline = 'middle'
+
+      for (const status of items) {
+        const item = SIG_COLORS[status]
+        ctx.fillStyle = item.bg
+        ctx.fillRect(x, y - 5, 10, 10)
+        ctx.fillStyle = '#4b5563'
+        ctx.fillText(item.label, x + 15, y)
+        x += ctx.measureText(item.label).width + 36
+      }
+
+      const source = chartData.significanceSource && chartData.significanceSource !== 'not_reported'
+        ? `Istotnosc statystyczna: ${chartData.significanceSource}`
+        : 'Porownania parami niedostepne w dokumencie'
+      ctx.font = "10px 'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif"
+      ctx.fillStyle = '#6b7280'
+      ctx.fillText(source, startX, y + 18)
+      ctx.restore()
+    },
+  }
+}
+
 export async function generateChartImage(
   chartData: ChartData,
   options: ChartOptions = {}
@@ -166,6 +232,7 @@ export async function generateChartImage(
   const isStackedBar = type === 'stackedBar'
   const isHorizontalBar = type === 'horizontalBar'
   const isBoxPlot = type === 'boxplot'
+  const isBarStyle = type === 'bar' || type === 'horizontalBar' || type === 'stackedBar'
   const chartJsType = isStackedBar || isHorizontalBar ? 'bar' : isBoxPlot ? 'boxplot' : type
 
   // DEBUG: Log chart type and verify controller registration
@@ -199,16 +266,19 @@ export async function generateChartImage(
         const colors = isPieStyle && dataset.data.length > 1
           ? dataset.data.map((_, i) => PROFESSIONAL_COLORS[i % PROFESSIONAL_COLORS.length])
           : [PROFESSIONAL_COLORS[datasetIndex % PROFESSIONAL_COLORS.length]]
+        const sigColors = isBarStyle && datasetIndex === 0
+          ? getSignificanceColors(chartData.significance, dataset.data.length)
+          : null
 
         return {
           label: dataset.label,
           data: dataset.data as any,
-          backgroundColor: dataset.backgroundColor || (isPieStyle
+          backgroundColor: dataset.backgroundColor || sigColors?.backgroundColor || (isPieStyle
             ? colors.map(c => c.bg)
             : isBoxPlot
               ? PROFESSIONAL_COLORS[datasetIndex % PROFESSIONAL_COLORS.length].bg
               : colors[0].bg),
-          borderColor: dataset.borderColor || (isPieStyle
+          borderColor: dataset.borderColor || sigColors?.borderColor || (isPieStyle
             ? colors.map(c => c.border)
             : isBoxPlot
               ? PROFESSIONAL_COLORS[datasetIndex % PROFESSIONAL_COLORS.length].border
@@ -313,13 +383,30 @@ export async function generateChartImage(
           padding: 12,
           cornerRadius: 6,
           displayColors: true,
+          callbacks: {
+            label: (context: any) => {
+              const value = isHorizontalBar ? context.parsed?.x : context.parsed?.y
+              const baseLabel = `${context.dataset.label}: ${isFiniteNumber(value) ? value.toFixed(2) : context.formattedValue}`
+              const sig = chartData.significance?.[context.dataIndex]
+              const sigLabel = sig === 'best'
+                ? ' - najlepsza (p<0,05)'
+                : sig === 'sig_worse'
+                  ? ' - p<0,05 vs najlepsza'
+                  : sig === 'ns'
+                    ? ' - brak istotnej roznicy'
+                    : ''
+              return `${baseLabel}${sigLabel}`
+            },
+          },
         },
       },
       // Scales for cartesian charts (bar, line, stackedBar, horizontalBar, boxplot)
       ...(!isPieStyle && type !== 'radar' && {
         scales: {
           y: {
-            beginAtZero: true,
+            beginAtZero: !isFiniteNumber(chartData.axisMin) && !isHorizontalBar,
+            ...(isFiniteNumber(chartData.axisMin) && !isHorizontalBar && { min: chartData.axisMin }),
+            ...(isFiniteNumber(chartData.axisMax) && !isHorizontalBar && { max: chartData.axisMax }),
             // Stacked bar: stack the Y axis
             ...(isStackedBar && { stacked: true }),
             grid: {
@@ -335,10 +422,19 @@ export async function generateChartImage(
               padding: 8,
             },
             title: {
-              display: false,
+              display: Boolean(chartData.yAxisLabel && !isHorizontalBar),
+              text: chartData.yAxisLabel,
+              color: '#6b7280',
+              font: {
+                size: 11,
+                family: "'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif",
+              },
             },
           },
           x: {
+            beginAtZero: !isFiniteNumber(chartData.axisMin) && isHorizontalBar,
+            ...(isFiniteNumber(chartData.axisMin) && isHorizontalBar && { min: chartData.axisMin }),
+            ...(isFiniteNumber(chartData.axisMax) && isHorizontalBar && { max: chartData.axisMax }),
             // Stacked bar: stack the X axis
             ...(isStackedBar && { stacked: true }),
             grid: {
@@ -354,6 +450,15 @@ export async function generateChartImage(
               padding: 8,
               maxRotation: isHorizontalBar ? 0 : 45,
               minRotation: 0,
+            },
+            title: {
+              display: Boolean(chartData.xAxisLabel && isHorizontalBar),
+              text: chartData.xAxisLabel,
+              color: '#6b7280',
+              font: {
+                size: 11,
+                family: "'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif",
+              },
             },
           },
         },
@@ -400,7 +505,7 @@ export async function generateChartImage(
       // Layout padding for better spacing
       layout: {
         padding: {
-          top: 20,
+          top: Array.isArray(chartData.significance) && chartData.significance.length > 0 ? 58 : 20,
           right: isHorizontalBar ? 40 : 30, // Extra right padding for horizontal labels
           bottom: 20,
           left: isHorizontalBar ? 20 : 30, // Less left padding for horizontal bars
@@ -415,6 +520,14 @@ export async function generateChartImage(
       configuration.plugins = []
     }
     configuration.plugins.push(radarAllSpokeTicksPlugin)
+  }
+
+  const significanceLegendPlugin = createSignificanceLegendPlugin(chartData)
+  if (significanceLegendPlugin) {
+    if (!configuration.plugins) {
+      configuration.plugins = []
+    }
+    configuration.plugins.push(significanceLegendPlugin)
   }
 
   const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration)

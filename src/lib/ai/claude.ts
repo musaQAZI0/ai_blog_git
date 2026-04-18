@@ -46,7 +46,22 @@ Explain how the findings should be interpreted in professional ophthalmology pra
 Under ## Ograniczenia:
 State the methodological limitations, missing data, generalizability issues, or uncertainties explicitly supported by the document.
 
-Ground all claims strictly in the provided document. Do not hallucinate data.`
+Ground all claims strictly in the provided document. Do not hallucinate data.
+
+NUMERIC ACCURACY - MANDATORY:
+6. Before writing any numeric value (SD, RMSAE, p-value, percentage, mean, n), trace it to a specific table or figure in the document. If you cannot confirm a number exists verbatim in a table or figure, omit it entirely rather than approximate. Never report a value for one formula that belongs to another formula in the same table.
+
+NON-SIGNIFICANT COMPARISONS - MANDATORY:
+7. For every statistically significant finding you report, explicitly state which comparisons did NOT reach significance (p>=0.05). Both significant and non-significant results are clinically actionable. Example format: "Formula X wykazala istotnie nizsze SD niz A, B i C (p<0,05), nie roznic sie istotnie od D, E i F."
+
+SUBGROUP REPORTING - MANDATORY:
+8. For each subgroup (oczy dlugie, oczy krotkie, typ IOL), report BOTH the primary endpoint winner AND any notable secondary endpoint findings (interval analysis, median AE) even when a different formula leads the secondary result. Do not report only one formula per subgroup.
+
+ENDPOINT LABELING - MANDATORY:
+9. Always label whether a finding comes from a primary endpoint (SD, RMSAE) or a secondary endpoint (odsetek w przedzialach, mediana AE). Use explicit labels such as "(pierwszorzedowy punkt koncowy)" or "(drugorzedowy punkt koncowy)" on first mention within each section.
+
+ZEROED-MEAN ANALYSIS:
+10. If the paper reports an analysis after adjusting mean PE to zero (per Hoffer et al. protocol), include this as a separate sub-paragraph within "Kluczowe wyniki" under the heading "Analiza po wyzerowaniu sredniego bledu predykcji". This is a primary analytical result, not a limitation.`
 
 export async function generateArticleWithClaude(
   pdfContent: string,
@@ -79,6 +94,10 @@ export async function generateArticleWithClaude(
   ## Ograniczenia
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
 - Write a detailed professional review. Use 850-1000 words for the "content" field when the document contains enough information.
+- For each subgroup analyzed (oczy dlugie, oczy krotkie, typ IOL), report BOTH the primary endpoint result and any secondary endpoint finding, even if led by different formulas.
+- When reporting the primary SD comparison for the whole dataset, name formulas with no statistically significant difference from the best formula.
+- If the paper reports mean PE adjusted to zero (Hoffer et al. protocol), add "### Analiza po wyzerowaniu sredniego bledu predykcji" inside "## Kluczowe wyniki" and report exact values.
+- For charts, use the provided chart placeholder URL or a token in the format {{CHART:dataset_name:chart_type}}.
 `
       : `AudienceInstructions (patient):
 - Keep language simple and reassuring.

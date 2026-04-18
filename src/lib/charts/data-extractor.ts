@@ -1,11 +1,19 @@
 import OpenAI from 'openai'
-import { ChartData, ChartType, BoxPlotDataPoint } from './chart-generator'
+import { ChartData, ChartType, BoxPlotDataPoint, SignificanceStatus } from './chart-generator'
 
 export interface ExtractedChartData {
+  id?: string
   chartTitle: string
   chartType: ChartType
   data: ChartData
   sourceDescription: string
+  axis_min?: number
+  axis_max?: number
+  significance?: SignificanceStatus[]
+  significance_source?: string
+  x_axis_label?: string
+  y_axis_label?: string
+  source_table?: string
 }
 
 const BAR_LIKE_CHART_TYPES = new Set<ChartType>(['bar', 'horizontalBar', 'stackedBar'])
@@ -25,14 +33,41 @@ const CHART_EXTRACTION_RESPONSE_FORMAT = {
         items: {
           type: 'object',
           additionalProperties: false,
-          required: ['chartTitle', 'chartType', 'sourceDescription', 'data'],
+          required: [
+            'id',
+            'chartTitle',
+            'chartType',
+            'sourceDescription',
+            'axis_min',
+            'axis_max',
+            'significance',
+            'significance_source',
+            'x_axis_label',
+            'y_axis_label',
+            'source_table',
+            'data',
+          ],
           properties: {
+            id: { type: 'string' },
             chartTitle: { type: 'string' },
             chartType: {
               type: 'string',
               enum: ['bar', 'line', 'pie', 'doughnut', 'radar', 'stackedBar', 'horizontalBar', 'boxplot'],
             },
             sourceDescription: { type: 'string' },
+            axis_min: { type: 'number' },
+            axis_max: { type: 'number' },
+            significance: {
+              type: 'array',
+              items: {
+                type: 'string',
+                enum: ['best', 'sig_worse', 'ns'],
+              },
+            },
+            significance_source: { type: 'string' },
+            x_axis_label: { type: 'string' },
+            y_axis_label: { type: 'string' },
+            source_table: { type: 'string' },
             data: {
               type: 'object',
               additionalProperties: false,
@@ -132,9 +167,11 @@ function pickAlternativeChartType(
   blockBarLike: boolean
 ): ChartType {
   const candidates: ChartType[] = ['line', 'doughnut', 'radar', 'pie', 'boxplot', 'bar']
+  const avoidRadar = hasCumulativeIntervalData(chart)
   return (
     candidates.find((candidate) =>
       !blockedTypes.has(candidate) &&
+      (!avoidRadar || candidate !== 'radar') &&
       (!blockBarLike || !isBarLikeChartType(candidate)) &&
       isCompatibleChartType(chart, candidate)
     ) || chart.chartType
@@ -250,7 +287,129 @@ export function enforceChartTypeVariety(charts: ExtractedChartData[]): Extracted
 }
 
 function getChartsFromResponse(parsedResponse: any): ExtractedChartData[] {
-  return Array.isArray(parsedResponse) ? parsedResponse : (parsedResponse.charts || [])
+  const rawCharts = Array.isArray(parsedResponse) ? parsedResponse : (parsedResponse.charts || [])
+  return rawCharts.map(normalizeExtractedChart).filter(Boolean) as ExtractedChartData[]
+}
+
+function normalizeSignificance(value: unknown, expectedLength: number, chartType: ChartType): SignificanceStatus[] {
+  if (!isBarLikeChartType(chartType)) return []
+  const raw = Array.isArray(value) ? value : []
+  const normalized = raw
+    .slice(0, expectedLength)
+    .map((status) => (status === 'best' || status === 'sig_worse' || status === 'ns') ? status : 'ns')
+
+  while (normalized.length < expectedLength) {
+    normalized.push('ns')
+  }
+
+  return normalized
+}
+
+function calculateAxisBounds(chart: Pick<ExtractedChartData, 'data'>): { axisMin: number; axisMax: number } | null {
+  const datasets = getNumericDatasets(chart as ExtractedChartData)
+  if (!datasets) return null
+
+  const values = datasets.flat()
+  if (values.length === 0) return null
+
+  const min = Math.min(...values)
+  const max = Math.max(...values)
+  const range = max - min
+  const padding = range > 0 ? range * 0.15 : Math.max(Math.abs(max) * 0.15, 0.01)
+
+  return {
+    axisMin: Math.floor((min - padding) * 100) / 100,
+    axisMax: Math.ceil((max + padding) * 100) / 100,
+  }
+}
+
+function hasCumulativeIntervalData(chart: Pick<ExtractedChartData, 'chartTitle' | 'sourceDescription' | 'data'>): boolean {
+  const text = [
+    chart.chartTitle,
+    chart.sourceDescription,
+    chart.data.labels.join(' '),
+    chart.data.datasets.map((dataset) => dataset.label).join(' '),
+  ].join(' ').toLowerCase()
+
+  return (
+    text.includes('+/-') ||
+    text.includes('±') ||
+    text.includes('0.25') ||
+    text.includes('0,25') ||
+    text.includes('0.50') ||
+    text.includes('0,50') ||
+    text.includes('1.0') ||
+    text.includes('1,0') ||
+    text.includes('within') ||
+    text.includes('granicach') ||
+    text.includes('przedzial')
+  )
+}
+
+function isCumulativeIntervalLineChart(chart: ExtractedChartData): boolean {
+  return chart.chartType === 'line' && hasCumulativeIntervalData(chart)
+}
+
+function normalizeExtractedChart(rawChart: any): ExtractedChartData | null {
+  let chartType = (rawChart.chartType || rawChart.type || 'bar') as ChartType
+  const labels = rawChart.data?.labels || rawChart.labels || []
+  const datasets = rawChart.data?.datasets || rawChart.datasets || []
+  if (!Array.isArray(labels) || !Array.isArray(datasets)) return null
+
+  const data: ChartData = {
+    labels,
+    datasets,
+  }
+  const chartTitle = rawChart.chartTitle || rawChart.title || 'Wykres danych'
+  const sourceDescription = rawChart.sourceDescription || rawChart.source_table || rawChart.sourceTable || ''
+  if (hasCumulativeIntervalData({ chartTitle, sourceDescription, data })) {
+    chartType = 'line'
+  }
+
+  const normalizedChart: ExtractedChartData = {
+    id: rawChart.id,
+    chartTitle,
+    chartType,
+    sourceDescription,
+    axis_min: rawChart.axis_min,
+    axis_max: rawChart.axis_max,
+    significance: rawChart.significance,
+    significance_source: rawChart.significance_source,
+    x_axis_label: rawChart.x_axis_label,
+    y_axis_label: rawChart.y_axis_label,
+    source_table: rawChart.source_table,
+    data,
+  }
+  const bounds = calculateAxisBounds(normalizedChart)
+  const firstDatasetLength = datasets[0]?.data?.length || labels.length
+  const intervalLineBounds = isCumulativeIntervalLineChart(normalizedChart)
+    ? (() => {
+      const values = getNumericDatasets(normalizedChart)?.flat() || []
+      if (values.length === 0) return null
+      return {
+        axisMin: Math.floor((Math.min(...values) - 5) * 100) / 100,
+        axisMax: 100,
+      }
+    })()
+    : null
+
+  data.axisMin = intervalLineBounds?.axisMin ?? (typeof rawChart.axis_min === 'number' ? rawChart.axis_min : bounds?.axisMin)
+  data.axisMax = intervalLineBounds?.axisMax ?? (typeof rawChart.axis_max === 'number' ? rawChart.axis_max : bounds?.axisMax)
+  data.significance = normalizeSignificance(rawChart.significance, firstDatasetLength, chartType)
+  data.significanceSource = rawChart.significance_source || 'not_reported'
+  data.xAxisLabel = rawChart.x_axis_label || ''
+  data.yAxisLabel = rawChart.y_axis_label || ''
+  data.sourceTable = rawChart.source_table || rawChart.sourceDescription || ''
+
+  normalizedChart.axis_min = data.axisMin
+  normalizedChart.axis_max = data.axisMax
+  normalizedChart.significance = data.significance
+  normalizedChart.significance_source = data.significanceSource
+  normalizedChart.x_axis_label = data.xAxisLabel
+  normalizedChart.y_axis_label = data.yAxisLabel
+  normalizedChart.source_table = data.sourceTable
+
+  return normalizedChart
 }
 
 function sanitizeSupportedChartTypes(extractedData: ExtractedChartData[]): ExtractedChartData[] {
@@ -284,7 +443,9 @@ function createCompanionChartFromExisting(chart: ExtractedChartData): ExtractedC
 
   if (datasets.length === 0) return null
 
-  const companionType: ChartType = isBarLikeChartType(chart.chartType)
+  const companionType: ChartType = isCumulativeIntervalLineChart(chart)
+    ? 'line'
+    : isBarLikeChartType(chart.chartType)
     ? 'line'
     : labels.length >= 7
       ? 'horizontalBar'
@@ -294,8 +455,22 @@ function createCompanionChartFromExisting(chart: ExtractedChartData): ExtractedC
     chartTitle: `${chart.chartTitle} - ujęcie alternatywne`,
     chartType: companionType,
     sourceDescription: `${chart.sourceDescription}; alternatywna wizualizacja zweryfikowanych danych`,
+    axis_min: chart.axis_min,
+    axis_max: chart.axis_max,
+    significance: isBarLikeChartType(companionType) ? normalizeSignificance(chart.significance, labels.length, companionType) : [],
+    significance_source: chart.significance_source || 'not_reported',
+    x_axis_label: chart.x_axis_label,
+    y_axis_label: chart.y_axis_label,
+    source_table: chart.source_table,
     data: {
       labels: [...labels],
+      axisMin: chart.data.axisMin,
+      axisMax: chart.data.axisMax,
+      significance: isBarLikeChartType(companionType) ? normalizeSignificance(chart.data.significance, labels.length, companionType) : [],
+      significanceSource: chart.data.significanceSource || 'not_reported',
+      xAxisLabel: chart.data.xAxisLabel,
+      yAxisLabel: chart.data.yAxisLabel,
+      sourceTable: chart.data.sourceTable,
       datasets: datasets.map((dataset) => ({
         label: dataset.label,
         data: [...dataset.data],
@@ -352,8 +527,16 @@ Return ONLY a valid JSON object with this structure:
 {
   "charts": [
     {
+      "id": "short_snake_case_identifier",
       "chartTitle": "Polish title",
       "chartType": "line",
+      "axis_min": 0.00,
+      "axis_max": 1.00,
+      "significance": [],
+      "significance_source": "not_reported",
+      "x_axis_label": "X-axis label",
+      "y_axis_label": "Y-axis label",
+      "source_table": "Table or figure number",
       "sourceDescription": "Source table/result in Polish",
       "data": {
         "labels": ["Label 1", "Label 2"],
@@ -390,6 +573,8 @@ export async function extractChartDataFromPDF(
 
   const openai = new OpenAI({ apiKey })
   const modelName = process.env.OPENAI_CHART_EXTRACTION_MODEL || 'gpt-5.4'
+  const tableTagCount = (pdfContent.match(/\[TABLE:/g) || []).length
+  console.log(`[chart-extractor] Table tags visible to OpenAI: ${tableTagCount}`)
   if (!process.env.OPENAI_CHART_EXTRACTION_MODEL && process.env.CHART_EXTRACTION_MODEL) {
     console.warn('[chart-extractor] Ignoring legacy CHART_EXTRACTION_MODEL; using default OPENAI chart extraction model gpt-5.4')
   }
@@ -402,6 +587,23 @@ ABSOLUTE ANTI-HALLUCINATION RULES
 - DO NOT round, estimate, interpolate, or extrapolate any values.
 - DO NOT combine numbers from different tables/contexts into one chart.
 - If you cannot find at least 2 data points with exact numbers from the document, return {"charts": []}.
+
+TABLE IDENTIFICATION RULE:
+The PDF text can contain multiple tables. When [TABLE: caption] tags are present, use them as the authoritative table boundaries. Before extracting any value:
+1. Read all [TABLE: ...] tags first, when present, and identify:
+   - Which table is the PRIMARY/WHOLE-DATASET results table (look for keywords: "whole", "overall", "primary", "n=total sample size")
+   - Which tables are SUBGROUP tables (look for keywords: "short", "long", "subgroup", "IOL type", "<", ">")
+2. For whole-dataset charts, extract values ONLY from the primary results table.
+3. For subgroup charts, extract values ONLY from the matching subgroup table.
+4. If the same formula name appears in multiple tables with different values, always prefer the table whose caption matches the chart context.
+5. Never mix values from different tables into one chart.
+6. If no [TABLE: ...] tags survived PDF parsing, still extract from clearly table-like rows and nearby visible captions, but keep each chart tied to one local table section/context.
+
+HOFFER QST / WHOLE-DATASET SD NUMERIC TRACING RULE
+- When extracting SD values for the whole-dataset comparison, use ONLY Table 2 or the table explicitly labeled as the whole-dataset / overall / primary results table.
+- Do NOT use values from subgroup tables (short eyes, long eyes, IOL type) or supplemental tables for the whole-dataset SD comparison.
+- If the same formula appears in multiple tables with different values, always use the value from the table explicitly labeled as the whole-dataset or primary results table.
+- This rule is mandatory for Hoffer QST and all other formulas in the whole-dataset SD chart.
 
 MANDATORY CHART VARIETY RULE
 When extracting 2 charts, you are ABSOLUTELY REQUIRED to use 2 VISUALLY DIFFERENT chart families.
@@ -417,7 +619,7 @@ DECISION TREE FOR CHART TYPE:
    boxplot requires EXACTLY this data format for each group: {"min": number, "q1": number, "median": number, "q3": number, "max": number}
 
 2. Does the data show MULTIPLE PERCENTAGES summing to ~100% for EACH formula/group? USE 'stackedBar'
-   Examples: "% oczu w granicach +/-0.25D, +/-0.50D, +/-1.0D dla każdej formuły", "Rozkład ciężkości powikłań na grupę"
+   Examples: "Rozkład ciężkości powikłań na grupę", "Wyłączne przedziały błędu refrakcji na grupę"
    stackedBar requires MULTIPLE datasets (one per stack layer), each with ONE value per label
 
 3. Does the data compare 7 or MORE categories? USE 'horizontalBar'
@@ -431,6 +633,12 @@ DECISION TREE FOR CHART TYPE:
 
 6. Are you comparing MULTIPLE METRICS across categories? USE 'radar'
    Examples: "Porównanie precyzji, dokładności i stabilności dla 3 formuł"
+
+CHART TYPE SELECTION RULE:
+- For data representing cumulative thresholds or sequential intervals, always use "line", not "radar".
+- Examples include: % eyes within +/-0.25D, +/-0.50D, +/-0.75D, +/-1.0D.
+- Radar charts are only appropriate when axes represent truly independent, non-ordered dimensions.
+- For cumulative-threshold line charts, use interval thresholds as labels and formulas/groups as datasets.
 
 7. For categorical comparisons with fewer than 7 categories USE 'bar'
    Examples: "Porównanie MAE dla 3-6 formuł IOL"
@@ -467,12 +675,38 @@ CRITICAL REQUIREMENTS:
 8. ABSOLUTELY MANDATORY: If extracting 2 charts, you MUST use 2 visually different chart families!
 9. CHECKING YOUR WORK: Before returning the JSON, verify that you did NOT return two bar-family charts. 'bar' + 'horizontalBar' is WRONG. 'bar' + 'stackedBar' is WRONG.
 
+AXIS SCALING - REQUIRED FOR EVERY CHART:
+- Return axis_min and axis_max for each chart.
+- axis_min = minimum numeric data value minus 15% of the data range.
+- axis_max = maximum numeric data value plus 15% of the data range.
+- Round axis_min DOWN to 2 decimal places and axis_max UP to 2 decimal places.
+- For values 0.44-0.50: range = 0.06, padding = 0.009, axis_min = 0.43, axis_max = 0.51.
+- For line charts showing multiple formulas across cumulative intervals, set axis_min to the minimum value across all series minus 5, and set axis_max to 100.
+- The significance array is not required for line charts; return significance as [] and significance_source as "not_reported".
+
+SIGNIFICANCE ENCODING - REQUIRED FOR BAR-FAMILY CHARTS:
+- For bar, horizontalBar, and stackedBar, return a significance array parallel to the first dataset's data array.
+- Each value must be exactly: "best", "sig_worse", or "ns".
+- "best" means the formula/group had the best value and was statistically significant.
+- "sig_worse" means significantly worse than the best formula (p<0.05).
+- "ns" means no statistically significant difference vs best.
+- Extract this from pairwise comparison tables. If not reported, set all values to "ns" and significance_source to "not_reported".
+- For non-bar charts, return significance as [] and significance_source as "not_reported".
+
 Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
 {
   "charts": [
     {
       "chartTitle": "Porównanie MAE formuł IOL",
       "chartType": "bar",
+      "id": "mae_formula_comparison",
+      "axis_min": 0.26,
+      "axis_max": 0.37,
+      "significance": ["sig_worse", "best", "ns", "sig_worse"],
+      "significance_source": "Tabela 3",
+      "x_axis_label": "Formula IOL",
+      "y_axis_label": "MAE (D)",
+      "source_table": "Tabela 2",
       "sourceDescription": "Tabela 2 - MAE dla każdej formuły",
       "data": {
         "labels": ["Barrett", "Cooke K6", "Kane", "EVO"],
@@ -487,21 +721,29 @@ Return ONLY a valid JSON object with this exact structure (ALL TEXT IN POLISH):
     {
       "chartTitle": "Procent oczu w granicach błędu predykcji",
       "chartType": "line",
+      "id": "prediction_error_intervals",
+      "axis_min": 34.00,
+      "axis_max": 100.00,
+      "significance": [],
+      "significance_source": "not_reported",
+      "x_axis_label": "Przedział błędu predykcji",
+      "y_axis_label": "Odsetek oczu (%)",
+      "source_table": "Tabela 3",
       "sourceDescription": "Tabela 3 - procent oczu w granicach +/-0.25D, +/-0.50D, +/-1.0D",
       "data": {
-        "labels": ["Barrett", "Cooke K6", "Kane", "EVO"],
+        "labels": ["+/-0.25 D", "+/-0.50 D", "+/-0.75 D", "+/-1.0 D"],
         "datasets": [
           {
-            "label": "+/-0.25 D (%)",
-            "data": [42, 48, 45, 40]
+            "label": "Barrett",
+            "data": [42, 72, 88, 95]
           },
           {
-            "label": "+/-0.50 D (%)",
-            "data": [72, 78, 75, 70]
+            "label": "Cooke K6",
+            "data": [48, 78, 90, 97]
           },
           {
-            "label": "+/-1.0 D (%)",
-            "data": [95, 97, 96, 93]
+            "label": "Kane",
+            "data": [45, 75, 89, 96]
           }
         ]
       }

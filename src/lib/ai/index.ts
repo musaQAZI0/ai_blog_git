@@ -24,8 +24,13 @@ function preparePdfContentForGeneration(
   pdfContent: string,
   targetAudience: AIGenerationRequest['targetAudience']
 ): string {
-  const normalized = (pdfContent || '').replace(/\s+/g, ' ').trim()
-  const maxChars = targetAudience === 'professional' ? 18000 : 14000
+  const normalized = (pdfContent || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/\r/g, '\n')
+    .replace(/[ \t]+/g, ' ')
+    .replace(/\n{4,}/g, '\n\n\n')
+    .trim()
+  const maxChars = targetAudience === 'professional' ? 35000 : 14000
   return normalized.slice(0, maxChars)
 }
 

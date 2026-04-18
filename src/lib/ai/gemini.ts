@@ -186,7 +186,22 @@ Explain how the findings should be interpreted in professional ophthalmology pra
 Under ## Ograniczenia:
 State the methodological limitations, missing data, generalizability issues, or uncertainties explicitly supported by the document.
 
-Ground all claims strictly in the provided document. Do not hallucinate data.`
+Ground all claims strictly in the provided document. Do not hallucinate data.
+
+NUMERIC ACCURACY - MANDATORY:
+6. Before writing any numeric value (SD, RMSAE, p-value, percentage, mean, n), trace it to a specific table or figure in the document. If you cannot confirm a number exists verbatim in a table or figure, omit it entirely rather than approximate. Never report a value for one formula that belongs to another formula in the same table.
+
+NON-SIGNIFICANT COMPARISONS - MANDATORY:
+7. For every statistically significant finding you report, explicitly state which comparisons did NOT reach significance (p>=0.05). Both significant and non-significant results are clinically actionable. Example format: "Formula X wykazala istotnie nizsze SD niz A, B i C (p<0,05), nie roznic sie istotnie od D, E i F."
+
+SUBGROUP REPORTING - MANDATORY:
+8. For each subgroup (oczy dlugie, oczy krotkie, typ IOL), report BOTH the primary endpoint winner AND any notable secondary endpoint findings (interval analysis, median AE) even when a different formula leads the secondary result. Do not report only one formula per subgroup.
+
+ENDPOINT LABELING - MANDATORY:
+9. Always label whether a finding comes from a primary endpoint (SD, RMSAE) or a secondary endpoint (odsetek w przedzialach, mediana AE). Use explicit labels such as "(pierwszorzedowy punkt koncowy)" or "(drugorzedowy punkt koncowy)" on first mention within each section.
+
+ZEROED-MEAN ANALYSIS:
+10. If the paper reports an analysis after adjusting mean PE to zero (per Hoffer et al. protocol), include this as a separate sub-paragraph within "Kluczowe wyniki" under the heading "Analiza po wyzerowaniu sredniego bledu predykcji". This is a primary analytical result, not a limitation.`
 
 function extractJsonObject(text: string): string {
   const trimmed = (text || '').trim()
@@ -277,13 +292,15 @@ export async function generateArticleWithGemini(
         chartContext = `\n\nAVAILABLE CHARTS TO REFERENCE IN YOUR ARTICLE:
 ${extractedChartData.map((chart, i) => `
 Chart ${i + 1}: ${chart.chartTitle}
+Dataset ID: ${chart.id || `chart_${i + 1}`}
 Type: ${chart.chartType}
 Data: ${JSON.stringify(chart.data.labels)} with values ${JSON.stringify(chart.data.datasets[0]?.data)}
 Source: ${chart.sourceDescription}
 Placeholder: ${getFigurePlaceholderUrl(i + 1)}
+Chart token: {{CHART:${chart.id || `chart_${i + 1}`}:${chart.chartType}}}
 `).join('\n')}
 
-CRITICAL: Write your article content to reference these specific charts. Place each chart placeholder (e.g., ${getFigurePlaceholderUrl(1)}) in your content where you discuss the corresponding data. Write text that introduces and explains what the chart shows.`
+CRITICAL: Write your article content to reference these specific charts. Place each chart placeholder (e.g., ${getFigurePlaceholderUrl(1)}) or matching chart token (e.g., {{CHART:dataset_name:chart_type}}) in your content where you discuss the corresponding data. Write text that introduces and explains what the chart shows.`
       }
     } catch (error) {
       console.warn('[gemini] Chart pre-extraction failed, continuing without chart context:', error)
@@ -314,6 +331,10 @@ CRITICAL: Write your article content to reference these specific charts. Place e
   ## Ograniczenia
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
 - Write a detailed professional review. Use 850-1000 words for the "content" field when the document contains enough information.
+- For each subgroup analyzed (oczy dlugie, oczy krotkie, typ IOL), report BOTH the primary endpoint result and any secondary endpoint finding, even if led by different formulas.
+- When reporting the primary SD comparison for the whole dataset, name formulas with no statistically significant difference from the best formula.
+- If the paper reports mean PE adjusted to zero (Hoffer et al. protocol), add "### Analiza po wyzerowaniu sredniego bledu predykcji" inside "## Kluczowe wyniki" and report exact values.
+- For charts, use the provided chart placeholder URL or a token in the format {{CHART:dataset_name:chart_type}}.
 - For "suggestedCategory", pick the BEST match from: ${validCategories.join(', ')}.
 `
       : `AudienceInstructions (patient):
@@ -502,12 +523,23 @@ Required JSON format:
           prompt:
             `Expand the following Polish professional ophthalmology article to 850-1000 words while preserving medical accuracy.\n` +
             `Return ONLY the improved markdown content, not JSON.\n` +
-            `Rules:\n` +
-            `- Use only information supported by the source document below.\n` +
-            `- Do not fabricate studies, citations, values, or clinical claims.\n` +
-            `- Keep any figure placeholder URLs exactly as-is.\n` +
-            `- Keep the professional structure: Streszczenie redakcyjne, Metodyka i populacja, Kluczowe wyniki, Interpretacja kliniczna, Ograniczenia, Zrodlo.\n` +
-            `- Expand with methodology, endpoints, subgroup findings, limitations, and clinical implications.\n\n` +
+            `EXPANSION RULES - READ CAREFULLY:\n` +
+            `1. Use only information supported by the source document below. Do not fabricate studies, citations, values, or clinical claims.\n` +
+            `2. Permitted expansion strategies:\n` +
+            `- Go deeper on statistical methodology already mentioned, including tests, correction methods, and distribution checks used in the paper.\n` +
+            `- Expand patient demographics already stated, including age range, sex distribution, AL range, and IOL model counts.\n` +
+            `- Detail exclusion criteria already listed in the Methods section.\n` +
+            `- Expand subgroup findings already mentioned, adding exact n, RMSAE values, and p-values from source tables.\n` +
+            `- Elaborate on limitations already named using document-grounded explanation.\n` +
+            `3. Forbidden expansion strategies:\n` +
+            `- Do not introduce any formula not already in the article.\n` +
+            `- Do not add any numeric value not already in the article unless it appears verbatim in the source document below.\n` +
+            `- Do not reference any other study or author not in the article.\n` +
+            `- Do not add clinical interpretation beyond what the paper's Discussion section supports.\n` +
+            `- Do not invent patient quotes, surgeon quotes, or anecdotes.\n` +
+            `4. Keep any figure placeholder URLs or {{CHART:...}} tokens exactly as-is.\n` +
+            `5. Keep the professional structure: Streszczenie redakcyjne, Metodyka i populacja, Kluczowe wyniki, Interpretacja kliniczna, Ograniczenia, Zrodlo.\n` +
+            `6. After expanding, verify that every numeric value appears verbatim in either the original short article or the source document. If not, remove it.\n\n` +
             `Source document:\n${normalizedPdfContent}${chartContext}\n\n` +
             `Article to expand:\n${content}`,
           generationConfig: {
@@ -660,6 +692,7 @@ Required JSON format:
         try {
           const chartId = `chart-${i + 1}`
           const placeholder = getFigurePlaceholderUrl(i + 1)
+          const chartToken = `{{CHART:${extractedChart.id || `chart_${i + 1}`}:${extractedChart.chartType}}}`
 
           console.log(`[gemini] Generating chart ${i + 1}: ${extractedChart.chartTitle} (${extractedChart.chartType})`)
           const url = await generateAndUploadChart(
@@ -676,8 +709,11 @@ Required JSON format:
           if (content.includes(placeholder)) {
             content = content.split(placeholder).join(markdownImage)
             console.log(`[gemini] Chart ${i + 1} injected into content: ${url}`)
+          } else if (content.includes(chartToken)) {
+            content = content.split(chartToken).join(markdownImage)
+            console.log(`[gemini] Chart ${i + 1} injected into content via chart token: ${url}`)
           } else {
-            console.warn(`[gemini] Placeholder ${placeholder} not found in content`)
+            console.warn(`[gemini] Placeholder ${placeholder} or token ${chartToken} not found in content`)
           }
         } catch (error) {
           console.error(`[gemini] Failed to generate/upload chart ${i + 1}:`, error)
@@ -727,6 +763,7 @@ Required JSON format:
   // Safety net: remove any leftover figure placeholders so users don't see them.
   content = content
     .replace(/\{\{FIGURE_\d+_URL\}\}/g, '')
+    .replace(/\{\{CHART:[^}]+:[^}]+\}\}/g, '')
     .replace(/https?:\/\/www\.google\.com\/search\?q=%7B%7BFIGURE_\d+_URL%7D%7D/g, '')
     .replace(/\n{3,}/g, '\n\n')
 

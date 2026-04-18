@@ -1,0 +1,867 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Professional Article Generation Flow</title>
+  <style>
+    :root {
+      --ink: #18212f;
+      --muted: #5d6675;
+      --line: #d9dee7;
+      --panel: #f6f8fb;
+      --panel-2: #eef5f2;
+      --accent: #185fa5;
+      --green: #3b6d11;
+      --blue: #185fa5;
+      --gray: #b4b2a9;
+      --warn: #9f4d11;
+      --page: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: #e8ecf2;
+      color: var(--ink);
+      font-family: Inter, Segoe UI, Arial, sans-serif;
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .page {
+      width: min(100%, 980px);
+      margin: 28px auto;
+      background: var(--page);
+      border: 1px solid var(--line);
+      box-shadow: 0 18px 60px rgba(24, 33, 47, 0.12);
+    }
+
+    header {
+      padding: 38px 44px 28px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 31px;
+      line-height: 1.12;
+      letter-spacing: 0;
+    }
+
+    .subtitle {
+      margin: 14px 0 0;
+      max-width: 760px;
+      color: var(--muted);
+      font-size: 15px;
+    }
+
+    .meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 22px;
+    }
+
+    .pill {
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 6px 9px;
+      background: #fff;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    main {
+      padding: 30px 44px 44px;
+    }
+
+    h2 {
+      margin: 34px 0 13px;
+      font-size: 20px;
+      line-height: 1.2;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 8px;
+    }
+
+    h2:first-child {
+      margin-top: 0;
+    }
+
+    h3 {
+      margin: 22px 0 8px;
+      font-size: 15px;
+      line-height: 1.3;
+    }
+
+    p {
+      margin: 0 0 11px;
+    }
+
+    ul, ol {
+      margin: 8px 0 16px 20px;
+      padding: 0;
+    }
+
+    li {
+      margin: 5px 0;
+    }
+
+    code {
+      padding: 2px 5px;
+      border-radius: 4px;
+      background: #eef1f5;
+      font-family: Consolas, Menlo, monospace;
+      font-size: 12px;
+    }
+
+    pre {
+      margin: 12px 0 18px;
+      padding: 14px 16px;
+      overflow: auto;
+      background: #111827;
+      color: #f5f7fb;
+      border-radius: 8px;
+      font-family: Consolas, Menlo, monospace;
+      font-size: 12px;
+      line-height: 1.48;
+      white-space: pre-wrap;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin: 20px 0 6px;
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      background: #fff;
+    }
+
+    .card strong {
+      display: block;
+      margin-bottom: 5px;
+      font-size: 13px;
+    }
+
+    .card span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .flow {
+      counter-reset: step;
+      display: grid;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .step {
+      position: relative;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px 14px 14px 54px;
+      background: #fff;
+      page-break-inside: avoid;
+    }
+
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      position: absolute;
+      left: 14px;
+      top: 14px;
+      width: 27px;
+      height: 27px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .step-title {
+      margin: 0 0 4px;
+      font-weight: 800;
+    }
+
+    .step-desc {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .note {
+      border-left: 4px solid var(--accent);
+      background: var(--panel);
+      padding: 12px 14px;
+      border-radius: 0 8px 8px 0;
+      margin: 14px 0 18px;
+    }
+
+    .warning {
+      border-left-color: var(--warn);
+      background: #fff6ed;
+    }
+
+    .matrix {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 22px;
+      font-size: 13px;
+    }
+
+    .matrix th,
+    .matrix td {
+      border: 1px solid var(--line);
+      padding: 9px 10px;
+      vertical-align: top;
+      text-align: left;
+    }
+
+    .matrix th {
+      background: var(--panel);
+      font-weight: 800;
+    }
+
+    .swatch {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 3px;
+      margin-right: 6px;
+      vertical-align: -1px;
+    }
+
+    .green { background: var(--green); }
+    .blue { background: var(--blue); }
+    .gray { background: var(--gray); }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .compact-list li {
+      margin: 3px 0;
+    }
+
+    .footer {
+      color: var(--muted);
+      font-size: 12px;
+      border-top: 1px solid var(--line);
+      padding-top: 18px;
+      margin-top: 34px;
+    }
+
+    @page {
+      size: A4;
+      margin: 12mm;
+    }
+
+    @media print {
+      body {
+        background: #fff;
+        font-size: 12px;
+      }
+
+      .page {
+        width: auto;
+        margin: 0;
+        border: 0;
+        box-shadow: none;
+      }
+
+      header,
+      main {
+        padding-left: 0;
+        padding-right: 0;
+      }
+
+      h2 {
+        page-break-after: avoid;
+      }
+
+      .step,
+      .card,
+      .note,
+      .matrix {
+        page-break-inside: avoid;
+      }
+    }
+
+    @media (max-width: 760px) {
+      .page {
+        margin: 0;
+        border: 0;
+      }
+
+      header,
+      main {
+        padding-left: 22px;
+        padding-right: 22px;
+      }
+
+      .summary-grid,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <h1>Professional Article Generation Flow</h1>
+      <p class="subtitle">
+        This document explains how the professional ophthalmology article pipeline works:
+        PDF text extraction, OpenAI chart extraction, Gemini article writing, expansion,
+        chart rendering, and final article assembly.
+      </p>
+      <div class="meta">
+        <span class="pill">Audience: professional</span>
+        <span class="pill">Article writer: Gemini</span>
+        <span class="pill">Chart extraction: OpenAI gpt-5.4</span>
+        <span class="pill">Chart renderer: Chart.js</span>
+        <span class="pill">Target: 850-1000 words</span>
+      </div>
+    </header>
+
+    <main>
+      <h2>Executive Summary</h2>
+      <div class="summary-grid">
+        <div class="card">
+          <strong>1. PDF becomes source text</strong>
+          <span>The API extracts text and sends the professional content path up to the AI layer.</span>
+        </div>
+        <div class="card">
+          <strong>2. OpenAI extracts chart data</strong>
+          <span>OpenAI reads the PDF text first and returns verified numeric datasets for charts.</span>
+        </div>
+        <div class="card">
+          <strong>3. Gemini writes the article</strong>
+          <span>Gemini receives source text plus chart context and writes the professional Polish article.</span>
+        </div>
+      </div>
+
+      <div class="note">
+        The key separation is intentional: OpenAI extracts structured chart data, Gemini writes the
+        professional article, and Chart.js renders final chart images from verified numbers.
+      </div>
+
+      <h2>High-Level Flow</h2>
+      <div class="flow">
+        <div class="step">
+          <p class="step-title">PDF upload</p>
+          <p class="step-desc">The user uploads one or more PDFs from the article creation screen.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">API request</p>
+          <p class="step-desc">The frontend calls <code>POST /api/ai/generate</code> with target audience set to <code>professional</code>.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">Text extraction</p>
+          <p class="step-desc">The API extracts PDF text and normalizes it before passing it into the AI provider layer.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">Chart pre-extraction</p>
+          <p class="step-desc">Before Gemini writes, OpenAI extracts up to two clinically relevant chart datasets from the PDF text.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">Chart verification</p>
+          <p class="step-desc">Extracted chart values are checked against source text to reduce hallucinated numeric output.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">Gemini article generation</p>
+          <p class="step-desc">Gemini writes the full professional article using source text and chart context.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">Expansion safety pass</p>
+          <p class="step-desc">If professional content is below 800 words, Gemini expands it to 850-1000 words using only source-supported information.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">SEO and metadata normalization</p>
+          <p class="step-desc">SEO title, description, keywords, tags, category, and excerpt are checked and repaired where needed.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">Cover image generation</p>
+          <p class="step-desc">Gemini image generation creates a professional cover image, with fallback search if needed.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">Chart rendering</p>
+          <p class="step-desc">Chart.js renders PNG charts from OpenAI-extracted data, with axis bounds and significance colors.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">Placeholder replacement</p>
+          <p class="step-desc">Chart placeholders or <code>{{CHART:dataset:type}}</code> tokens are replaced with uploaded chart images.</p>
+        </div>
+        <div class="step">
+          <p class="step-title">Final response</p>
+          <p class="step-desc">The API returns title, content, excerpt, SEO metadata, category, tags, and generated image URLs.</p>
+        </div>
+      </div>
+
+      <h2>Component Roles</h2>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Component</th>
+            <th>Responsibility</th>
+            <th>Important Rules</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>PDF extraction</strong></td>
+            <td>Extracts readable text from uploaded PDF files.</td>
+            <td>Professional generation uses a larger text slice than patient content.</td>
+          </tr>
+          <tr>
+            <td><strong>OpenAI gpt-5.4</strong></td>
+            <td>Extracts structured chart datasets before article writing.</td>
+            <td>Every number must appear verbatim in source text. Whole-dataset SD must come from the whole-dataset table.</td>
+          </tr>
+          <tr>
+            <td><strong>Gemini</strong></td>
+            <td>Writes the professional Polish article using source text and available chart context.</td>
+            <td>850-1000 words, table-traced numbers, subgroup completeness, non-significant comparisons, endpoint labels.</td>
+          </tr>
+          <tr>
+            <td><strong>Gemini expansion</strong></td>
+            <td>Expands professional articles under 800 words.</td>
+            <td>May only expand using source-supported facts. No invented studies, authors, p-values, or clinical claims.</td>
+          </tr>
+          <tr>
+            <td><strong>Chart.js</strong></td>
+            <td>Renders final PNG charts from extracted data.</td>
+            <td>Uses axis bounds, significance colors, and chart type selection from extraction output.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Professional Article Rules</h2>
+      <div class="two-col">
+        <div class="card">
+          <h3>Required Sections</h3>
+          <ol class="compact-list">
+            <li><code>## Streszczenie redakcyjne</code></li>
+            <li><code>## Metodyka i populacja</code></li>
+            <li><code>## Kluczowe wyniki</code></li>
+            <li><code>## Interpretacja kliniczna</code></li>
+            <li><code>## Ograniczenia</code></li>
+            <li><code>## Zrodlo</code></li>
+          </ol>
+        </div>
+        <div class="card">
+          <h3>Writing Constraints</h3>
+          <ul class="compact-list">
+            <li>Use ultra-precise academic Polish.</li>
+            <li>Target 850-1000 words.</li>
+            <li>Use zero fluff and high data density.</li>
+            <li>Do not invent numbers, citations, or clinical claims.</li>
+            <li>Keep all claims grounded in the PDF.</li>
+          </ul>
+        </div>
+      </div>
+
+      <h3>Accuracy Requirements</h3>
+      <ul>
+        <li><strong>Numeric trace rule:</strong> every SD, RMSAE, p-value, percentage, mean, or sample size must trace back to a table or figure.</li>
+        <li><strong>Non-significant comparisons:</strong> when a significant result is reported, the article must also name non-significant comparisons.</li>
+        <li><strong>Subgroup completeness:</strong> long eyes, short eyes, and IOL type subgroups must include primary and secondary endpoint findings.</li>
+        <li><strong>Endpoint labeling:</strong> primary endpoint findings and secondary endpoint findings must be labeled on first mention.</li>
+        <li><strong>Zeroed-mean analysis:</strong> if mean PE adjusted to zero is reported, it must appear under <code>Kluczowe wyniki</code>, not as a limitation.</li>
+      </ul>
+
+      <h2>OpenAI Chart Extraction</h2>
+      <p>
+        Chart extraction happens before the article is written. The output is structured JSON, not prose.
+        The article writer receives chart context and can reference the exact chart placeholders or chart tokens.
+      </p>
+
+      <h3>Required Chart JSON Fields</h3>
+      <pre>{
+  "charts": [
+    {
+      "id": "short_snake_case_identifier",
+      "chartTitle": "Polish chart title",
+      "chartType": "bar | horizontalBar | stackedBar | boxplot | line | pie | doughnut | radar",
+      "axis_min": 0.26,
+      "axis_max": 0.37,
+      "significance": ["sig_worse", "best", "ns"],
+      "significance_source": "Table N or not_reported",
+      "x_axis_label": "X-axis label",
+      "y_axis_label": "Y-axis label",
+      "source_table": "Table N or Figure N",
+      "sourceDescription": "Source table/result in Polish",
+      "data": {
+        "labels": ["Label 1", "Label 2"],
+        "datasets": [
+          { "label": "Dataset label", "data": [0.35, 0.28] }
+        ]
+      }
+    }
+  ]
+}</pre>
+
+      <h3>Chart Type Selection</h3>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Data Shape</th>
+            <th>Chart Type</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Distribution statistics: min, Q1, median, Q3, max</td>
+            <td><code>boxplot</code></td>
+            <td>Shows distribution and spread.</td>
+          </tr>
+          <tr>
+            <td>Many categories, especially formula comparisons</td>
+            <td><code>horizontalBar</code></td>
+            <td>Improves label readability.</td>
+          </tr>
+          <tr>
+            <td>Cumulative thresholds or sequential intervals</td>
+            <td><code>line</code></td>
+            <td>Thresholds are ordered. Radar is not allowed for this.</td>
+          </tr>
+          <tr>
+            <td>Independent non-ordered dimensions</td>
+            <td><code>radar</code></td>
+            <td>Only valid when axes are truly independent dimensions.</td>
+          </tr>
+          <tr>
+            <td>Single percentage composition</td>
+            <td><code>pie</code> or <code>doughnut</code></td>
+            <td>Shows proportional parts.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="note warning">
+        Cumulative threshold data such as <code>% eyes within +/-0.25D, +/-0.50D, +/-0.75D, +/-1.0D</code>
+        must be a line chart, not radar.
+      </div>
+
+      <h3>Whole-Dataset SD Tracing Rule</h3>
+      <p>
+        For whole-dataset SD comparisons, especially Hoffer QST, the extractor may only use the table
+        explicitly labeled as the whole-dataset, overall, or primary results table. It must not pull values
+        from short-eye, long-eye, IOL-type, subgroup, or supplemental tables.
+      </p>
+
+      <h2>Chart Rendering Rules</h2>
+      <h3>Significance Color Mapping</h3>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Status</th>
+            <th>Color</th>
+            <th>Meaning</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>best</code></td>
+            <td><span class="swatch green"></span>Green</td>
+            <td>Best performer and statistically significant.</td>
+          </tr>
+          <tr>
+            <td><code>sig_worse</code></td>
+            <td><span class="swatch blue"></span>Blue</td>
+            <td>Significantly worse than the best performer.</td>
+          </tr>
+          <tr>
+            <td><code>ns</code></td>
+            <td><span class="swatch gray"></span>Gray</td>
+            <td>No statistically significant difference versus best.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Axis Scaling</h3>
+      <ul>
+        <li>Default: <code>axis_min = min - 15% of range</code>, <code>axis_max = max + 15% of range</code>.</li>
+        <li>Threshold line charts: <code>axis_min = minimum value across all series - 5</code>.</li>
+        <li>Threshold line charts: <code>axis_max = 100</code>.</li>
+        <li>This prevents small differences from being hidden by an unnecessary zero baseline.</li>
+      </ul>
+
+      <h2>Placeholder Replacement</h2>
+      <p>The article writer can reference chart locations in either old or new format.</p>
+      <table class="matrix">
+        <thead>
+          <tr>
+            <th>Format</th>
+            <th>Example</th>
+            <th>Behavior</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Legacy placeholder URL</td>
+            <td><code>https://www.google.com/search?q={{FIGURE_1_URL}}</code></td>
+            <td>Replaced with the generated chart image markdown.</td>
+          </tr>
+          <tr>
+            <td>Chart token</td>
+            <td><code>{{CHART:prediction_error_intervals:line}}</code></td>
+            <td>Replaced with the matching generated chart image markdown.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2>Operational Logs To Expect</h2>
+      <pre>[api/generate] Extracting text from PDFs...
+[api/generate] Starting article generation with gemini for professional audience...
+[gemini] Pre-extracting chart data with OpenAI to inform article generation...
+[chart-extractor] Calling OpenAI chart extraction model: gpt-5.4
+[chart-extractor] ===== EXTRACTED CHART TYPES =====
+[chart-verifier] Chart "..." verified
+[gemini] OpenAI chart extraction returned 2 chart(s)
+[gemini] Generating chart images from pre-extracted data...
+[gemini] Chart 1 injected into content: https://...
+POST /api/ai/generate 200</pre>
+
+      <h2>Short Version</h2>
+      <pre>PDF upload
+-> extract PDF text
+-> OpenAI gpt-5.4 extracts 2 verified chart datasets
+-> Gemini writes 850-1000 word professional article using chart context
+-> Gemini expands article if under 800 words
+-> Gemini image model creates cover image
+-> Chart.js renders charts from OpenAI data
+-> chart placeholders are replaced with uploaded chart PNGs
+-> API returns completed professional article</pre>
+
+      <h2>Prompt Appendix</h2>
+      <p>
+        These are the working prompts/rules used by the professional generation path. Runtime values such as
+        PDF text, chart context, valid categories, and placeholder URLs are injected where shown.
+      </p>
+
+      <h3>Professional Article System Prompt</h3>
+      <pre>You are the Editor-in-Chief of a high-impact scientific journal specializing in ophthalmology.
+
+Your task is to create a detailed professional review for ophthalmologists and optometrists.
+
+CRITICAL: You must return a complete JSON object with fields:
+title, content, excerpt, seoMeta, suggestedTags, suggestedCategory, coverImagePrompt, figures.
+
+Writing Style for the "content" field:
+1. Zero Fluff: eliminate introductory phrases, transitional sentences, and meta-commentary.
+2. Maximum Density: prioritize data, p-values, anatomy, protocols, endpoints, and exact results.
+3. Length: aim for 850-1000 words when the source document contains enough substance.
+4. Language: write in ultra-precise academic Polish.
+
+Required content structure:
+## Streszczenie redakcyjne
+## Metodyka i populacja
+## Kluczowe wyniki
+## Interpretacja kliniczna
+## Ograniczenia
+
+Ground all claims strictly in the provided document. Do not hallucinate data.
+
+NUMERIC ACCURACY - MANDATORY:
+Before writing any numeric value (SD, RMSAE, p-value, percentage, mean, n), trace it to a specific table or figure.
+If you cannot confirm a number exists verbatim, omit it entirely. Never report a value for one formula that belongs to another formula.
+
+NON-SIGNIFICANT COMPARISONS - MANDATORY:
+For every statistically significant finding you report, explicitly state which comparisons did NOT reach significance (p&gt;=0.05).
+
+SUBGROUP REPORTING - MANDATORY:
+For each subgroup (oczy dlugie, oczy krotkie, typ IOL), report both the primary endpoint winner and notable secondary endpoint findings.
+
+ENDPOINT LABELING - MANDATORY:
+Label whether a finding comes from a primary endpoint (SD, RMSAE) or secondary endpoint (interval percentages, median AE).
+
+ZEROED-MEAN ANALYSIS:
+If the paper reports analysis after adjusting mean PE to zero, include it under:
+### Analiza po wyzerowaniu sredniego bledu predykcji
+This is a primary analytical result, not a limitation.</pre>
+
+      <h3>Professional Main Article Prompt</h3>
+      <pre>Based on the following medical document content, create a blog article/review in Polish.
+
+Target word count: ~900 words for the main content (aim for 850-1000).
+
+IMPORTANT: word count refers ONLY to the "content" field, excluding title, excerpt,
+SEO meta, tags/categories, URLs, and placeholders.
+
+Document content:
+[PDF text + chart context]
+
+CRITICAL RULES:
+1. Return a SINGLE valid JSON object. No markdown fences. No extra text.
+2. The "content" field MUST be a COMPLETE article.
+3. Never stop mid-sentence or mid-paragraph.
+4. seoMeta.title must be max 60 characters.
+5. seoMeta.description must be max 160 characters.
+6. seoMeta.keywords must contain 3-5 relevant Polish keywords.
+7. suggestedTags must contain 2-4 specific Polish tags.
+8. suggestedCategory must be one of the allowed categories.
+9. excerpt must be 2-3 sentences, max 160 characters, in Polish.
+10. coverImagePrompt must be a detailed English prompt for image generation.
+11. Include a "## Zrodlo" section at the end with the original article reference.
+
+Professional section order:
+## Streszczenie redakcyjne
+## Metodyka i populacja
+## Kluczowe wyniki
+## Interpretacja kliniczna
+## Ograniczenia
+## Zrodlo
+
+Professional rules:
+- Extract only details present in the document: numbers, protocols, outcomes.
+- Do not invent details or citations.
+- For each subgroup, report both primary endpoint result and secondary endpoint finding.
+- When reporting primary SD comparison, name formulas with no statistically significant difference from the best formula.
+- If mean PE adjusted to zero is reported, add:
+  ### Analiza po wyzerowaniu sredniego bledu predykcji
+- For charts, use the provided figure placeholder URL or token:
+  {{CHART:dataset_name:chart_type}}
+
+Required JSON format:
+{
+  "title": "Descriptive article title in Polish",
+  "content": "Full COMPLETE article in markdown, 850-1000 words",
+  "excerpt": "2-3 sentence summary, max 160 characters",
+  "seoMeta": {
+    "title": "Short SEO title, max 60 chars",
+    "description": "Unique meta description, max 160 chars",
+    "keywords": ["keyword1", "keyword2", "keyword3"]
+  },
+  "suggestedTags": ["tag1", "tag2", "tag3"],
+  "suggestedCategory": "One allowed category",
+  "coverImagePrompt": "Detailed English prompt for cover image.",
+  "figures": [
+    {
+      "id": "figure_1",
+      "type": "illustration or chart",
+      "alt": "Alt text in Polish",
+      "caption": "Short caption in Polish",
+      "placeholder": "figure placeholder URL",
+      "prompt": "Medical illustration or data visualization prompt in English."
+    }
+  ]
+}</pre>
+
+      <h3>Gemini Expansion Prompt</h3>
+      <pre>Expand the following Polish professional ophthalmology article to 850-1000 words while preserving medical accuracy.
+
+Return ONLY the improved markdown content, not JSON.
+
+EXPANSION RULES - READ CAREFULLY:
+1. Use only information supported by the source document below.
+   Do not fabricate studies, citations, values, or clinical claims.
+
+2. Permitted expansion strategies:
+- Go deeper on statistical methodology already mentioned.
+- Expand patient demographics already stated.
+- Detail exclusion criteria already listed in the Methods section.
+- Expand subgroup findings already mentioned using exact n, RMSAE values, and p-values from source tables.
+- Elaborate on limitations already named using document-grounded explanation.
+
+3. Forbidden expansion strategies:
+- Do not introduce any formula not already in the article.
+- Do not add any numeric value not already in the article unless it appears verbatim in the source document.
+- Do not reference any other study or author not in the article.
+- Do not add clinical interpretation beyond what the paper's Discussion supports.
+- Do not invent patient quotes, surgeon quotes, or anecdotes.
+
+4. Keep any figure placeholder URLs or {{CHART:...}} tokens exactly as-is.
+5. Keep the professional structure:
+   Streszczenie redakcyjne, Metodyka i populacja, Kluczowe wyniki,
+   Interpretacja kliniczna, Ograniczenia, Zrodlo.
+6. After expanding, verify that every numeric value appears verbatim in the original article or source document.
+
+Source document:
+[PDF text + chart context]
+
+Article to expand:
+[current article]</pre>
+
+      <h3>OpenAI Chart Extraction Prompt</h3>
+      <pre>Analyze the medical/scientific document and extract EXACTLY 2 clinically relevant numerical datasets for visualization.
+
+ABSOLUTE ANTI-HALLUCINATION RULES:
+- Every number must appear verbatim in the document.
+- Do not round, estimate, interpolate, or extrapolate.
+- Do not combine numbers from different tables/contexts.
+
+HOFFER QST / WHOLE-DATASET SD NUMERIC TRACING RULE:
+- When extracting SD values for whole-dataset comparison, use ONLY Table 2 or the explicitly labeled whole-dataset / primary results table.
+- Do not use subgroup tables, long-eye tables, short-eye tables, IOL-type tables, or supplemental tables.
+- If the same formula appears in multiple tables with different values, use the whole-dataset / primary results table.
+
+MANDATORY CHART VARIETY RULE:
+- When extracting 2 charts, use 2 visually different chart families.
+- Bar-family means: bar, horizontalBar, stackedBar.
+- If one chart is bar-family, the other must be non-bar.
+
+CHART TYPE SELECTION RULE:
+- Cumulative thresholds or sequential intervals must use "line", not "radar".
+- Example: % eyes within +/-0.25D, +/-0.50D, +/-0.75D, +/-1.0D.
+- Radar is only for truly independent, non-ordered dimensions.
+
+AXIS SCALING:
+- For every chart return axis_min and axis_max.
+- Default: axis_min = min - 15% of range; axis_max = max + 15% of range.
+- For cumulative interval line charts: axis_min = minimum value across all series - 5; axis_max = 100.
+
+SIGNIFICANCE ENCODING:
+- For bar, horizontalBar, stackedBar, return a significance array parallel to the first dataset.
+- Values: "best", "sig_worse", "ns".
+- If pairwise comparisons are not reported, set all values to "ns" and significance_source to "not_reported".
+- For non-bar charts, significance = [] and significance_source = "not_reported".
+
+Return ONLY valid JSON:
+{
+  "charts": [
+    {
+      "id": "short_snake_case_identifier",
+      "chartTitle": "Polish chart title",
+      "chartType": "bar | horizontalBar | stackedBar | boxplot | line | pie | doughnut | radar",
+      "axis_min": 0.26,
+      "axis_max": 0.37,
+      "significance": ["sig_worse", "best", "ns"],
+      "significance_source": "Table N or not_reported",
+      "x_axis_label": "X-axis label",
+      "y_axis_label": "Y-axis label",
+      "source_table": "Table N or Figure N",
+      "sourceDescription": "Source table/result in Polish",
+      "data": {
+        "labels": ["Label 1", "Label 2"],
+        "datasets": [
+          { "label": "Dataset label", "data": [0.35, 0.28] }
+        ]
+      }
+    }
+  ]
+}</pre>
+
+      <div class="footer">
+        Generated for the ophthalmic AI blog pipeline. This document intentionally avoids API keys,
+        secrets, and environment-specific credentials.
+      </div>
+    </main>
+  </div>
+</body>
+</html>

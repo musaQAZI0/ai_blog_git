@@ -30,7 +30,10 @@ function preparePdfContentForGeneration(
     .replace(/[ \t]+/g, ' ')
     .replace(/\n{4,}/g, '\n\n\n')
     .trim()
-  const maxChars = targetAudience === 'professional' ? 35000 : 14000
+  // Professional PDFs often place primary result tables after methods and baseline
+  // characteristics. Keep the full normalized extraction window so chart parsing
+  // does not clip later outcome tables.
+  const maxChars = targetAudience === 'professional' ? 45000 : 14000
   return normalized.slice(0, maxChars)
 }
 

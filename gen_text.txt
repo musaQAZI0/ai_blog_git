@@ -1,0 +1,140 @@
+﻿biometria 
+kalkulator ESCRS 
+operacja za─çmy 
+soczewki wewn─àtrzga┼ékowe 
+Por├│wnanie precyzji formu┼é kalkulatora 
+IOL ESCRS: Analiza retrospektywna 748 
+przypadk├│w 
+Retrospektywna analiza 748 oczu wykaza┼éa, ┼╝e formu┼éa Cooke K6 osi─àgn─Ö┼éa najwy┼╝sz─à 
+precyzj─Ö (najni┼╝sze SD) w ca┼éej kohorcie. W oczach d┼éugich (>25 mm) formu┼éa Kane 
+mia┼éa najni┼╝szy RMSAE. 
+dr hab. Janusz Skrzypecki 
+3 maja 20266 min czytania0 wy┼¢wietle┼ä 
+    
+ 
+Streszczenie redakcyjne 
+Retrospektywna analiza serii przypadk├│w oceni┼éa predykcj─Ö refrakcyjn─à 
+siedmiu formu┼é do kalkulacji mocy soczewek wewn─àtrzga┼é┼ékowych (IOL) 
+zintegrowanych w kalkulatorze ESCRS. Badanie obj─Ö┼éo 748 oczu po implantacji 
+jednej z trzech monofokalnych soczewek IOL. Jako pierwszorz─Ödowe punkty 
+ko┼äcowe przyj─Öto odchylenie standardowe (SD) oraz pierwiastek ze ┼¢redniej 
+kwadrat├│w b┼é─Öd├│w bezwzgl─Ödnych (RMSAE) b┼é─Ödu predykcji (PE). 
+W ca┼éej analizowanej kohorcie formu┼éa Cooke K6 wykaza┼éa statystycznie 
+istotnie najni┼╝sze SD b┼é─Ödu predykcji (0,44 D; p < 0,05) w por├│wnaniu z 
+formu┼éami Barrett, EVO i Hoffer QST. W podgrupie oczu d┼éugich (d┼éugo┼¢─ç 
+osiowa > 25 mm) formu┼éa Kane osi─àgn─Ö┼éa najni┼╝szy RMSAE, z wynikiem 
+statystycznie lepszym ni┼╝ formu┼éy Barrett i EVO (p < 0,05). Nie stwierdzono 
+istotnych statystycznie r├│┼╝nic w pierwszorz─Ödowych punktach ko┼äcowych 
+pomi─Ödzy analizowanymi formu┼éami w zale┼╝no┼¢ci od typu wszczepionej 
+soczewki IOL. Stwierdzono jednak r├│┼╝nice w drugorz─Ödowych punktach 
+ko┼äcowych ΓÇô dla soczewki MA60MA, mediana b┼é─Ödu bezwzgl─Ödnego by┼éa 
+istotnie wy┼╝sza dla formu┼éy Hoffer QST w por├│wnaniu do wszystkich 
+pozosta┼éych formu┼é z wyj─àtkiem Pearl-DGS. 
+Metodyka i populacja 
+Badanie mia┼éo charakter retrospektywnej analizy serii przypadk├│w, 
+zatwierdzonej przez Institutional Review Board w Baylor College of Medicine. 
+Do badania w┼é─àczono 748 oczu od 748 pacjent├│w, u kt├│rych wykonano 
+fakoemulsyfikacj─Ö z implantacj─à jednej z trzech soczewek wewn─àtrzga┼ékowych: 
+jednocz─Ö┼¢ciowych SN60WF (n=94) i PCB00/ZCB00 (n=611) lub trzycz─Ö┼¢ciowej 
+MA60MA (n=36). W obliczeniach mocy IOL wykorzystano sta┼ée A 
+rekomendowane przez kalkulator ESCRS. 
+Populacja badana charakteryzowa┼éa si─Ö ┼¢rednim wiekiem 68,9 ┬▒ 9 lat, a ┼¢rednia 
+d┼éugo┼¢─ç osiowa ga┼éki ocznej (AL) wynosi┼éa 24,5 ┬▒ 2,6 mm (zakres: 19,29ΓÇô33,95 
+mm). Analiz─Ö przeprowadzono dla ca┼éej kohorty oraz w predefiniowanych 
+podgrupach: oczu kr├│tkich (AL < 22 mm, n=87), oczu d┼éugich (AL > 25 mm, 
+n=295) oraz w zale┼╝no┼¢ci od wszczepionego modelu IOL. Kryteriami 
+wykluczaj─àcymi by┼éy: skorygowana pooperacyjnie ostro┼¢─ç wzroku do dali 
+gorsza ni┼╝ 20/30, przebyta chirurgia refrakcyjna rog├│wki lub inne operacje 
+oczne. Pomiary biometryczne wykonano za pomoc─à urz─àdzenia Lenstar LS900. 
+Jako pierwszorz─Ödowe punkty ko┼äcowe (primary endpoints) zdefiniowano 
+odchylenie standardowe (SD) b┼é─Ödu predykcji oraz RMSAE. Drugorz─Ödowe 
+punkty ko┼äcowe obejmowa┼éy: ┼¢redni─à dewiacj─Ö bezwzgl─Ödn─à, odsetek oczu w 
+okre┼¢lonych przedzia┼éach b┼é─Ödu predykcji (┬▒0,25 D, ┬▒0,50 D, ┬▒0,75 D, ┬▒1,00 
+D), ┼¢redni b┼é─àd predykcji, median─Ö b┼é─Ödu predykcji, ┼¢redni b┼é─àd bezwzgl─Ödny 
+(MAE) oraz median─Ö b┼é─Ödu bezwzgl─Ödnego (MedAE). Do por├│wna┼ä 
+statystycznych SD u┼╝yto testu Morgana-Pitmana (wersja HC4), dla RMSAE i 
+innych metryk zastosowano metod─Ö bootstrap-t z korekt─à Holma, a dla 
+odsetk├│w w przedzia┼éach ΓÇô test chi-kwadrat McNemara z korekt─à na ci─àg┼éo┼¢─ç i 
+korekt─à Holma. 
+Kluczowe wyniki 
+Analiza dla ca┼éej kohorty (n=748) wykaza┼éa, ┼╝e formu┼éa Cooke K6 uzyska┼éa 
+najni┼╝sze odchylenie standardowe b┼é─Ödu predykcji (pierwszorz─Ödowy punkt 
+ko┼äcowy), wynosz─àce 0,44 D. R├│┼╝nica ta by┼éa statystycznie istotna (p < 0,05) w 
+por├│wnaniu z formu┼éami Barrett (0,48 D), EVO (0,47 D) oraz Hoffer QST (0,50 
+D). Warto┼¢ci SD dla pozosta┼éych formu┼é wynios┼éy: Pearl-DGS (0,46 D), Hill-RBF 
+(0,48 D) oraz Kane (0,48 D); w dokumencie ┼║r├│d┼éowym nie sprecyzowano 
+istotno┼¢ci statystycznej por├│wna┼ä Cooke K6 z tymi trzema formu┼éami. 
+ 
+Por├│wnanie odchylenia standardowego b┼é─Ödu predykcji w analizowanej 
+kohorcie. Ni┼╝sza warto┼¢─ç SD oznacza wi─Öksz─à precyzj─Ö. 
+Pod wzgl─Ödem drugorz─Ödowego punktu ko┼äcowego, jakim by┼é odsetek oczu 
+w okre┼¢lonych przedzia┼éach b┼é─Ödu predykcji, formu┼éy wykaza┼éy zr├│┼╝nicowan─à 
+skuteczno┼¢─ç. W najbardziej rygorystycznym przedziale ┬▒0,25 D, najwy┼╝szy 
+odsetek uzyska┼éa formu┼éa Hill-RBF (47,9%). W kluczowym klinicznie przedziale 
+┬▒0,50 D, najlepszy wynik osi─àgn─Ö┼éa formu┼éa Kane, z odsetkiem 78,6% oczu. 
+Formu┼éa Cooke K6, najlepsza pod wzgl─Ödem SD, osi─àgn─Ö┼éa w tych przedzia┼éach 
+odpowiednio 46,0% i 76,9%. 
+ 
+ 
+ 
+Odsetek oczu mieszcz─àcych si─Ö w kolejnych przedzia┼éach b┼é─Ödu predykcji dla 
+poszczeg├│lnych formu┼é. 
+Analiza podgrup wykaza┼éa istotne r├│┼╝nice w zale┼╝no┼¢ci od d┼éugo┼¢ci osiowej ga┼éki ocznej: 
+∩é╖ 
+Oczy d┼éugie (AL > 25 mm, n=295): Formu┼éa Kane wykaza┼éa najni┼╝szy RMSAE 
+(pierwszorz─Ödowy punkt ko┼äcowy). Wynik ten by┼é statystycznie lepszy (p < 0,05) 
+w por├│wnaniu z formu┼éami Barrett oraz EVO. Pozosta┼ée por├│wnania nie zosta┼éy 
+wyszczeg├│lnione. 
+∩é╖ 
+Oczy kr├│tkie (AL < 22 mm, n=87): Badanie obejmowa┼éo analiz─Ö tej podgrupy, 
+jednak szczeg├│┼éowe wyniki nie zosta┼éy przedstawione w udost─Öpnionym 
+materiale. 
+∩é╖ 
+Typy IOL: Nie stwierdzono statystycznie istotnych r├│┼╝nic w pierwszorz─Ödowych 
+punktach ko┼äcowych (SD, RMSAE) pomi─Ödzy formu┼éami dla ┼╝adnego z trzech 
+analizowanych typ├│w soczewek (SN60WF, PCB00/ZCB00, MA60MA). Jednak┼╝e, 
+analiza drugorz─Ödowych punkt├│w ko┼äcowych wykaza┼éa, ┼╝e dla soczewki MA60MA 
+(n=36), mediana b┼é─Ödu bezwzgl─Ödnego by┼éa statystycznie istotnie wy┼╝sza dla 
+formu┼éy Hoffer QST w por├│wnaniu ze wszystkimi innymi analizowanymi 
+formu┼éami (Cooke K6, EVO, Barrett, Hill-RBF, Kane) z wyj─àtkiem formu┼éy Pearl-
+DGS. 
+Interpretacja kliniczna 
+Wyniki badania dostarczaj─à klinicznie istotnych wskaz├│wek dotycz─àcych wyboru formu┼éy 
+w ramach kalkulatora ESCRS. W og├│lnej populacji pacjent├│w, formu┼éa Cooke K6 wydaje 
+si─Ö oferowa─ç najwy┼╝sz─à precyzj─Ö, mierzon─à jako najmniejsza wariancja (najni┼╝sze SD) 
+b┼é─Ödu predykcji. Oznacza to, ┼╝e jej wyniki s─à najbardziej powtarzalne i skupione wok├│┼é 
+┼¢redniej. Jednak┼╝e, je┼¢li celem jest maksymalizacja odsetka pacjent├│w w w─àskim 
+przedziale ┬▒0,50 D od celu refrakcyjnego, formu┼éa Kane mo┼╝e by─ç preferowanym 
+wyborem. 
+Szczeg├│lnie wa┼╝na jest obserwacja dotycz─àca oczu d┼éugich, kt├│re stanowi─à wyzwanie w 
+kalkulacji mocy IOL. W tej podgrupie formu┼éa Kane, poprzez uzyskanie najni┼╝szego 
+RMSAE, udowodni┼éa swoj─à wy┼╝szo┼¢─ç nad formu┼éami Barrett i EVO. RMSAE jest miar─à 
+uwzgl─Ödniaj─àc─à zar├│wno b┼é─Ödy systematyczne, jak i losowe, co czyni ten wynik klinicznie 
+bardzo relewantnym. Brak istotnych r├│┼╝nic dla pierwszorz─Ödowych punkt├│w ko┼äcowych 
+w zale┼╝no┼¢ci od typu soczewki monofokalnej sugeruje, ┼╝e nowoczesne formu┼éy dobrze 
+radz─à sobie z estymacj─à pozycji efektywnej (ELP) dla tych konkretnych modeli. Niemniej, 
+gorszy wynik formu┼éy Hoffer QST pod wzgl─Ödem mediany b┼é─Ödu bezwzgl─Ödnego dla 
+soczewki MA60MA wskazuje na potencjalne interakcje mi─Ödzy konstrukcj─à soczewki a 
+algorytmem formu┼éy, co mo┼╝e mie─ç znaczenie przy wyborze dla tego specyficznego, 
+trzycz─Ö┼¢ciowego modelu. 
+Ograniczenia 
+Podstawowym ograniczeniem badania jest jego retrospektywny charakter, co wi─à┼╝e si─Ö z 
+potencjalnym ryzykiem b┼é─Öd├│w systematycznych (selection bias). Po drugie, w badaniu 
+wykorzystano sta┼ée A rekomendowane przez kalkulator ESCRS, kt├│re mog┼éy nie by─ç w 
+pe┼éni zoptymalizowane dla badanej populacji i stosowanego sprz─Ötu, co mog┼éo wp┼éyn─à─ç 
+na bezwzgl─Ödne warto┼¢ci b┼é─Öd├│w predykcji. Po trzecie, analiza obj─Ö┼éa tylko trzy modele 
+soczewek monofokalnych, co ogranicza mo┼╝liwo┼¢─ç generalizacji wynik├│w na inne typy 
+soczewek, w szczeg├│lno┼¢ci toryczne, wieloogniskowe czy o wyd┼éu┼╝onej g┼é─Öbi ostro┼¢ci. 
+Wreszcie, cho─ç badanie obj─Ö┼éo podgrup─Ö oczu kr├│tkich, szczeg├│┼éowe wyniki dla tej 
+klinicznie wymagaj─àcej grupy nie zosta┼éy zaprezentowane w materiale ┼║r├│d┼éowym, co 
+stanowi luk─Ö w pe┼énej ocenie por├│wnawczej. 
+┼╣r├│d┼éo 
+J. Skrzypecki, D. D. Koch and L. Wang Performance of formulas included in the ESCRS 
+intraocular lens power calculator J Cataract Refract Surg 2024 Vol. 50 Pages 1224-1229 
+Tagi: 
+biometria 
+kalkulator ESCRS 
+operacja za─çmy 
+soczewki wewn─àtrzga┼ékowe 
+ 
+

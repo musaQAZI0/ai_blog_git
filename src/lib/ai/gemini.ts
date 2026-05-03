@@ -164,7 +164,7 @@ CRITICAL: You must return a complete JSON object with fields: title, content, ex
 **Writing Style for the "content" field:**
 1.  **Zero Fluff:** Eliminate all introductory phrases, transitional sentences, and meta-commentary (e.g., avoid "The authors conclude that...", "It is important to note..."). Go straight to the facts.
 2.  **Maximum Density:** Use an economy of words. Prioritize data, p-values, specific anatomical structures, and exact drug dosages over descriptive prose.
-3.  **Length:** Aim for 850-1000 words when the source document contains enough substance. Keep the writing dense and evidence-based; expand by covering methodology, endpoints, subgroup findings, limitations, and clinical implications rather than adding filler.
+3.  **Length:** Aim for about 500 words when the source document contains enough substance. Keep the writing dense and evidence-based; prioritize the main methodology, endpoints, key results, limitations, and clinical implications without adding filler.
 4.  **Language:** Write in **ultra-precise, academic Polish**. Use professional terminology exclusively.
 
 **Content Structure (these are markdown headings INSIDE the "content" field, NOT JSON keys):**
@@ -187,6 +187,10 @@ Under ## Ograniczenia:
 State the methodological limitations, missing data, generalizability issues, or uncertainties explicitly supported by the document.
 
 Ground all claims strictly in the provided document. Do not hallucinate data.
+
+TERMINOLOGY ACCURACY - MANDATORY:
+5. Translate "non-toric IOL" as "nietoryczna soczewka wewnątrzgałkowa" / "soczewka nietoryczna". Never translate it as "niefokalna".
+5a. Do not change lens class terms. "Monofocal" means "jednoogniskowa"; "non-toric" means "nietoryczna".
 
 NUMERIC ACCURACY - MANDATORY:
 6. Before writing any numeric value (SD, RMSAE, p-value, percentage, mean, n), trace it to a specific table or figure in the document. If you cannot confirm a number exists verbatim in a table or figure, omit it entirely rather than approximate. Never report a value for one formula that belongs to another formula in the same table.
@@ -264,6 +268,17 @@ function buildExcerpt(content: string): string {
   return plain.slice(0, 160)
 }
 
+function sanitizeChartCaption(caption: string): string {
+  const cleaned = (caption || '')
+    .replace(/\b(?:Table|Tabela)\s*\d+\b\s*[-:–—.]?\s*/gi, '')
+    .replace(/\b(?:z|from)\s+(?:Table|Tabela)\s*\d+\b/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+  if (!cleaned) return 'Wizualizacja danych liczbowych z analizowanego dokumentu.'
+  return cleaned
+}
+
 export async function generateArticleWithGemini(
   pdfContent: string,
   targetAudience: TargetAudience,
@@ -285,7 +300,7 @@ export async function generateArticleWithGemini(
       console.log(`[gemini] PDF content length for OpenAI chart extraction: ${pdfContent.length} chars`)
       const { extractChartDataFromPDF } = await import('@/lib/charts/data-extractor')
       extractedChartData = await extractChartDataFromPDF(pdfContent, 2)
-      console.log(`[gemini] OpenAI chart extraction returned ${extractedChartData.length} chart(s)`)
+      console.log(`[gemini] Chart extraction returned ${extractedChartData.length} verified chart(s)`)
 
       if (extractedChartData.length > 0) {
         console.log(`[gemini] Found ${extractedChartData.length} charts to include in article`)
@@ -294,13 +309,20 @@ ${extractedChartData.map((chart, i) => `
 Chart ${i + 1}: ${chart.chartTitle}
 Dataset ID: ${chart.id || `chart_${i + 1}`}
 Type: ${chart.chartType}
-Data: ${JSON.stringify(chart.data.labels)} with values ${JSON.stringify(chart.data.datasets[0]?.data)}
+X labels: ${JSON.stringify(chart.data.labels)}
+Datasets: ${JSON.stringify(chart.data.datasets)}
 Source: ${chart.sourceDescription}
 Placeholder: ${getFigurePlaceholderUrl(i + 1)}
 Chart token: {{CHART:${chart.id || `chart_${i + 1}`}:${chart.chartType}}}
 `).join('\n')}
 
-CRITICAL: Write your article content to reference these specific charts. Place each chart placeholder (e.g., ${getFigurePlaceholderUrl(1)}) or matching chart token (e.g., {{CHART:dataset_name:chart_type}}) in your content where you discuss the corresponding data. Write text that introduces and explains what the chart shows.`
+CRITICAL: Write your article content to reference these specific charts only. Place Chart 1 before Chart 2 in the article. Place each chart placeholder (e.g., ${getFigurePlaceholderUrl(1)}) or matching chart token (e.g., {{CHART:dataset_name:chart_type}}) in your content where you discuss the corresponding data. Write text that introduces and explains what the chart shows.
+CHART ACCURACY RULES:
+- Do not invent chart values, categories, trends, statistical significance, or table numbers.
+- If a chart has multiple datasets, attribute numeric claims to the exact dataset/formula/category shown in the chart data. Do not call one dataset "overall" or "best" unless the source text explicitly says that.
+- For SD/error charts, state that a lower value means greater precision only when that is consistent with the source description.
+- Preserve endpoint hierarchy from the source. Do not call a result "secondary" if the methods/source context says it is a primary endpoint.
+- Never mention "Table 2", "Table 3", or any table number in chart captions/descriptions.`
       }
     } catch (error) {
       console.warn('[gemini] Chart pre-extraction failed, continuing without chart context:', error)
@@ -330,7 +352,7 @@ CRITICAL: Write your article content to reference these specific charts. Place e
   ## Interpretacja kliniczna
   ## Ograniczenia
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
-- Write a detailed professional review. Use 850-1000 words for the "content" field when the document contains enough information.
+- Write a concise professional review. Use about 500 words for the "content" field when the document contains enough information.
 - For each subgroup analyzed (oczy dlugie, oczy krotkie, typ IOL), report BOTH the primary endpoint result and any secondary endpoint finding, even if led by different formulas.
 - When reporting the primary SD comparison for the whole dataset, name formulas with no statistically significant difference from the best formula.
 - If the paper reports mean PE adjusted to zero (Hoffer et al. protocol), add "### Analiza po wyzerowaniu sredniego bledu predykcji" inside "## Kluczowe wyniki" and report exact values.
@@ -346,10 +368,10 @@ CRITICAL: Write your article content to reference these specific charts. Place e
 
   const normalizedPdfContent = normalizePdfContent(pdfContent)
   const targetWordCount = targetAudience === 'professional'
-    ? '~900 words for the main content (aim for 850-1000)'
+    ? '~500 words for the main content'
     : '~400 words for the main content (aim for 380-450)'
   const contentWordCountDescription = targetAudience === 'professional'
-    ? '850-1000 words'
+    ? 'about 500 words'
     : '380-450 words'
 
   const userPrompt = `Based on the following medical document content, create a blog article/review in Polish.
@@ -514,20 +536,20 @@ Required JSON format:
 
   if (targetAudience === 'professional') {
     const currentWordCount = countWords(content)
-    if (currentWordCount > 0 && currentWordCount < 800) {
-      console.log(`[gemini] Professional article below target length (${currentWordCount} words); expanding to 850-1000 words`)
+    if (currentWordCount > 0 && currentWordCount < 430) {
+      console.log(`[gemini] Professional article below target length (${currentWordCount} words); expanding to about 500 words`)
       try {
         const expansion = await generateContentWithFallback({
           systemPrompt,
           prefer,
           prompt:
-            `Expand the following Polish professional ophthalmology article to 850-1000 words while preserving medical accuracy.\n` +
+            `Expand the following Polish professional ophthalmology article to about 500 words while preserving medical accuracy.\n` +
             `Return ONLY the improved markdown content, not JSON.\n` +
             `EXPANSION RULES - READ CAREFULLY:\n` +
             `1. Use only information supported by the source document below. Do not fabricate studies, citations, values, or clinical claims.\n` +
             `2. Permitted expansion strategies:\n` +
-            `- Go deeper on statistical methodology already mentioned, including tests, correction methods, and distribution checks used in the paper.\n` +
-            `- Expand patient demographics already stated, including age range, sex distribution, AL range, and IOL model counts.\n` +
+            `- Add only the most important statistical methodology already mentioned.\n` +
+            `- Add only essential patient demographics already stated.\n` +
             `- Detail exclusion criteria already listed in the Methods section.\n` +
             `- Expand subgroup findings already mentioned, adding exact n, RMSAE values, and p-values from source tables.\n` +
             `- Elaborate on limitations already named using document-grounded explanation.\n` +
@@ -703,7 +725,7 @@ Required JSON format:
           )
 
           const alt = `Wykres: ${extractedChart.chartTitle}`
-          const captionLine = extractedChart.sourceDescription ? `\n\n*${extractedChart.sourceDescription}*` : ''
+          const captionLine = extractedChart.sourceDescription ? `\n\n*${sanitizeChartCaption(extractedChart.sourceDescription)}*` : ''
           const markdownImage = `![${alt}](${url})${captionLine}`
 
           if (content.includes(placeholder)) {
@@ -714,6 +736,8 @@ Required JSON format:
             console.log(`[gemini] Chart ${i + 1} injected into content via chart token: ${url}`)
           } else {
             console.warn(`[gemini] Placeholder ${placeholder} or token ${chartToken} not found in content`)
+            content = `${content.trim()}\n\n${markdownImage}`
+            console.log(`[gemini] Chart ${i + 1} appended to content: ${url}`)
           }
         } catch (error) {
           console.error(`[gemini] Failed to generate/upload chart ${i + 1}:`, error)
@@ -793,7 +817,7 @@ export async function improveContentWithGemini(
   const prefer: 'pro' | 'flash' =
     (process.env.GEMINI_TEXT_MODEL || '').toLowerCase().includes('flash') ? 'flash' : 'pro'
   const lengthInstruction = targetAudience === 'professional'
-    ? 'For professional content, preserve or expand the article to 850-1000 words using only supported clinical detail. '
+    ? 'For professional content, preserve or expand the article to about 500 words using only supported clinical detail. '
     : ''
 
   const { result } = await generateContentWithFallback({

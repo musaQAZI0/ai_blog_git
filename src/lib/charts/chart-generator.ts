@@ -191,7 +191,7 @@ function createSignificanceLegendPlugin(chartData: ChartData) {
       const items: SignificanceStatus[] = ['best', 'sig_worse', 'ns']
       const startX = chart.chartArea.left
       let x = startX
-      const y = chart.options.plugins?.title?.display ? 58 : 30
+      const y = 24
 
       ctx.save()
       ctx.font = "11px 'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif"
@@ -212,6 +212,47 @@ function createSignificanceLegendPlugin(chartData: ChartData) {
       ctx.font = "10px 'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif"
       ctx.fillStyle = '#6b7280'
       ctx.fillText(source, startX, y + 18)
+      ctx.restore()
+    },
+  }
+}
+
+function formatChartValueLabel(value: unknown): string {
+  if (!isFiniteNumber(value)) return ''
+  const absolute = Math.abs(value)
+  if (absolute > 0 && absolute < 1) return value.toFixed(3)
+  if (!Number.isInteger(value)) return value.toFixed(1)
+  return String(value)
+}
+
+function createBarValueLabelsPlugin(isHorizontalBar: boolean) {
+  return {
+    id: 'barValueLabels',
+    afterDatasetsDraw(chart: any) {
+      const ctx = chart.ctx
+      const dataset = chart.data.datasets?.[0]
+      const meta = chart.getDatasetMeta(0)
+      if (!dataset || !meta || meta.hidden) return
+
+      ctx.save()
+      ctx.font = "11px 'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif"
+      ctx.fillStyle = '#374151'
+      ctx.textBaseline = 'middle'
+
+      meta.data.forEach((element: any, index: number) => {
+        const label = formatChartValueLabel(dataset.data?.[index])
+        if (!label) return
+
+        const position = element.tooltipPosition()
+        if (isHorizontalBar) {
+          ctx.textAlign = 'left'
+          ctx.fillText(label, position.x + 7, position.y)
+        } else {
+          ctx.textAlign = 'center'
+          ctx.fillText(label, position.x, position.y - 10)
+        }
+      })
+
       ctx.restore()
     },
   }
@@ -506,7 +547,7 @@ export async function generateChartImage(
       layout: {
         padding: {
           top: Array.isArray(chartData.significance) && chartData.significance.length > 0 ? 58 : 20,
-          right: isHorizontalBar ? 40 : 30, // Extra right padding for horizontal labels
+          right: isHorizontalBar ? 64 : 30, // Extra right padding for horizontal value labels
           bottom: 20,
           left: isHorizontalBar ? 20 : 30, // Less left padding for horizontal bars
         },
@@ -528,6 +569,13 @@ export async function generateChartImage(
       configuration.plugins = []
     }
     configuration.plugins.push(significanceLegendPlugin)
+  }
+
+  if ((type === 'bar' || type === 'horizontalBar') && chartData.datasets.length === 1) {
+    if (!configuration.plugins) {
+      configuration.plugins = []
+    }
+    configuration.plugins.push(createBarValueLabelsPlugin(isHorizontalBar))
   }
 
   const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration)

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { generateArticle } from '@/lib/ai'
 import { extractTextFromMultiplePDFs } from '@/lib/ai/pdf-parser'
+import { normalizeExtractedPdfText } from '@/lib/ai/pdf-text-normalizer'
 import { AIProvider, TargetAudience } from '@/types'
 import { getRequestUser } from '@/lib/auth/server'
 import { rateLimit } from '@/lib/rate-limit'
@@ -12,71 +13,6 @@ function getClientIp(request: NextRequest): string {
   const xff = request.headers.get('x-forwarded-for')
   if (xff) return xff.split(',')[0]?.trim() || 'unknown'
   return request.headers.get('x-real-ip') || 'unknown'
-}
-
-function looksLikeTableRow(line: string): boolean {
-  const trimmed = line.trim()
-  if (!trimmed) return false
-  const numericMatches = trimmed.match(/[-+]?\d+(?:[.,]\d+)?%?/g) || []
-  const hasFormulaOrStatsTerm = /\b(SD|RMSAE|MAE|MedAE|PE|Cooke|Kane|Barrett|EVO|Hill|Hoffer|Pearl|SRK|Haigis|Holladay|Olsen|Formula|Formu)/i.test(trimmed)
-  return numericMatches.length >= 3 || (numericMatches.length >= 2 && hasFormulaOrStatsTerm)
-}
-
-function looksLikeTableCaption(line: string, nextLine: string): boolean {
-  const trimmed = line.trim()
-  if (!trimmed) return false
-  if (/^\[TABLE:/i.test(trimmed)) return false
-  if (/^(table|tabela)\s*\d+/i.test(trimmed)) return true
-  if (/^(table|tabela)\s*[:.-]/i.test(trimmed)) return true
-  return looksLikeTableRow(nextLine) && /\b(whole|overall|primary|subgroup|short|long|IOL|results|formula|formu|prediction|refractive|eyes|oczu|wynik|tabela)\b/i.test(trimmed)
-}
-
-function wrapDetectedTables(text: string): string {
-  const lines = (text || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n')
-  const output: string[] = []
-  let inTable = false
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i]
-    const trimmed = line.trim()
-    const nextLine = lines[i + 1] || ''
-
-    if (looksLikeTableCaption(trimmed, nextLine)) {
-      if (inTable) {
-        output.push('[END TABLE]')
-      }
-      output.push(`[TABLE: ${trimmed}]`)
-      inTable = true
-      continue
-    }
-
-    if (inTable && !trimmed) {
-      const upcoming = lines.slice(i + 1, i + 4).some((candidate) => looksLikeTableRow(candidate))
-      if (!upcoming) {
-        output.push('[END TABLE]')
-        inTable = false
-      }
-      output.push('')
-      continue
-    }
-
-    output.push(line)
-  }
-
-  if (inTable) {
-    output.push('[END TABLE]')
-  }
-
-  return output.join('\n')
-}
-
-function normalizeExtractedText(text: string): string {
-  const withTables = wrapDetectedTables(text || '')
-  return withTables
-    .replace(/[ \t]+/g, ' ')
-    .replace(/\n{4,}/g, '\n\n\n')
-    .trim()
-    .slice(0, 45000)
 }
 
 function parseProvider(value: string | null | undefined): AIProvider {
@@ -162,9 +98,9 @@ export async function POST(request: NextRequest) {
       )
 
       console.log('[api/generate] Extracting text from PDFs...')
-      pdfContent = normalizeExtractedText(await extractTextFromMultiplePDFs(buffers))
+      pdfContent = normalizeExtractedPdfText(await extractTextFromMultiplePDFs(buffers))
     } else if (pdfContent) {
-      pdfContent = normalizeExtractedText(pdfContent)
+      pdfContent = normalizeExtractedPdfText(pdfContent)
     }
 
     if (!pdfContent || pdfContent.length < 100) {

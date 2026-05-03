@@ -34,7 +34,7 @@ CRITICAL: You must return a complete JSON object with fields: title, content, ex
 **Writing Style for the "content" field:**
 1.  **Zero Fluff:** Eliminate all introductory phrases, transitional sentences, and meta-commentary (e.g., avoid "The authors conclude that...", "It is important to note..."). Go straight to the facts.
 2.  **Maximum Density:** Use an economy of words. Prioritize data, p-values, specific anatomical structures, and exact drug dosages over descriptive prose.
-3.  **Length:** Aim for 850-1000 words when the source document contains enough substance. Keep the writing dense and evidence-based; expand by covering methodology, endpoints, subgroup findings, limitations, and clinical implications rather than adding filler.
+3.  **Length:** Aim for about 500 words when the source document contains enough substance. Keep the writing dense and evidence-based; prioritize the main methodology, endpoints, key results, limitations, and clinical implications without adding filler.
 4.  **Language:** Write in **ultra-precise, academic Polish**. Use professional terminology exclusively.
 
 **Content Structure (these are markdown headings INSIDE the "content" field, NOT JSON keys):**
@@ -103,7 +103,7 @@ export async function generateArticleWithOpenAI(
   ## Interpretacja kliniczna
   ## Ograniczenia
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
-- Write a detailed professional review. Use 850-1000 words for the "content" field when the document contains enough information.
+- Write a concise professional review. Use about 500 words for the "content" field when the document contains enough information.
 - For each subgroup analyzed (oczy dlugie, oczy krotkie, typ IOL), report BOTH the primary endpoint result and any secondary endpoint finding, even if led by different formulas.
 - When reporting the primary SD comparison for the whole dataset, name formulas with no statistically significant difference from the best formula.
 - If the paper reports mean PE adjusted to zero (Hoffer et al. protocol), add "### Analiza po wyzerowaniu sredniego bledu predykcji" inside "## Kluczowe wyniki" and report exact values.
@@ -115,7 +115,7 @@ export async function generateArticleWithOpenAI(
 `
 
   const targetWordCount = targetAudience === 'professional'
-    ? '~900 words for the main content (aim for 850-1000)'
+    ? '~500 words for the main content'
     : '~400 words for the main content (aim for 380-450)'
 
   const userPrompt = `Based on the following medical document content, create a blog article/review in Polish.
@@ -196,9 +196,9 @@ Required JSON format:
 
   async function ensureTargetLength(markdown: string): Promise<string> {
     const words = countWords(markdown)
-    const minimumWords = targetAudience === 'professional' ? 800 : 380
+    const minimumWords = targetAudience === 'professional' ? 430 : 380
     const targetExpansion = targetAudience === 'professional'
-      ? '~900 words (aim 850-1000)'
+      ? '~500 words'
       : '~400 words (aim 380-450)'
     if (words >= minimumWords) return markdown
 
@@ -245,7 +245,7 @@ Required JSON format:
           content:
             `Rewrite the following Polish professional/clinical blog article to be LESS generic and more grounded in the provided document.\n` +
             `Constraints:\n` +
-            `- Keep total length ~900 words (aim 850-1000).\n` +
+            `- Keep total length about 500 words.\n` +
             `- Do NOT add SEO metadata.\n` +
             `- Do NOT fabricate studies/citations.\n` +
             `- Preserve any figure placeholder URLs (e.g. ${getFigurePlaceholderUrl(1)}) exactly as-is.\n` +

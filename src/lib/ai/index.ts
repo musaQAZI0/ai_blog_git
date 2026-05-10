@@ -2,7 +2,7 @@ import { generateArticleWithOpenAI, improveContent } from './openai'
 import { generateArticleWithClaude, improveContentWithClaude } from './claude'
 import { generateArticleWithGemini, improveContentWithGemini } from './gemini'
 import { normalizeAIGenerationResponse } from './normalize'
-import { AIGenerationRequest, AIGenerationResponse, AIProvider } from '@/types'
+import { AIGenerationMode, AIGenerationRequest, AIGenerationResponse, AIProvider } from '@/types'
 
 const PROVIDER_ORDER: Record<AIProvider, AIProvider[]> = {
   gemini: ['gemini', 'openai', 'claude'],
@@ -22,7 +22,8 @@ function isProviderConfigured(provider: AIProvider): boolean {
 
 function preparePdfContentForGeneration(
   pdfContent: string,
-  targetAudience: AIGenerationRequest['targetAudience']
+  targetAudience: AIGenerationRequest['targetAudience'],
+  generationMode: AIGenerationMode
 ): string {
   const normalized = (pdfContent || '')
     .replace(/\r\n/g, '\n')
@@ -33,7 +34,17 @@ function preparePdfContentForGeneration(
   // Professional PDFs often place primary result tables after methods and baseline
   // characteristics. Keep the full normalized extraction window so chart parsing
   // does not clip later outcome tables.
-  const maxChars = targetAudience === 'professional' ? 45000 : 14000
+  // Mobile: smaller limits for fast generation
+  // Desktop full mode: larger limits for comprehensive generation with charts/images
+  // Desktop fast mode: smaller limits (fallback)
+  const maxChars =
+    generationMode === 'fast'
+      ? targetAudience === 'professional'
+        ? 22000
+        : 9000
+      : targetAudience === 'professional'
+        ? 55000 // Increased from 45000 for desktop professional full mode
+        : 18000 // Increased from 14000 for desktop patient full mode
   return normalized.slice(0, maxChars)
 }
 
@@ -61,13 +72,16 @@ async function generateWithProvider(
   provider: AIProvider,
   pdfContent: string,
   targetAudience: AIGenerationRequest['targetAudience'],
-  generateImage: boolean
+  generateImage: boolean,
+  generationMode: AIGenerationMode
 ): Promise<AIGenerationResponse> {
-  if (provider === 'openai') {
-    return generateArticleWithOpenAI(pdfContent, targetAudience, generateImage)
+  if (provider === 'openai')
+  {
+    return generateArticleWithOpenAI(pdfContent, targetAudience, generateImage, generationMode)
   }
-  if (provider === 'gemini') {
-    return generateArticleWithGemini(pdfContent, targetAudience, generateImage)
+  if (provider === 'gemini')
+  {
+    return generateArticleWithGemini(pdfContent, targetAudience, generateImage, generationMode)
   }
   return generateArticleWithClaude(pdfContent, targetAudience, generateImage)
 }
@@ -75,21 +89,27 @@ async function generateWithProvider(
 export async function generateArticle(
   request: AIGenerationRequest
 ): Promise<AIGenerationResponse> {
-  const { pdfContent, targetAudience, provider, generateImage } = request
-  const preparedPdfContent = preparePdfContentForGeneration(pdfContent, targetAudience)
+  const { pdfContent, targetAudience, provider, generateImage, generationMode = 'full' } = request
+  const preparedPdfContent = preparePdfContentForGeneration(pdfContent, targetAudience, generationMode)
   const attemptedErrors: string[] = []
+  const providerOrder = generationMode === 'fast' ? [provider] : PROVIDER_ORDER[provider]
 
-  for (const candidate of PROVIDER_ORDER[provider]) {
-    if (!isProviderConfigured(candidate)) {
+  for (const candidate of providerOrder)
+  {
+    if (!isProviderConfigured(candidate))
+    {
       attemptedErrors.push(`${candidate}: provider not configured`)
       continue
     }
 
-    const maxAttempts = candidate === provider ? 2 : 1
+    const maxAttempts = generationMode === 'fast' ? 1 : candidate === provider ? 2 : 1
 
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        if (candidate !== provider) {
+    for (let attempt = 1; attempt <= maxAttempts; attempt++)
+    {
+      try
+      {
+        if (candidate !== provider)
+        {
           console.warn(`[ai] Falling back from ${provider} to ${candidate}`)
         }
 
@@ -97,11 +117,13 @@ export async function generateArticle(
           candidate,
           preparedPdfContent,
           targetAudience,
-          generateImage
+          generateImage,
+          generationMode
         )
 
         return normalizeAIGenerationResponse(result)
-      } catch (error) {
+      } catch (error)
+      {
         const message = error instanceof Error ? error.message : String(error || 'Unknown error')
         attemptedErrors.push(`${candidate} attempt ${attempt}: ${message}`)
 
@@ -125,12 +147,15 @@ export async function improveArticleContent(
   targetAudience: 'patient' | 'professional',
   provider: AIProvider
 ): Promise<string> {
-  if (provider === 'openai') {
+  if (provider === 'openai')
+  {
     return improveContent(content, targetAudience)
   }
-  if (provider === 'gemini') {
+  if (provider === 'gemini')
+  {
     return improveContentWithGemini(content, targetAudience)
-  } else {
+  } else
+  {
     return improveContentWithClaude(content, targetAudience)
   }
 }

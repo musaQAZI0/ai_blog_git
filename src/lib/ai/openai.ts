@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { AIGenerationResponse, TargetAudience } from '@/types'
+import { AIGenerationMode, AIGenerationResponse, TargetAudience } from '@/types'
 import { generateAndUploadImagen, type ImagenPurpose } from '@/lib/ai/gemini-imagen'
 import { findCoverImageUrl } from '@/lib/images/cover-search'
 
@@ -76,14 +76,16 @@ ZEROED-MEAN ANALYSIS:
 export async function generateArticleWithOpenAI(
   pdfContent: string,
   targetAudience: TargetAudience,
-  generateImage: boolean = true
+  generateImage: boolean = true,
+  generationMode: AIGenerationMode = 'full'
 ): Promise<AIGenerationResponse> {
   const systemPrompt = targetAudience === 'patient'
     ? PATIENT_SYSTEM_PROMPT
     : PROFESSIONAL_SYSTEM_PROMPT
 
-  const figureInstructions =
-    targetAudience === 'professional'
+  const figureInstructions = !generateImage
+    ? `- Do not include figures, charts, image placeholders, or image prompts. Return "figures": [].`
+    : targetAudience === 'professional'
       ? `- Include MAXIMUM 2 figures. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize REAL DATA from the PDF source document.
 - CRITICAL for charts/graphs: Include data labels and text ONLY if they come from the source document. Use EXACT values from the PDF - do NOT make up or estimate numbers.
 - Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg", "Cooke K6", "Barrett Universal II").
@@ -107,7 +109,7 @@ export async function generateArticleWithOpenAI(
 - For each subgroup analyzed (oczy dlugie, oczy krotkie, typ IOL), report BOTH the primary endpoint result and any secondary endpoint finding, even if led by different formulas.
 - When reporting the primary SD comparison for the whole dataset, name formulas with no statistically significant difference from the best formula.
 - If the paper reports mean PE adjusted to zero (Hoffer et al. protocol), add "### Analiza po wyzerowaniu sredniego bledu predykcji" inside "## Kluczowe wyniki" and report exact values.
-- For charts, use the provided chart placeholder URL or a token in the format {{CHART:dataset_name:chart_type}}.
+${generateImage ? '- For charts, use the provided chart placeholder URL or a token in the format {{CHART:dataset_name:chart_type}}.' : '- Do not include chart placeholders or image references.'}
 `
       : `AudienceInstructions (patient):
 - Keep language simple and reassuring.
@@ -127,7 +129,7 @@ Document content: ${pdfContent}
 IMPORTANT:
 - Return a SINGLE valid JSON object (no markdown, no code fences, no extra text).
 ${figureInstructions}
-- In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. ${getFigurePlaceholderUrl(1)}.
+${generateImage ? `- In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. ${getFigurePlaceholderUrl(1)}.` : '- In "content" markdown, do not include image URLs, chart tokens, or figure placeholders.'}
 - MUST include a "## Źródło" section at the END of the content with the original article reference extracted from the PDF.
 - Reference format: Authors (one line), Title (one line), Journal Year Vol. X Issue Y Pages Z-W (one line).
 - Example reference format:
@@ -141,7 +143,7 @@ ${audienceInstructions}
 Required JSON format:
 {
   "title": "Article title",
-  "content": "Full article content in markdown format (must include placeholders like ${getFigurePlaceholderUrl(1)} where images should appear)",
+  "content": "Full article content in markdown format${generateImage ? ` (must include placeholders like ${getFigurePlaceholderUrl(1)} where images should appear)` : ' without image placeholders'}",
   "excerpt": "A brief 2-3 sentence summary (max 160 characters)",
   "seoMeta": {
     "title": "SEO optimized title (max 60 characters)",
@@ -150,8 +152,8 @@ Required JSON format:
   },
   "suggestedTags": ["tag1", "tag2"],
   "suggestedCategory": "Category name",
-  "coverImagePrompt": "A short prompt for a cover image relevant to the article.",
-  "figures": [
+  "coverImagePrompt": ${generateImage ? '"A short prompt for a cover image relevant to the article."' : '""'},
+  "figures": ${generateImage ? `[
     {
       "id": "figure_1",
       "type": "illustration or chart",
@@ -160,7 +162,7 @@ Required JSON format:
       "placeholder": "${getFigurePlaceholderUrl(1)}",
       "prompt": "Medical illustration or data visualization prompt in English. ${targetAudience === 'professional' ? 'PRIORITIZE data charts/graphs. Example: \"Bar chart comparing IOL formula performance. X-axis: Cooke K6, Barrett Universal II, EVO, Kane. Y-axis: SD of PEs (D). Data values: 12, 147, 1227, 183. Label specific bars with formula names.\" Use exact values from PDF.' : 'CRITICAL: Pure visual illustration only - absolutely NO TEXT, NO LABELS, NO WORDS, NO NUMBERS. Clean medical illustration.'}"
     }
-  ]
+  ]` : '[]'}
 }`
 
   const openai = getOpenAIClient()
@@ -261,8 +263,10 @@ Required JSON format:
     return completion.choices[0]?.message?.content || markdown
   }
 
-  content = await ensureTargetLength(content)
-  content = await ensureProfessionalSpecificity(content)
+  if (generationMode === 'full') {
+    content = await ensureTargetLength(content)
+    content = await ensureProfessionalSpecificity(content)
+  }
 
   function injectFigure(options: {
     content: string

@@ -1,11 +1,12 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { AIGenerationResponse, TargetAudience } from '@/types'
+import { AIGenerationMode, AIGenerationResponse, TargetAudience } from '@/types'
 import { generateAndUploadImagen, type ImagenPurpose } from '@/lib/ai/gemini-imagen'
 import { findCoverImageUrl } from '@/lib/images/cover-search'
 
 function getGeminiClient() {
   const apiKey = process.env.GEMINI_API_KEY
-  if (!apiKey) {
+  if (!apiKey)
+  {
     throw new Error('GEMINI_API_KEY is not configured')
   }
   return new GoogleGenerativeAI(apiKey)
@@ -36,7 +37,8 @@ async function listAvailableTextModels(apiKey: string): Promise<string[]> {
     cache: 'no-store',
   })
 
-  if (!res.ok) {
+  if (!res.ok)
+  {
     const text = await res.text().catch(() => '')
     throw new Error(
       `[gemini] ListModels failed (${res.status}): ${text || res.statusText}. ` +
@@ -77,7 +79,8 @@ function pickFallbackModel(available: string[], preferred: 'pro' | 'flash'): str
         'gemini-flash-latest',
       ]
 
-  for (const c of candidates) {
+  for (const c of candidates)
+  {
     if (normalized.has(c)) return c
   }
   return available[0] || null
@@ -110,15 +113,18 @@ async function generateContentWithFallback(options: {
     return { result: await model.generateContent(options.prompt), modelName: name }
   }
 
-  try {
+  try
+  {
     return await tryGenerate(requested)
-  } catch (err) {
+  } catch (err)
+  {
     if (!isModelNotFoundError(err)) throw err
   }
 
   const available = await listAvailableTextModels(apiKey)
   const fallback = pickFallbackModel(available, options.prefer)
-  if (!fallback) {
+  if (!fallback)
+  {
     throw new Error(
       `No Gemini text models available for generateContent for this API key. ` +
       `Set GEMINI_TEXT_MODEL to one of the models returned by ListModels.`
@@ -224,10 +230,12 @@ function extractJsonObject(text: string): string {
 }
 
 function safeParseJsonObject(text: string): Record<string, any> | null {
-  try {
+  try
+  {
     const parsed = JSON.parse(text)
     return parsed && typeof parsed === 'object' ? parsed : null
-  } catch {
+  } catch
+  {
     return null
   }
 }
@@ -282,7 +290,8 @@ function sanitizeChartCaption(caption: string): string {
 export async function generateArticleWithGemini(
   pdfContent: string,
   targetAudience: TargetAudience,
-  generateImage: boolean = true
+  generateImage: boolean = true,
+  generationMode: AIGenerationMode = 'full'
 ): Promise<AIGenerationResponse> {
   const systemPrompt = targetAudience === 'patient'
     ? PATIENT_SYSTEM_PROMPT
@@ -294,43 +303,33 @@ export async function generateArticleWithGemini(
   let extractedChartData: any[] = []
   let chartContext = ''
   console.log(`[gemini] Chart pre-extraction check: generateImage=${generateImage}, targetAudience=${targetAudience}`)
-  if (generateImage && targetAudience === 'professional') {
-    try {
+  if (generationMode === 'full' && generateImage && targetAudience === 'professional')
+  {
+    try
+    {
       console.log('[gemini] Pre-extracting chart data with OpenAI to inform article generation...')
       console.log(`[gemini] PDF content length for OpenAI chart extraction: ${pdfContent.length} chars`)
       const { extractChartDataFromPDF } = await import('@/lib/charts/data-extractor')
       extractedChartData = await extractChartDataFromPDF(pdfContent, 2)
       console.log(`[gemini] Chart extraction returned ${extractedChartData.length} verified chart(s)`)
 
-      if (extractedChartData.length > 0) {
+      if (extractedChartData.length > 0)
+      {
         console.log(`[gemini] Found ${extractedChartData.length} charts to include in article`)
-        chartContext = `\n\nAVAILABLE CHARTS TO REFERENCE IN YOUR ARTICLE:
-${extractedChartData.map((chart, i) => `
-Chart ${i + 1}: ${chart.chartTitle}
-Dataset ID: ${chart.id || `chart_${i + 1}`}
-Type: ${chart.chartType}
-X labels: ${JSON.stringify(chart.data.labels)}
-Datasets: ${JSON.stringify(chart.data.datasets)}
-Source: ${chart.sourceDescription}
-Placeholder: ${getFigurePlaceholderUrl(i + 1)}
-Chart token: {{CHART:${chart.id || `chart_${i + 1}`}:${chart.chartType}}}
-`).join('\n')}
+        const { createStrictChartContext } = await import('@/lib/ai/content-validator')
 
-CRITICAL: Write your article content to reference these specific charts only. Place Chart 1 before Chart 2 in the article. Place each chart placeholder (e.g., ${getFigurePlaceholderUrl(1)}) or matching chart token (e.g., {{CHART:dataset_name:chart_type}}) in your content where you discuss the corresponding data. Write text that introduces and explains what the chart shows.
-CHART ACCURACY RULES:
-- Do not invent chart values, categories, trends, statistical significance, or table numbers.
-- If a chart has multiple datasets, attribute numeric claims to the exact dataset/formula/category shown in the chart data. Do not call one dataset "overall" or "best" unless the source text explicitly says that.
-- For SD/error charts, state that a lower value means greater precision only when that is consistent with the source description.
-- Preserve endpoint hierarchy from the source. Do not call a result "secondary" if the methods/source context says it is a primary endpoint.
-- Never mention "Table 2", "Table 3", or any table number in chart captions/descriptions.`
+        // Use strict chart context that prevents hallucination
+        chartContext = createStrictChartContext(extractedChartData)
       }
-    } catch (error) {
+    } catch (error)
+    {
       console.warn('[gemini] Chart pre-extraction failed, continuing without chart context:', error)
     }
   }
 
-  const figureInstructions =
-    targetAudience === 'professional'
+  const figureInstructions = !generateImage
+    ? `3. Do not include figures, charts, image placeholders, or image prompts. Return "figures": [].`
+    : targetAudience === 'professional'
       ? `3. Include MAXIMUM 2 figures that show the MOST IMPORTANT results. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize PRIMARY ENDPOINTS and KEY FINDINGS from the PDF source document.
 3a. CRITICAL for charts/graphs: Include data labels and text ONLY if they come from the source document. Use EXACT values from the PDF - do NOT make up or estimate numbers.
 3b. Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg", "Cooke K6", "Barrett Universal II").
@@ -356,7 +355,7 @@ CHART ACCURACY RULES:
 - For each subgroup analyzed (oczy dlugie, oczy krotkie, typ IOL), report BOTH the primary endpoint result and any secondary endpoint finding, even if led by different formulas.
 - When reporting the primary SD comparison for the whole dataset, name formulas with no statistically significant difference from the best formula.
 - If the paper reports mean PE adjusted to zero (Hoffer et al. protocol), add "### Analiza po wyzerowaniu sredniego bledu predykcji" inside "## Kluczowe wyniki" and report exact values.
-- For charts, use the provided chart placeholder URL or a token in the format {{CHART:dataset_name:chart_type}}.
+${generateImage ? '- For charts, use the provided chart placeholder URL or a token in the format {{CHART:dataset_name:chart_type}}.' : '- Do not include chart placeholders or image references.'}
 - For "suggestedCategory", pick the BEST match from: ${validCategories.join(', ')}.
 `
       : `AudienceInstructions (patient):
@@ -366,7 +365,7 @@ CHART ACCURACY RULES:
 - For "suggestedCategory", pick the BEST match from: ${validCategories.join(', ')}.
 `
 
-  const normalizedPdfContent = normalizePdfContent(pdfContent)
+  const normalizedPdfContent = normalizePdfContent(pdfContent, generationMode === 'fast' ? 9000 : 12000)
   const targetWordCount = targetAudience === 'professional'
     ? '~500 words for the main content'
     : '~400 words for the main content (aim for 380-450)'
@@ -404,7 +403,7 @@ ${audienceInstructions}
 Required JSON format:
 {
   "title": "Descriptive article title in Polish",
-  "content": "Full COMPLETE article in markdown (${contentWordCountDescription}, with ## headings, bullet points, and figure placeholders like ${getFigurePlaceholderUrl(1)})",
+  "content": "Full COMPLETE article in markdown (${contentWordCountDescription}, with ## headings and bullet points${generateImage ? `, and figure placeholders like ${getFigurePlaceholderUrl(1)}` : ', without figure or chart placeholders'})",
   "excerpt": "2-3 sentence summary, max 160 characters",
   "seoMeta": {
     "title": "Short SEO title, max 60 chars",
@@ -413,8 +412,8 @@ Required JSON format:
   },
   "suggestedTags": ["tag1", "tag2", "tag3"],
   "suggestedCategory": "One of: ${validCategories.join(' | ')}",
-  "coverImagePrompt": "Detailed English prompt for cover image.",
-  "figures": [
+  "coverImagePrompt": ${generateImage ? '"Detailed English prompt for cover image."' : '""'},
+  "figures": ${generateImage ? `[
     {
       "id": "figure_1",
       "type": "illustration or chart",
@@ -423,7 +422,7 @@ Required JSON format:
       "placeholder": "${getFigurePlaceholderUrl(1)}",
       "prompt": "Medical illustration or data visualization prompt in English. ${targetAudience === 'professional' ? 'PRIORITIZE data charts/graphs. Example: \"Bar chart comparing IOL formula performance. X-axis: Cooke K6, Barrett Universal II, EVO, Kane. Y-axis: SD of PEs (D). Data values: 12, 147, 1227, 183. Label specific bars with formula names.\" Use exact values from PDF.' : 'CRITICAL: Pure visual illustration only - absolutely NO TEXT, NO LABELS, NO WORDS, NO NUMBERS. Clean medical illustration.'}"
     }
-  ]
+  ]` : '[]'}
 }`
 
   const prefer: 'pro' | 'flash' =
@@ -466,14 +465,17 @@ Required JSON format:
   const canUseGeminiImages = Boolean(process.env.GEMINI_API_KEY)
   let coverFallbackUrl: string | null = null
 
-  if (!content || content.trim().length < 120) {
+  if (!content || content.trim().length < 120)
+  {
     const fallbackFromText = extractPlainText(responseText)
-    if (fallbackFromText && fallbackFromText.length >= 120) {
+    if (fallbackFromText && fallbackFromText.length >= 120)
+    {
       content = fallbackFromText
     }
   }
 
-  if (!content || content.trim().length < 120) {
+  if (!content || content.trim().length < 120)
+  {
     const rescuePrompt = `Create a clean Polish blog article based on the document excerpt below.
 Return ONLY a valid JSON object matching the required format. Do not include markdown fences or extra text.
 Rules:
@@ -500,7 +502,8 @@ Required JSON format:
   "suggestedCategory": "Category name"
 }`
 
-    try {
+    try
+    {
       const rescue = await generateContentWithFallback({
         systemPrompt,
         prefer,
@@ -514,31 +517,38 @@ Required JSON format:
 
       const rescueText = rescue.result.response.text()
       const rescueJson = safeParseJsonObject(extractJsonObject(rescueText))
-      if (rescueJson) {
+      if (rescueJson)
+      {
         content = rescueJson.content || content
         title = rescueJson.title || title
         excerpt = rescueJson.excerpt || excerpt
         articleData.seoMeta = rescueJson.seoMeta || articleData.seoMeta
         articleData.suggestedTags = rescueJson.suggestedTags || articleData.suggestedTags
         articleData.suggestedCategory = rescueJson.suggestedCategory || articleData.suggestedCategory
-      } else {
+      } else
+      {
         const rescuePlain = extractPlainText(rescueText)
         if (rescuePlain) content = rescuePlain
       }
-    } catch (error) {
+    } catch (error)
+    {
       console.warn('Gemini rescue generation failed:', error)
     }
   }
 
-  if (!content || content.trim().length < 80) {
+  if (!content || content.trim().length < 80)
+  {
     content = `# ${title}\n\nNie udało sie wygenerować pełnej treści. Spróbuj ponownie z innym dokumentem.`
   }
 
-  if (targetAudience === 'professional') {
+  if (generationMode === 'full' && targetAudience === 'professional')
+  {
     const currentWordCount = countWords(content)
-    if (currentWordCount > 0 && currentWordCount < 430) {
+    if (currentWordCount > 0 && currentWordCount < 430)
+    {
       console.log(`[gemini] Professional article below target length (${currentWordCount} words); expanding to about 500 words`)
-      try {
+      try
+      {
         const expansion = await generateContentWithFallback({
           systemPrompt,
           prefer,
@@ -571,21 +581,25 @@ Required JSON format:
         })
 
         const expandedContent = expansion.result.response.text().trim()
-        if (countWords(expandedContent) > currentWordCount) {
+        if (countWords(expandedContent) > currentWordCount)
+        {
           content = expandedContent
           console.log(`[gemini] Professional article expanded to ${countWords(content)} words`)
         }
-      } catch (error) {
+      } catch (error)
+      {
         console.warn('[gemini] Professional article expansion failed:', error)
       }
     }
   }
 
-  if (!title || title === 'Untitled Article') {
+  if (!title || title === 'Untitled Article')
+  {
     title = deriveTitleFromContent(content)
   }
 
-  if (!excerpt || excerpt.trim().length < 40) {
+  if (!excerpt || excerpt.trim().length < 40)
+  {
     excerpt = buildExcerpt(content)
   }
 
@@ -598,15 +612,18 @@ Required JSON format:
   let seoKeywords: string[] = Array.isArray(seoMeta.keywords) ? seoMeta.keywords.filter(Boolean) : []
 
   // Enforce SEO title max 60 chars — truncate at last word boundary if needed
-  if (!seoTitle || seoTitle.length < 10) {
+  if (!seoTitle || seoTitle.length < 10)
+  {
     seoTitle = title.slice(0, 60)
   }
-  if (seoTitle.length > 60) {
+  if (seoTitle.length > 60)
+  {
     seoTitle = seoTitle.slice(0, 57).replace(/\s+\S*$/, '') + '...'
   }
 
   // Enforce SEO description max 160 chars
-  if (!seoDescription || seoDescription.length < 20 || seoDescription === excerpt) {
+  if (!seoDescription || seoDescription.length < 20 || seoDescription === excerpt)
+  {
     // Generate a unique description from mid-content
     const plainContent = content.replace(/[#*_>`\-\[\]\(\)]/g, ' ').replace(/\s+/g, ' ').trim()
     const sentences = plainContent.split(/[.!?]/).filter((s) => s.trim().length > 20)
@@ -614,12 +631,14 @@ Required JSON format:
       ? (sentences[1].trim() + '.').slice(0, 160)
       : plainContent.slice(50, 210).replace(/\s+\S*$/, '') + '...'
   }
-  if (seoDescription.length > 160) {
+  if (seoDescription.length > 160)
+  {
     seoDescription = seoDescription.slice(0, 157).replace(/\s+\S*$/, '') + '...'
   }
 
   // Enforce keywords — extract from content if empty
-  if (seoKeywords.length === 0) {
+  if (seoKeywords.length === 0)
+  {
     const ophthalmologyTerms = [
       'zaćma', 'jaskra', 'glaukoma', 'rogówka', 'soczewka', 'siatkówka', 'AMD',
       'krótkowzroczność', 'astygmatyzm', 'suche oko', 'okulistyka', 'operacja',
@@ -628,7 +647,8 @@ Required JSON format:
     ]
     const contentLower = content.toLowerCase()
     seoKeywords = ophthalmologyTerms.filter((term) => contentLower.includes(term.toLowerCase())).slice(0, 5)
-    if (seoKeywords.length < 2) {
+    if (seoKeywords.length < 2)
+    {
       seoKeywords = ['okulistyka', 'zdrowie oczu', title.split(' ').slice(0, 2).join(' ')]
     }
   }
@@ -637,14 +657,16 @@ Required JSON format:
   let suggestedTags: string[] = Array.isArray(articleData.suggestedTags)
     ? articleData.suggestedTags.filter(Boolean)
     : []
-  if (suggestedTags.length === 0) {
+  if (suggestedTags.length === 0)
+  {
     suggestedTags = seoKeywords.slice(0, 3)
   }
 
   // Enforce suggestedCategory — map to valid category or find best match
   const allowedCategories = targetAudience === 'patient' ? PATIENT_CATEGORIES : PROFESSIONAL_CATEGORIES
   let suggestedCategory: string = articleData.suggestedCategory || ''
-  if (!suggestedCategory || suggestedCategory === 'General' || !allowedCategories.includes(suggestedCategory)) {
+  if (!suggestedCategory || suggestedCategory === 'General' || !allowedCategories.includes(suggestedCategory))
+  {
     // Try to find the best matching category from content
     const contentLower = content.toLowerCase() + ' ' + title.toLowerCase()
     const categoryScores = allowedCategories.map((cat) => ({
@@ -657,8 +679,10 @@ Required JSON format:
 
   // ── Image generation ──
 
-  if (generateImage && canUseGeminiImages) {
-    try {
+  if (generateImage && canUseGeminiImages)
+  {
+    try
+    {
       const coverPrompt: string =
         articleData.coverImagePrompt ||
         `Professional medical illustration related to ophthalmology for an article titled "${title}". Clean, modern medical aesthetic. No text in the image.`
@@ -669,14 +693,17 @@ Required JSON format:
         'ai-cover',
         'cover'
       )
-    } catch (error) {
+    } catch (error)
+    {
       console.error('Gemini cover image generation failed:', error)
     }
   }
 
   // Cover fallback via internet search if Imagen fails or is disabled.
-  if (generateImage && !generatedImageUrl) {
-    try {
+  if (generateImage && !generatedImageUrl)
+  {
+    try
+    {
       coverFallbackUrl = await findCoverImageUrl({
         title,
         category: suggestedCategory,
@@ -684,7 +711,8 @@ Required JSON format:
         targetAudience,
       })
       if (coverFallbackUrl) generatedImageUrl = coverFallbackUrl
-    } catch (error) {
+    } catch (error)
+    {
       console.warn('Cover search fallback failed:', error)
     }
   }
@@ -692,15 +720,18 @@ Required JSON format:
   // For professional articles: Use Chart.js to generate accurate data charts
   // For patient articles: Use AI image generation for clean anatomical illustrations
   console.log(`[gemini] Chart rendering check: generateImage=${generateImage}, targetAudience=${targetAudience}, extractedChartData.length=${extractedChartData.length}`)
-  if (generateImage && targetAudience === 'professional' && extractedChartData.length > 0) {
-    try {
+  if (generateImage && targetAudience === 'professional' && extractedChartData.length > 0)
+  {
+    try
+    {
       console.log('[gemini] Generating chart images from pre-extracted data...')
       const { generateAndUploadChart } = await import('@/lib/charts/chart-uploader')
       const { enforceChartTypeVariety, validateChartData } = await import('@/lib/charts/data-extractor')
       const renderableCharts = enforceChartTypeVariety(
         extractedChartData.filter((extractedChart, index) => {
           // Validate chart data to prevent AI hallucination
-          if (!validateChartData(extractedChart)) {
+          if (!validateChartData(extractedChart))
+          {
             console.warn(`[gemini] Chart ${index + 1} failed validation, skipping`)
             return false
           }
@@ -708,10 +739,12 @@ Required JSON format:
         })
       )
 
-      for (let i = 0; i < renderableCharts.length; i++) {
+      for (let i = 0; i < renderableCharts.length; i++)
+      {
         const extractedChart = renderableCharts[i]
 
-        try {
+        try
+        {
           const chartId = `chart-${i + 1}`
           const placeholder = getFigurePlaceholderUrl(i + 1)
           const chartToken = `{{CHART:${extractedChart.id || `chart_${i + 1}`}:${extractedChart.chartType}}}`
@@ -728,36 +761,45 @@ Required JSON format:
           const captionLine = extractedChart.sourceDescription ? `\n\n*${sanitizeChartCaption(extractedChart.sourceDescription)}*` : ''
           const markdownImage = `![${alt}](${url})${captionLine}`
 
-          if (content.includes(placeholder)) {
+          if (content.includes(placeholder))
+          {
             content = content.split(placeholder).join(markdownImage)
             console.log(`[gemini] Chart ${i + 1} injected into content: ${url}`)
-          } else if (content.includes(chartToken)) {
+          } else if (content.includes(chartToken))
+          {
             content = content.split(chartToken).join(markdownImage)
             console.log(`[gemini] Chart ${i + 1} injected into content via chart token: ${url}`)
-          } else {
+          } else
+          {
             console.warn(`[gemini] Placeholder ${placeholder} or token ${chartToken} not found in content`)
             content = `${content.trim()}\n\n${markdownImage}`
             console.log(`[gemini] Chart ${i + 1} appended to content: ${url}`)
           }
-        } catch (error) {
+        } catch (error)
+        {
           console.error(`[gemini] Failed to generate/upload chart ${i + 1}:`, error)
         }
       }
-    } catch (error) {
+    } catch (error)
+    {
       console.error('[gemini] Chart generation failed:', error)
     }
-  } else if (generateImage && targetAudience === 'professional') {
+  } else if (generateImage && targetAudience === 'professional')
+  {
     console.log('[gemini] No chart data found in PDF, skipping chart generation')
   }
 
-  if (generateImage && targetAudience === 'patient') {
+  if (generateImage && targetAudience === 'patient')
+  {
     // Patient articles: use AI image generation for anatomical illustrations
     const limitedFigures = figures.slice(0, 3)
-    for (let i = 0; i < limitedFigures.length; i++) {
+    for (let i = 0; i < limitedFigures.length; i++)
+    {
       const figure = limitedFigures[i]
       if (!figure?.prompt) continue
 
-      try {
+      try
+      {
         const url = await generateAndUploadImagen(
           figure.prompt,
           figure.id || `figure-${i + 1}`,
@@ -770,13 +812,16 @@ Required JSON format:
         const captionLine = figure.caption ? `\n\n*${figure.caption}*` : ''
         const markdownImage = `![${alt}](${url})${captionLine}`
 
-        if (content.includes(placeholder)) {
+        if (content.includes(placeholder))
+        {
           content = content.split(placeholder).join(markdownImage)
         }
-      } catch (error) {
+      } catch (error)
+      {
         console.error('Gemini figure generation failed:', error)
         const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
-        if (coverFallbackUrl && content.includes(placeholder)) {
+        if (coverFallbackUrl && content.includes(placeholder))
+        {
           const alt = figure.alt || figure.caption || `Rycina ${i + 1}`
           content = content.split(placeholder).join(`![${alt}](${coverFallbackUrl})`)
         }
@@ -790,6 +835,43 @@ Required JSON format:
     .replace(/\{\{CHART:[^}]+:[^}]+\}\}/g, '')
     .replace(/https?:\/\/www\.google\.com\/search\?q=%7B%7BFIGURE_\d+_URL%7D%7D/g, '')
     .replace(/\n{3,}/g, '\n\n')
+
+  // VALIDATION: Check content accuracy against extracted charts
+  if (targetAudience === 'professional' && extractedChartData.length > 0 && generationMode === 'full')
+  {
+    try
+    {
+      const { validateContentAccuracy, sanitizeArticleContent } = await import('@/lib/ai/content-validator')
+
+      const validation = validateContentAccuracy(content, extractedChartData, pdfContent)
+
+      if (!validation.isValid)
+      {
+        console.warn('[gemini] Content validation found issues:', validation.errors)
+        validation.errors.forEach(error => {
+          console.warn(`  - [${error.type}] ${error.message}`)
+        })
+      }
+
+      if (validation.warnings.length > 0)
+      {
+        validation.warnings.forEach(warning => {
+          console.warn(`  ⚠️ ${warning}`)
+        })
+      }
+
+      // Sanitize orphaned references
+      const sanitized = sanitizeArticleContent(content, extractedChartData)
+      if (sanitized.removedReferences.length > 0)
+      {
+        console.warn(`[gemini] Removed ${sanitized.removedReferences.length} orphaned chart reference(s)`)
+        content = sanitized.content
+      }
+    } catch (validationError)
+    {
+      console.warn('[gemini] Content validation step failed:', validationError)
+    }
+  }
 
   return {
     title,

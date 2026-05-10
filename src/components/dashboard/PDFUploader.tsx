@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useState } from 'react'
+import React, { useCallback, useState, useEffect } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, FileText, Sparkles } from 'lucide-react'
 import { Button, Alert, AlertDescription } from '@/components/ui'
@@ -9,14 +9,35 @@ import { cn } from '@/lib/utils'
 interface PDFUploaderProps {
   onFilesSelected: (files: File[]) => void
   maxFiles?: number
+  maxTotalSizeMb?: number
   disabled?: boolean
+}
+
+function isMobileBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+  const ua = navigator.userAgent || ''
+  const coarsePointer =
+    typeof window !== 'undefined' ? window.matchMedia?.('(pointer: coarse)').matches : false
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || Boolean(coarsePointer)
 }
 
 export function PDFUploader({
   onFilesSelected,
-  maxFiles = 5,
+  maxFiles,
+  maxTotalSizeMb,
   disabled,
 }: PDFUploaderProps) {
+  // Device-specific limits: mobile 2 files / 12 MB, desktop 5 files / 30 MB
+  const [isMobile, setIsMobile] = useState(false)
+  const [deviceMaxFiles, setDeviceMaxFiles] = useState(maxFiles ?? 5)
+  const [deviceMaxTotalSizeMb, setDeviceMaxTotalSizeMb] = useState(maxTotalSizeMb ?? 30)
+
+  useEffect(() => {
+    const mobile = isMobileBrowser()
+    setIsMobile(mobile)
+    setDeviceMaxFiles(maxFiles ?? (mobile ? 2 : 5))
+    setDeviceMaxTotalSizeMb(maxTotalSizeMb ?? (mobile ? 12 : 30))
+  }, [])
   const [files, setFiles] = useState<File[]>([])
   const [error, setError] = useState<string | null>(null)
   const totalSizeMb = files.reduce((sum, file) => sum + file.size, 0) / 1024 / 1024
@@ -25,21 +46,31 @@ export function PDFUploader({
     (acceptedFiles: File[], rejectedFiles: unknown[]) => {
       setError(null)
 
-      if (rejectedFiles.length > 0) {
+      if (rejectedFiles.length > 0)
+      {
         setError('Niektóre pliki zostały odrzucone. Akceptujemy tylko pliki PDF.')
         return
       }
 
-      if (files.length + acceptedFiles.length > maxFiles) {
-        setError(`Możesz dodac maksymalnie ${maxFiles} plikow.`)
+      if (files.length + acceptedFiles.length > deviceMaxFiles)
+      {
+        setError(`Możesz dodac maksymalnie ${deviceMaxFiles} plikow.`)
         return
       }
 
       const newFiles = [...files, ...acceptedFiles]
+      const nextTotalSizeMb = newFiles.reduce((sum, file) => sum + file.size, 0) / 1024 / 1024
+
+      if (nextTotalSizeMb > deviceMaxTotalSizeMb)
+      {
+        setError(`Laczny rozmiar plikow nie moze przekroczyc ${deviceMaxTotalSizeMb} MB.`)
+        return
+      }
+
       setFiles(newFiles)
       onFilesSelected(newFiles)
     },
-    [files, maxFiles, onFilesSelected]
+    [files, deviceMaxFiles, deviceMaxTotalSizeMb, onFilesSelected]
   )
 
   const removeFile = (index: number) => {
@@ -53,7 +84,8 @@ export function PDFUploader({
     accept: {
       'application/pdf': ['.pdf'],
     },
-    maxFiles: maxFiles - files.length,
+    maxFiles: deviceMaxFiles - files.length,
+    maxSize: deviceMaxTotalSizeMb * 1024 * 1024,
     disabled,
   })
 
@@ -98,7 +130,7 @@ export function PDFUploader({
                   Drag and drop PDF files
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  or click to browse ({maxFiles} max)
+                  or click to browse ({deviceMaxFiles} max)
                 </p>
               </div>
             )}
@@ -118,7 +150,7 @@ export function PDFUploader({
             </div>
           </div>
           <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
-            Accepted format: PDF. Keep files under your provider limits for faster processing.
+            Accepted format: PDF. Limit: {deviceMaxTotalSizeMb} MB total.
           </p>
         </div>
       </div>

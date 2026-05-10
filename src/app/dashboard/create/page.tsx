@@ -26,6 +26,16 @@ import { normalizeAIGenerationResponse } from '@/lib/ai/normalize'
 
 type GenerationStage = 'extracting' | 'generating' | 'finalizing'
 
+function isMobileBrowser(): boolean {
+  if (typeof navigator === 'undefined') return false
+
+  const ua = navigator.userAgent || ''
+  const coarsePointer =
+    typeof window !== 'undefined' ? window.matchMedia?.('(pointer: coarse)').matches : false
+
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || Boolean(coarsePointer)
+}
+
 async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit,
@@ -34,12 +44,14 @@ async function fetchWithTimeout(
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
 
-  try {
+  try
+  {
     return await fetch(input, {
       ...init,
       signal: controller.signal,
     })
-  } finally {
+  } finally
+  {
     clearTimeout(timeoutId)
   }
 }
@@ -66,7 +78,8 @@ function CreateArticleContent() {
           : null
 
   React.useEffect(() => {
-    if (lockedTargetAudience) {
+    if (lockedTargetAudience)
+    {
       setTargetAudience(lockedTargetAudience)
     }
   }, [lockedTargetAudience])
@@ -81,13 +94,12 @@ function CreateArticleContent() {
     setGenerationStage(null)
     setError(null)
 
-    try {
+    try
+    {
       const idToken = await firebaseUser?.getIdToken?.()
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      )
-      const extractTimeout = isMobile ? 180000 : 120000
-      const generateTimeout = isMobile ? 420000 : 300000
+      const isMobile = isMobileBrowser()
+      const extractTimeout = 120000
+      const generateTimeout = isMobile ? 90000 : 300000
       const headers = idToken ? { authorization: `Bearer ${idToken}` } : undefined
 
       const formData = new FormData()
@@ -100,7 +112,8 @@ function CreateArticleContent() {
       setGenerationStage('extracting')
       let extractedPdfContent = ''
 
-      try {
+      try
+      {
         const extractResponse = await fetchWithTimeout(
           '/api/ai/generate',
           {
@@ -112,13 +125,16 @@ function CreateArticleContent() {
         )
         const extractPayload = await extractResponse.json()
 
-        if (!extractResponse.ok) {
+        if (!extractResponse.ok)
+        {
           throw new Error(extractPayload.error || 'Nie udalo sie przetworzyc pliku PDF')
         }
 
         extractedPdfContent = String(extractPayload?.data?.pdfContent || '')
-      } catch (extractErr) {
-        if (extractErr instanceof Error && extractErr.name === 'AbortError') {
+      } catch (extractErr)
+      {
+        if (extractErr instanceof Error && extractErr.name === 'AbortError')
+        {
           throw new Error(
             isMobile
               ? 'Przetwarzanie PDF trwa zbyt dlugo. Sprobuj polaczyc sie z WiFi lub uzyc krotszego pliku.'
@@ -130,7 +146,8 @@ function CreateArticleContent() {
 
       setGenerationStage('generating')
 
-      try {
+      try
+      {
         const response = await fetchWithTimeout(
           '/api/ai/generate',
           {
@@ -143,15 +160,17 @@ function CreateArticleContent() {
               action: 'generate',
               pdfContent: extractedPdfContent,
               targetAudience: lockedTargetAudience || targetAudience,
-              provider: 'gemini',
-              generateImage: true,
+              provider: isMobile ? 'gemini' : 'openai',
+              generateImage: !isMobile,
+              generationMode: isMobile ? 'fast' : 'full',
             }),
           },
           generateTimeout
         )
         const data = await response.json()
 
-        if (!response.ok) {
+        if (!response.ok)
+        {
           throw new Error(data.error || 'Blad generowania artykulu')
         }
 
@@ -173,8 +192,10 @@ function CreateArticleContent() {
 
         setGeneratedContent(sanitized)
         setStep('edit')
-      } catch (generateErr) {
-        if (generateErr instanceof Error && generateErr.name === 'AbortError') {
+      } catch (generateErr)
+      {
+        if (generateErr instanceof Error && generateErr.name === 'AbortError')
+        {
           const minutes = Math.floor(generateTimeout / 60000)
           throw new Error(
             `Generowanie trwało zbyt długo (> ${minutes} min). System wyłączył obrazy i uruchamia fallback modeli, ale ten dokument nadal jest zbyt ciężki.`
@@ -182,30 +203,35 @@ function CreateArticleContent() {
         }
         throw generateErr
       }
-    } catch (err) {
+    } catch (err)
+    {
       console.error('[create-article] Generation error:', err)
       setError(err instanceof Error ? err.message : 'Wystapil blad')
-    } finally {
+    } finally
+    {
       setGenerationStage(null)
       setGenerating(false)
     }
   }
 
   const handleGenerate = async () => {
-    if (files.length === 0) {
+    if (files.length === 0)
+    {
       setError('Wybierz co najmniej jeden plik PDF')
       return
     }
 
     const useOptimizedFlow = typeof window !== 'undefined'
-    if (useOptimizedFlow) {
+    if (useOptimizedFlow)
+    {
       return runOptimizedGeneration()
     }
 
     setGenerating(true)
     setError(null)
 
-    try {
+    try
+    {
       const formData = new FormData()
       files.forEach((file) => {
         formData.append('files', file)
@@ -222,9 +248,10 @@ function CreateArticleContent() {
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), timeoutDuration)
 
-      console.log(`[create-article] Starting generation (${isMobile ? 'mobile' : 'desktop'}, ${timeoutDuration/1000}s timeout)`)
+      console.log(`[create-article] Starting generation (${isMobile ? 'mobile' : 'desktop'}, ${timeoutDuration / 1000}s timeout)`)
 
-      try {
+      try
+      {
         const response = await fetch('/api/ai/generate', {
           method: 'POST',
           body: formData,
@@ -234,7 +261,8 @@ function CreateArticleContent() {
 
         clearTimeout(timeoutId)
 
-        if (!response.ok) {
+        if (!response.ok)
+        {
           const data = await response.json()
           throw new Error(data.error || 'Błąd generowania artykułu')
         }
@@ -258,10 +286,12 @@ function CreateArticleContent() {
 
         setGeneratedContent(sanitized)
         setStep('edit')
-      } catch (fetchErr) {
+      } catch (fetchErr)
+      {
         clearTimeout(timeoutId)
         // Handle abort/timeout errors with user-friendly message
-        if (fetchErr instanceof Error && fetchErr.name === 'AbortError') {
+        if (fetchErr instanceof Error && fetchErr.name === 'AbortError')
+        {
           const minutes = Math.floor(timeoutDuration / 60000)
           throw new Error(
             `Generowanie trwało zbyt długo (>${minutes} min). ` +
@@ -272,10 +302,12 @@ function CreateArticleContent() {
         }
         throw fetchErr
       }
-    } catch (err) {
+    } catch (err)
+    {
       console.error('[create-article] Generation error:', err)
       setError(err instanceof Error ? err.message : 'Wystapil blad')
-    } finally {
+    } finally
+    {
       setGenerating(false)
     }
   }
@@ -284,21 +316,25 @@ function CreateArticleContent() {
     if (!user) return
 
     setSaving(true)
-    try {
+    try
+    {
       const normalizedData: ArticleCreateData = {
         ...data,
         targetAudience: lockedTargetAudience || data.targetAudience,
       }
       const articleId = await createArticle(normalizedData, user.id, user.name)
 
-      if (publish) {
+      if (publish)
+      {
         await publishArticle(articleId)
       }
 
       router.push('/dashboard/articles')
-    } catch (err) {
+    } catch (err)
+    {
       setError(err instanceof Error ? err.message : 'Błąd zapisu artykułu')
-    } finally {
+    } finally
+    {
       setSaving(false)
     }
   }
@@ -345,7 +381,12 @@ function CreateArticleContent() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <PDFUploader onFilesSelected={handleFilesSelected} disabled={generating} />
+            <PDFUploader
+              onFilesSelected={handleFilesSelected}
+              disabled={generating}
+              maxFiles={typeof window !== 'undefined' && isMobileBrowser() ? 2 : 5}
+              maxTotalSizeMb={typeof window !== 'undefined' && isMobileBrowser() ? 12 : 30}
+            />
 
             <div className="rounded-2xl border border-border bg-muted/70 p-4">
               <div className="grid gap-4 sm:grid-cols-2">

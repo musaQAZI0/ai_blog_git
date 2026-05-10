@@ -2,12 +2,12 @@ import { NextRequest, NextResponse } from 'next/server'
 import { generateArticle } from '@/lib/ai'
 import { extractTextFromMultiplePDFs } from '@/lib/ai/pdf-parser'
 import { normalizeExtractedPdfText } from '@/lib/ai/pdf-text-normalizer'
-import { AIProvider, TargetAudience } from '@/types'
+import { AIGenerationMode, AIProvider, TargetAudience } from '@/types'
 import { getRequestUser } from '@/lib/auth/server'
 import { rateLimit } from '@/lib/rate-limit'
 
 export const dynamic = 'force-dynamic'
-export const maxDuration = 60
+export const maxDuration = 300
 
 function getClientIp(request: NextRequest): string {
   const xff = request.headers.get('x-forwarded-for')
@@ -26,6 +26,10 @@ function parseGenerateImage(value: unknown): boolean {
   if (typeof value === 'boolean') return value
   if (typeof value === 'string') return value !== 'false' && value !== '0'
   return true
+}
+
+function parseGenerationMode(value: unknown): AIGenerationMode {
+  return value === 'fast' ? 'fast' : 'full'
 }
 
 export async function POST(request: NextRequest) {
@@ -53,6 +57,7 @@ export async function POST(request: NextRequest) {
     let pdfContent = ''
     let provider: AIProvider = 'gemini'
     let generateImage = true
+    let generationMode: AIGenerationMode = 'full'
     let action = 'generate'
     let targetAudience: TargetAudience | null = null
 
@@ -64,6 +69,7 @@ export async function POST(request: NextRequest) {
             targetAudience?: TargetAudience
             provider?: string
             generateImage?: boolean
+            generationMode?: string
           }
         | null
 
@@ -71,6 +77,7 @@ export async function POST(request: NextRequest) {
       pdfContent = typeof body?.pdfContent === 'string' ? body.pdfContent : ''
       provider = parseProvider(body?.provider)
       generateImage = parseGenerateImage(body?.generateImage)
+      generationMode = parseGenerationMode(body?.generationMode)
       targetAudience = (body?.targetAudience as TargetAudience | undefined) || null
     } else {
       const formData = await request.formData()
@@ -79,6 +86,7 @@ export async function POST(request: NextRequest) {
       pdfContent = String(formData.get('pdfContent') || '')
       provider = parseProvider(formData.get('provider') as string | null)
       generateImage = parseGenerateImage(formData.get('generateImage'))
+      generationMode = parseGenerationMode(formData.get('generationMode'))
       targetAudience = (formData.get('targetAudience') as TargetAudience | null) || null
     }
 
@@ -138,6 +146,7 @@ export async function POST(request: NextRequest) {
       targetAudience,
       provider,
       generateImage,
+      generationMode,
     })
 
     return NextResponse.json({

@@ -82,12 +82,14 @@ export interface ArticleCreateData {
 
 // AI Generation Types
 export type AIProvider = 'openai' | 'claude' | 'gemini'
+export type AIGenerationMode = 'fast' | 'full'
 
 export interface AIGenerationRequest {
   pdfContent: string
   targetAudience: TargetAudience
   provider: AIProvider
   generateImage: boolean
+  generationMode?: AIGenerationMode
 }
 
 export interface AIGenerationResponse {

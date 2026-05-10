@@ -221,7 +221,7 @@ async function extractChartsWithOpenAI(
     instructions:
       'You are a precise medical data extraction assistant. Extract only factual numerical data that appears verbatim in the source document. Return only structured data matching the schema.',
     input: prompt,
-    max_output_tokens: 4000,
+    max_output_tokens: 8192,
     text: {
       format: CHART_EXTRACTION_RESPONSE_FORMAT,
     },
@@ -470,6 +470,57 @@ function sanitizeSupportedChartTypes(extractedData: ExtractedChartData[]): Extra
 
 function hasUsefulVariation(values: number[]): boolean {
   return values.length >= 2 && values.some((value) => value !== values[0])
+}
+
+/**
+ * Rejects charts where values span incompatible numerical scales.
+ * E.g. mixing 0.04 (SE in diopters) with 2026 (journal year) or 72 (patient age)
+ * in one chart means values came from completely different contexts.
+ * Legitimate medical charts rarely span more than 200x ratio (e.g. 0.5 to 100%).
+ */
+function hasHomogeneousValueScale(values: number[]): boolean {
+  if (values.length < 2) return false
+  const positive = values.filter((v) => v > 0)
+  if (positive.length < 2) return true
+
+  const min = Math.min(...positive)
+  const max = Math.max(...positive)
+  if (min > 0 && max / min > 200) return false
+
+  return true
+}
+
+/**
+ * Returns true if the label looks like a patient demographics or biometric parameter row.
+ * These rows come from Table 1 / methodology tables and should never be chart categories.
+ */
+function isDemographicsOrBiometricLabel(label: string): boolean {
+  if (/\bParameter\s+\w/i.test(label)) return true           // "Parameter Age (y)..."
+  if (/\bSD\s+values?\s+for\b/i.test(label)) return true     // "SD values for K, ACD..."
+  if (/\bwith\s+a\s+vertex\b/i.test(label)) return true      // "with a vertex distance of"
+  if (/\bfor\s+trial\s+spectacles\b/i.test(label)) return true
+  if (/\bdiopters?\s*\(D\)/i.test(label)) return true        // "diopters (D)"
+  if (/\b(volume|participants?)\b/i.test(label) && /\d{4}/.test(label)) return true // year-like context
+
+  return /\b(axial\s*length|anterior\s*chamber|keratometry|corneal\s*radius|CDVA|BCVA|logMAR|sphere|cylinder|pachymetry|pupil\s*diameter|IOP|refraction|manifest|biometry|biometric|IOL\s*power|axial|n\s*=\s*\d|volume\b)\b/i.test(label)
+}
+
+/**
+ * Returns true if the label is a table column header fragment rather than a real category name.
+ * Column headers often contain multiple measurement units or statistical descriptor words.
+ */
+function isColumnHeaderFragment(label: string): boolean {
+  // Labels with multiple parenthetical units = column header text
+  const unitMatches = label.match(/\b(D|mm|logMAR|diopters?|years?|months?|weeks?)\b/gi) || []
+  if (unitMatches.length >= 2) return true
+
+  // "(unit) something" with another unit = column header
+  if (/\([^)]+\)/.test(label) && unitMatches.length >= 1 && label.length > 20) return true
+
+  // Standalone statistical descriptor used as a row label = column header
+  if (/^\s*(Mean|Median|SD|SE|Min|Max|Range|IQR)\s*$/.test(label)) return true
+
+  return false
 }
 
 function createCompanionChartFromExisting(chart: ExtractedChartData): ExtractedChartData | null {
@@ -872,6 +923,8 @@ function isUsableGenericLabel(label: string): boolean {
     label.length >= 3 &&
     label.length <= 56 &&
     !isFormulaComparisonLabel(label) &&
+    !isDemographicsOrBiometricLabel(label) &&
+    !isColumnHeaderFragment(label) &&
     !/^(https?|clinical ophthalmology|powered by|discussion|table|figure)\b/i.test(label) &&
     !/[=;]|(?:\bsubsample\b|\bexample\b|\bobserved\b|\bbetween\b|\bavailable\b|\bindicated\b|\bsignificant\b)/i.test(label)
   )
@@ -944,8 +997,16 @@ function buildGenericMetricChart(
 
   if (rows.length < 3 || !hasUsefulVariation(rows.map((row) => row.value))) return null
 
-  const labels = rows.map((row) => row.label)
   const values = rows.map((row) => row.value)
+  if (!hasHomogeneousValueScale(values)) {
+    console.warn(
+      `[chart-extractor] Generic metric chart rejected: value scale not homogeneous ` +
+      `(min=${Math.min(...values)}, max=${Math.max(...values)}) — likely mixing values from different contexts`
+    )
+    return null
+  }
+
+  const labels = rows.map((row) => row.label)
   const metricLabel = inferGenericMetricLabel(group.caption, columnIndex)
   const chartType: ChartType = preferredType || (chartIndex === 0 ? (labels.length >= 7 ? 'horizontalBar' : 'bar') : 'line')
   const data = makeChartData(labels, metricLabel, values, group.caption, 'Kategoria', metricLabel)
@@ -1288,10 +1349,11 @@ function buildChartFocusedContext(pdfContent: string, maxChars: number = 26000):
     if (usedChars >= maxChars) break
   }
 
+  const NARRATIVE_RESULT_PATTERN = /\b(abstract|results?|conclusion|primary endpoint|main outcome|RMSAE|MAE|SD|correlation|r\s*=|r\s*of|pearson|spearman|p\s*[<>=]|p\s*-\s*value|significantly|coefficient|\bOR\b|\bHR\b|\bRR\b|odds ratio|hazard ratio|mean|median|found that|showed that|demonstrated|observed|measured|calculated|compared|ranged?|varied?|differed?|associated|predicted|explained|improved?|reduced?|decreased?|increased?|changed?|IOP|intraocular pressure|mmHg|BCVA|UDVA|CDVA|DCVA|logMAR|Snellen|ETDRS|letters|visual acuity|best corrected|uncorrected|injection|anti-VEGF|ranibizumab|bevacizumab|aflibercept|faricimab|brolucizumab|treatment|baseline|postoperative|follow-up|month|week|year|success|complication|failure|recurrence|reduction|improvement|macular|retinal|corneal|glaucoma|cataract|refractive|myopia|hyperopia|astigmatism|presbyopia|tonometry|pachymetry|OCT|RNFL|GCC|cup-to-disc|visual field|MD|PSD|keratometry|topography|aberration|spherical equivalent|manifest|cycloplegic|surgery|phacoemulsification|vitrectomy|trabeculectomy|tube|bleb|filtering|laser|LASIK|PRK|SMILE|crosslinking|CXL|phakic|pseudophakic|IOL|add power|diffractive|EDOF|trifocal|bifocal|monofocal|toric)\b/i
   const intro = pdfContent
     .split('\n')
-    .filter((line) => /\b(abstract|results?|conclusion|primary endpoint|main outcome|RMSAE|MAE|SD)\b/i.test(line))
-    .slice(0, 30)
+    .filter((line) => NARRATIVE_RESULT_PATTERN.test(line) && /[-+]?\d+(?:[.,]\d+)?/.test(line))
+    .slice(0, 60)
     .join('\n')
 
   const context = [
@@ -1404,6 +1466,16 @@ ABSOLUTE ANTI-HALLUCINATION RULES
 - DO NOT combine numbers from different tables/contexts into one chart.
 - If you cannot find at least 2 data points with exact numbers from the document, return {"charts": []}.
 
+NARRATIVE TEXT EXTRACTION (use when no suitable results table exists):
+When the document does NOT contain a structured results/outcomes comparison table, you MAY build charts from clearly structured numerical statements in the abstract or results narrative.
+This is ONLY allowed when:
+1. The narrative explicitly states multiple numeric values for different named categories in a single sentence or paragraph — e.g. "r = 0.98 for ACD, r = 0.31 for AL, r = -0.01 for K (p < 0.001)"
+2. Every single number appears verbatim in the text
+3. All values represent the SAME type of metric (all r-values, all percentages, all means, etc.) — do NOT mix metric types
+4. The categories being compared are clearly named and short (e.g. "ACD", "AL", "K", "+1.5 D", "+2.0 D")
+5. The data answers the paper's primary research question
+Do NOT extract narrative demographics (age, n, sex). ONLY extract narrative RESULTS.
+
 TABLE IDENTIFICATION RULE:
 The PDF text can contain multiple tables. When [TABLE: caption] tags are present, use them as the authoritative table boundaries. Before extracting any value:
 1. Read all [TABLE: ...] tags first, when present, and identify:
@@ -1475,6 +1547,25 @@ CHART TYPE SELECTION RULE:
 - 'radar' - Multi-dimensional comparisons
 
 DO NOT USE: 'scatter' or 'polarArea' - these chart types are NOT supported!
+
+FORBIDDEN TABLE TYPES — DO NOT extract charts from these:
+- Patient demographics / baseline characteristics tables (columns: Age, Sex, AL, ACD, K, CDVA, SE, n, Volume, Year)
+- Study design or methodology tables (rows: parameter name, value, unit)
+- Biometric parameters tables (rows: keratometry, axial length, anterior chamber depth, refraction)
+- Journal metadata rows (volume, issue, year, DOI, page numbers, participants count)
+- Correlation parameter tables where ROW LABELS are measurement parameter names ("Age", "ACD", "AL", "K") — these belong in the narrative, not a chart
+- Any table where the row labels are measurement units, statistical descriptors ("Mean", "SD", "Min", "Max"), or sentence fragments
+
+PERMITTED TABLE TYPES — ONLY extract charts from:
+- Results/outcomes comparison tables where ROWS are named groups, formulas, or treatments, and COLUMNS are a single outcome metric
+- Tables showing change over time where ROWS are time points and COLUMNS are metric values
+- Tables showing distribution/proportion where ROWS are categories summing to 100%
+- Statistical comparison tables where each row is a distinct clinical entity (formula, drug, procedure) being compared on one outcome
+
+LABEL QUALITY RULE:
+- Each chart category label must be a SHORT IDENTIFIER (≤ 30 characters) representing a formula name, group name, treatment name, or time point
+- Labels must NOT be: column header descriptions, statistical parameter names, biometric parameter names, or sentence fragments
+- If the only available labels look like column headers ("Parameter Age (y) SE (D) CDVA", "with a vertex distance of", "SD values for K"), return {"charts": []}
 
 CRITICAL REQUIREMENTS:
 1. Extract ONLY data that is explicitly present in the document - DO NOT make up, estimate, round, or infer any numbers. Every value MUST be copy-pasted from the source.
@@ -1609,11 +1700,57 @@ EXAMPLE FOR HORIZONTAL BAR (when many formulas are compared):
   }
 }
 
+OPHTHALMOLOGY STUDY TYPES — examples of what to extract for each specialty:
+
+GLAUCOMA / IOP studies:
+- Extract: IOP values (mmHg) at each follow-up time point per group → line chart
+- Extract: % success / failure / complication rates per procedure → bar or doughnut
+- Example labels: ["Miesiąc 1", "Miesiąc 3", "Miesiąc 6", "Miesiąc 12"] with IOP values
+- Example: Chart 1 'line' (IOP over time) + Chart 2 'pie' (success rate distribution)
+
+RETINA / AMD / VEGF studies:
+- Extract: BCVA (logMAR or ETDRS letters) at baseline vs follow-up per treatment group → line or bar
+- Extract: Number of injections, treatment intervals, retreatment rates per group → bar
+- Example labels: ["Aflibercept", "Ranibizumab", "Bevacizumab"] or ["Baseline", "Miesiąc 3", "Miesiąc 6", "Miesiąc 12"]
+- Example: Chart 1 'line' (BCVA over time) + Chart 2 'bar' (mean injections per group)
+
+REFRACTIVE SURGERY / CORNEA studies:
+- Extract: UDVA, CDVA, SE at baseline vs 1M/3M/6M/12M → line chart
+- Extract: % eyes within ±0.5D, ±1.0D of target refraction per procedure → line or bar
+- Extract: Corneal power, pachymetry, or aberration values pre vs post → bar
+- Example: Chart 1 'bar' (UDVA by group) + Chart 2 'line' (% within target refraction)
+
+SURGICAL OUTCOMES / RCT studies:
+- Extract: Primary endpoint values (complication rate, success rate, BCVA, IOP) per treatment arm → bar
+- Extract: Kaplan-Meier-style event rates at time points → line
+- Extract: Distribution of outcomes across categories → doughnut
+- Example: Chart 1 'bar' (primary endpoint by group) + Chart 2 'doughnut' (outcome distribution)
+
+SIMULATION / MODELLING studies:
+- Extract: Correlation coefficients (r values) per parameter → bar
+- Extract: Outcome metric ranges across population → line
+- Example: Chart 1 'bar' (r per biometric parameter) + Chart 2 'line' (outcome range vs add power)
+
+QUESTIONNAIRE / PRO studies:
+- Extract: Domain scores per group → bar or radar
+- Extract: Score change over time → line
+- Example: Chart 1 'radar' (multi-domain scores) + Chart 2 'bar' (change from baseline)
+
+NARRATIVE EXTRACTION for all types:
+If data appears in sentences rather than tables, extract it when:
+- Multiple named groups/time points have numeric values of the same metric
+- E.g. "IOP was 18.2 mmHg at month 1, 15.4 mmHg at month 3, and 13.1 mmHg at month 6"
+- E.g. "BCVA improved from 0.52 to 0.31 logMAR in group A and from 0.55 to 0.38 in group B"
+- E.g. "Success rate was 87% in the trabeculectomy group vs 74% in the tube group"
+
 REAL-WORLD EXAMPLES WITH VARIETY ENFORCED:
-OK: Chart 1: "Compare MAE for IOL formulas" -> 'bar' + Chart 2: "% eyes within refractive targets" -> 'doughnut'
-OK: Chart 1: "MAE ranking for 8+ formulas" -> 'horizontalBar' + Chart 2: "Distribution of prediction errors" -> 'boxplot'
-OK: Chart 1: "Visual acuity at 1, 3, 6, 12 months" -> 'line' + Chart 2: "Complication rate distribution" -> 'pie'
-OK: Chart 1: "Success rates" -> 'doughnut' + Chart 2: "Multi-metric comparison" -> 'radar'
+OK: Chart 1: "IOP w czasie obserwacji" -> 'line' + Chart 2: "Rozkład wyników leczenia" -> 'pie'
+OK: Chart 1: "BCVA wg grupy leczenia" -> 'bar' + Chart 2: "Zmiany BCVA w czasie" -> 'line'
+OK: Chart 1: "Porównanie MAE formuł IOL" -> 'bar' + Chart 2: "% oczu w granicach błędu" -> 'doughnut'
+OK: Chart 1: "MAE 8+ formuł" -> 'horizontalBar' + Chart 2: "Rozkład błędu predykcji" -> 'boxplot'
+OK: Chart 1: "Wyniki domeny jakości widzenia" -> 'radar' + Chart 2: "Odsetek powikłań" -> 'pie'
+OK: Chart 1: "Korelacja parametrów biometrycznych" -> 'bar' + Chart 2: "Zakres mocy addycji" -> 'line'
+OK: Chart 1: "Redukcja IOP" -> 'bar' + Chart 2: "Wskaźnik sukcesu wg grupy" -> 'doughnut'
 
 WRONG: Chart 1: 'bar' + Chart 2: 'bar' - THIS IS NOT ALLOWED!
 WRONG: Chart 1: 'bar' + Chart 2: 'horizontalBar' or 'stackedBar' - BOTH ARE BAR-FAMILY!

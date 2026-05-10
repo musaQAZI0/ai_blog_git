@@ -192,10 +192,13 @@ export function validateContentAccuracy(
     {
         if (!isNumberVerified(numberStr, verifiedNumbers))
         {
-            // Check both decimal formats against source PDF (e.g. "1.5" matches "1,5" in Polish PDFs)
+            // Normalize both sides: em-dash (U+2212) used in PDFs for minus, comma/period decimal
+            const normalizedPdf = sourcePdfContent
+                .replace(/\u2212/g, '-')   // em-dash minus → hyphen
+                .replace(/\u2013/g, '-')   // en-dash → hyphen
+                .replace(/\s+/g, ' ')
             const withComma = numberStr.replace('.', ',')
             const withPeriod = numberStr.replace(',', '.')
-            const normalizedPdf = sourcePdfContent.replace(/\s+/g, ' ')
             const foundInSource =
                 normalizedPdf.includes(numberStr) ||
                 normalizedPdf.includes(withComma) ||

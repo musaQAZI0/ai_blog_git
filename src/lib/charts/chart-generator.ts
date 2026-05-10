@@ -287,11 +287,6 @@ export async function generateChartImage(
     console.error(`[chart-generator] ❌ Controller for "${chartJsType}" NOT found! Chart will fail to render.`)
   }
 
-  const chartJSNodeCanvas = new ChartJSNodeCanvas({
-    width,
-    height,
-    backgroundColour: 'white'
-  })
 
   // For pie/doughnut charts, use multiple colors for each segment
   const isPieStyle = ['pie', 'doughnut'].includes(type)
@@ -555,6 +550,14 @@ export async function generateChartImage(
     },
   }
 
+  let chartJSNodeCanvas: any
+  try {
+    chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height, backgroundColour: 'white' })
+  } catch (canvasInitError) {
+    const msg = canvasInitError instanceof Error ? canvasInitError.message : String(canvasInitError)
+    throw new Error(`[chart-generator] Canvas native library unavailable — chart skipped. (${msg})`)
+  }
+
   // Add the custom plugin for radar charts to show tick labels on all spokes
   if (type === 'radar') {
     if (!configuration.plugins) {
@@ -578,8 +581,13 @@ export async function generateChartImage(
     configuration.plugins.push(createBarValueLabelsPlugin(isHorizontalBar))
   }
 
-  const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration)
-  return imageBuffer
+  try {
+    const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration)
+    return imageBuffer
+  } catch (renderError) {
+    const msg = renderError instanceof Error ? renderError.message : String(renderError)
+    throw new Error(`[chart-generator] Failed to render chart "${title}": ${msg}`)
+  }
 }
 
 /**

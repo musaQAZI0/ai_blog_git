@@ -1,6 +1,16 @@
 // Note: pdf-parse should be used on the server side only
 import pdf from 'pdf-parse'
 
+// Suppress harmless font-table warnings from pdfjs (e.g. "Required 'glyf' table is not found")
+// These appear when PDFs use embedded fonts without a complete glyph table and don't affect extraction.
+const _origWarn = console.warn.bind(console)
+console.warn = (...args: unknown[]) => {
+  const msg = typeof args[0] === 'string' ? args[0] : ''
+  if (msg.includes('glyf') || msg.includes('cmap') || msg.includes('Required') && msg.includes('table')) return
+  _origWarn(...args)
+}
+
+
 type PdfTextItem = {
   str: string
   width?: number

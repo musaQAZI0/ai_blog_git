@@ -1,20 +1,22 @@
 services:
   - type: web
     name: ai-medical-blog
-    env: node
+    runtime: node
     region: frankfurt
     plan: free
-    buildCommand: >
-      apt-get install -y
-      libcairo2
-      libpango-1.0-0
-      libpangocairo-1.0-0
-      libjpeg-turbo8
-      libgif7
-      librsvg2-2
-      2>/dev/null || true
-      && npm ci
-      && npm run build
+    buildCommand: |
+      apt-get update &&
+      apt-get install -y \
+        build-essential \
+        libcairo2-dev \
+        libpango1.0-dev \
+        libjpeg-dev \
+        libgif-dev \
+        librsvg2-dev \
+        libpixman-1-dev \
+        pkg-config &&
+      npm ci &&
+      npm run build
     startCommand: npm start
     healthCheckPath: /api/public-config
     envVars:

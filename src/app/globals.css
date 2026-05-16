@@ -191,3 +191,298 @@
 .sidebar-scroll::-webkit-scrollbar-thumb:hover {
   background-color: #666666;
 }
+
+/* ========================================
+   MOBILE & CROSS-PLATFORM OPTIMIZATIONS
+   ======================================== */
+
+/* Touch-friendly tap targets (minimum 44x44px) */
+@layer utilities {
+  .tap-target {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Prevent text size adjustment on orientation change */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+}
+
+/* Smooth scrolling with momentum on iOS */
+@layer base {
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Remove tap highlight on mobile */
+@layer base {
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    -webkit-tap-highlight-color: transparent;
+    tap-highlight-color: transparent;
+  }
+}
+
+/* Optimize font rendering for all platforms */
+@layer base {
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+}
+
+/* Prevent horizontal scroll on mobile */
+@layer base {
+  html,
+  body {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+}
+
+/* Accessible focus states */
+@layer utilities {
+  .focus-ring {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  }
+}
+
+/* Shimmer animation for loading states */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  /* Larger text on mobile for readability */
+  .prose {
+    font-size: 1rem;
+    line-height: 1.7;
+  }
+
+  /* Reduce padding on mobile */
+  .prose p {
+    margin-bottom: 1em;
+  }
+
+  /* Stack tables horizontally on mobile */
+  .prose table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent zoom on input focus (iOS) */
+  input[type="text"],
+  input[type="email"],
+  input[type="password"],
+  input[type="number"],
+  input[type="tel"],
+  textarea,
+  select {
+    font-size: 16px; /* Prevents iOS zoom */
+  }
+
+  /* Touch-friendly form controls */
+  input,
+  select,
+  textarea,
+  button {
+    min-height: 44px;
+  }
+}
+
+/* Tablet-specific optimizations */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .prose {
+    font-size: 1.0625rem;
+  }
+}
+
+/* Reduce motion for users who prefer it */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Dark mode optimizations */
+@media (prefers-color-scheme: dark) {
+  /* Better contrast for dark mode */
+  .dark {
+    color-scheme: dark;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  * {
+    border-width: 2px;
+  }
+
+  button,
+  a {
+    text-decoration: underline;
+  }
+}
+
+/* Print optimizations */
+@media print {
+  * {
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  a,
+  a:visited {
+    text-decoration: underline;
+  }
+
+  a[href]::after {
+    content: " (" attr(href) ")";
+  }
+
+  abbr[title]::after {
+    content: " (" attr(title) ")";
+  }
+
+  /* Hide navigation and non-essential elements */
+  nav,
+  aside,
+  .no-print {
+    display: none !important;
+  }
+
+  /* Page breaks */
+  h1,
+  h2,
+  h3 {
+    page-break-after: avoid;
+  }
+
+  img {
+    max-width: 100% !important;
+    page-break-inside: avoid;
+  }
+
+  p,
+  blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+}
+
+/* Landscape mobile optimizations */
+@media (max-height: 500px) and (orientation: landscape) {
+  /* Reduce header height in landscape */
+  header {
+    height: auto;
+    min-height: 48px;
+  }
+}
+
+/* Safe area insets for notched devices (iPhone X, etc.) */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(env(safe-area-inset-left), 0px);
+    padding-right: max(env(safe-area-inset-right), 0px);
+    padding-bottom: max(env(safe-area-inset-bottom), 0px);
+  }
+}
+
+/* Hover effects only on devices with hover capability */
+@media (hover: hover) and (pointer: fine) {
+  button:hover,
+  a:hover {
+    transform: translateY(-1px);
+    transition: transform 0.2s ease;
+  }
+}
+
+/* Touch device optimizations */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger tap targets on touch devices */
+  button,
+  a,
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-width: 48px;
+    min-height: 48px;
+  }
+
+  /* Remove hover effects on touch devices */
+  button:hover,
+  a:hover {
+    transform: none;
+  }
+}
+
+/* macOS Safari specific fixes */
+@supports (-webkit-appearance: none) {
+  /* Fix Safari input styling */
+  input[type="search"]::-webkit-search-cancel-button {
+    -webkit-appearance: none;
+  }
+}
+
+/* Firefox specific fixes */
+@-moz-document url-prefix() {
+  /* Firefox scrollbar styling */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;
+  }
+}
+
+/* Performance optimization: Use transform for animations */
+@layer utilities {
+  .gpu-accelerated {
+    transform: translateZ(0);
+    backface-visibility: hidden;
+    perspective: 1000px;
+  }
+}
+
+/* Skeleton loader animation */
+@layer utilities {
+  .skeleton {
+    @apply relative overflow-hidden bg-gray-200 rounded;
+  }
+
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.5),
+      transparent
+    );
+    animation: shimmer 2s infinite;
+  }
+}

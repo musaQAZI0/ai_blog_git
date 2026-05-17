@@ -121,6 +121,100 @@ function isBarLikeChartType(chartType: ChartType): boolean {
   return BAR_LIKE_CHART_TYPES.has(chartType)
 }
 
+/**
+ * Intelligently determines the best chart type based on data characteristics
+ * This is used as a fallback when AI doesn't specify a type
+ */
+function inferChartTypeFromData(data: {
+  labels: string[]
+  datasets: { label: string; data: any[] }[]
+  title?: string
+  sourceDescription?: string
+}): ChartType {
+  const { labels, datasets, title = '', sourceDescription = '' } = data
+
+  // Check for temporal/sequential data
+  const isTemporalData = labels.some(label =>
+    /\d+\s*(month|week|day|year|miesi|tydz|dzien|rok|h|min)/i.test(label) ||
+    /^(t|time|czas)\s*[=:]/i.test(label)
+  )
+
+  // Check for cumulative interval data (defocus curves, error distributions)
+  const isCumulativeInterval = labels.some(label =>
+    /[±+-]\s*\d+\.?\d*\s*d/i.test(label) ||
+    /within|w granicach/i.test(title + sourceDescription)
+  )
+
+  // Check for boxplot data structure
+  const hasBoxPlotStructure = datasets.length > 0 &&
+    datasets.every(ds => ds.data.every(d =>
+      typeof d === 'object' && d !== null &&
+      'min' in d && 'q1' in d && 'median' in d && 'q3' in d && 'max' in d
+    ))
+
+  if (hasBoxPlotStructure) {
+    return 'boxplot'
+  }
+
+  // Check if single dataset with percentages summing to ~100
+  if (datasets.length === 1 && datasets[0].data.length >= 2) {
+    const values = datasets[0].data.filter((v): v is number => typeof v === 'number')
+    const sum = values.reduce((acc, v) => acc + v, 0)
+    const allPositive = values.every(v => v >= 0)
+    const sumsTo100 = Math.abs(sum - 100) < 5 // Within 5% of 100
+
+    if (allPositive && sumsTo100) {
+      return values.length <= 5 ? 'pie' : 'doughnut'
+    }
+  }
+
+  // Check for multiple datasets with percentages (stacked bar candidate)
+  if (datasets.length > 1) {
+    const firstDatasetValues = datasets[0].data.filter((v): v is number => typeof v === 'number')
+    if (firstDatasetValues.length > 0) {
+      const sumsPerLabel: number[] = []
+      for (let i = 0; i < firstDatasetValues.length; i++) {
+        const sum = datasets.reduce((acc, ds) => {
+          const val = ds.data[i]
+          return acc + (typeof val === 'number' ? val : 0)
+        }, 0)
+        sumsPerLabel.push(sum)
+      }
+
+      const allSumsNear100 = sumsPerLabel.every(sum => Math.abs(sum - 100) < 5)
+      if (allSumsNear100 && datasets.every(ds => ds.data.every((v): v is number => typeof v === 'number' && v >= 0))) {
+        return 'stackedBar'
+      }
+    }
+  }
+
+  // Temporal or cumulative interval data → line chart
+  if (isTemporalData || isCumulativeInterval) {
+    return 'line'
+  }
+
+  // Multiple datasets with continuous data → line chart
+  if (datasets.length > 1 && datasets[0].data.length >= 3) {
+    return 'line'
+  }
+
+  // Many categories (7+) → horizontal bar for readability
+  if (labels.length >= 7) {
+    return 'horizontalBar'
+  }
+
+  // Check for radar-compatible data (3+ dimensions, all positive)
+  if (labels.length >= 3 && labels.length <= 8 && datasets.length === 1) {
+    const values = datasets[0].data.filter((v): v is number => typeof v === 'number')
+    if (values.every(v => v >= 0)) {
+      return 'radar'
+    }
+  }
+
+  // Default to standard bar chart
+  return 'bar'
+}
+
 function getNumericDatasets(chart: ExtractedChartData): number[][] | null {
   const datasets = chart.data?.datasets || []
   const numericDatasets: number[][] = []
@@ -166,16 +260,40 @@ function pickAlternativeChartType(
   blockedTypes: Set<ChartType>,
   blockBarLike: boolean
 ): ChartType {
-  const candidates: ChartType[] = ['line', 'doughnut', 'radar', 'pie', 'boxplot', 'bar']
+  // First, try intelligent inference based on data characteristics
+  const intelligentType = inferChartTypeFromData({
+    labels: chart.data.labels,
+    datasets: chart.data.datasets,
+    title: chart.chartTitle,
+    sourceDescription: chart.sourceDescription
+  })
+
+  // Check if the intelligent type is available and compatible
+  if (!blockedTypes.has(intelligentType) &&
+      (!blockBarLike || !isBarLikeChartType(intelligentType)) &&
+      isCompatibleChartType(chart, intelligentType)) {
+    console.log(`[chart-variety] Picked intelligent alternative '${intelligentType}' based on data characteristics`)
+    return intelligentType
+  }
+
+  // Fallback to candidate list if intelligent type is blocked
+  const candidates: ChartType[] = ['line', 'doughnut', 'radar', 'pie', 'boxplot', 'horizontalBar', 'bar']
   const avoidRadar = hasCumulativeIntervalData(chart)
-  return (
-    candidates.find((candidate) =>
-      !blockedTypes.has(candidate) &&
-      (!avoidRadar || candidate !== 'radar') &&
-      (!blockBarLike || !isBarLikeChartType(candidate)) &&
-      isCompatibleChartType(chart, candidate)
-    ) || chart.chartType
+
+  const alternative = candidates.find((candidate) =>
+    !blockedTypes.has(candidate) &&
+    (!avoidRadar || candidate !== 'radar') &&
+    (!blockBarLike || !isBarLikeChartType(candidate)) &&
+    isCompatibleChartType(chart, candidate)
   )
+
+  if (alternative) {
+    console.log(`[chart-variety] Picked fallback alternative '${alternative}' from candidate list`)
+    return alternative
+  }
+
+  console.warn(`[chart-variety] Could not find alternative, keeping original type '${chart.chartType}'`)
+  return chart.chartType
 }
 
 function isOpenAIModelUnavailable(error: unknown): boolean {
@@ -394,7 +512,6 @@ function isCumulativeIntervalLineChart(chart: ExtractedChartData): boolean {
 }
 
 function normalizeExtractedChart(rawChart: any): ExtractedChartData | null {
-  let chartType = (rawChart.chartType || rawChart.type || 'bar') as ChartType
   const labels = rawChart.data?.labels || rawChart.labels || []
   const datasets = rawChart.data?.datasets || rawChart.datasets || []
   if (!Array.isArray(labels) || !Array.isArray(datasets)) return null
@@ -405,7 +522,19 @@ function normalizeExtractedChart(rawChart: any): ExtractedChartData | null {
   }
   const chartTitle = rawChart.chartTitle || rawChart.title || 'Wykres danych'
   const sourceDescription = rawChart.sourceDescription || rawChart.source_table || rawChart.sourceTable || ''
+
+  // Use intelligent fallback if AI didn't specify a type
+  let chartType = (rawChart.chartType || rawChart.type) as ChartType | undefined
+  if (!chartType) {
+    chartType = inferChartTypeFromData({ labels, datasets, title: chartTitle, sourceDescription })
+    console.log(`[chart-extractor] AI didn't specify type, inferred '${chartType}' from data characteristics`)
+  }
+
+  // Override with line chart for cumulative interval data
   if (hasCumulativeIntervalData({ chartTitle, sourceDescription, data })) {
+    if (chartType !== 'line') {
+      console.log(`[chart-extractor] Overriding chart type from '${chartType}' to 'line' for cumulative interval data`)
+    }
     chartType = 'line'
   }
 
@@ -1008,7 +1137,19 @@ function buildGenericMetricChart(
 
   const labels = rows.map((row) => row.label)
   const metricLabel = inferGenericMetricLabel(group.caption, columnIndex)
-  const chartType: ChartType = preferredType || (chartIndex === 0 ? (labels.length >= 7 ? 'horizontalBar' : 'bar') : 'line')
+
+  // Use intelligent chart type inference instead of hardcoded chartIndex logic
+  const chartType: ChartType = preferredType || inferChartTypeFromData({
+    labels,
+    datasets: [{ label: metricLabel, data: values }],
+    title: metricLabel,
+    sourceDescription: group.caption
+  })
+
+  if (!preferredType) {
+    console.log(`[chart-extractor] No preferred type for chart ${chartIndex + 1}, inferred '${chartType}' from data`)
+  }
+
   const data = makeChartData(labels, metricLabel, values, group.caption, 'Kategoria', metricLabel)
   data.significance = []
 
@@ -1262,7 +1403,132 @@ function buildCumulativePercentageChart(group: ParsedTableGroup): ExtractedChart
   }
 }
 
+function parseSourceNumber(value: string): number {
+  return Number(value.replace('−', '-').replace(',', '.'))
+}
+
+function extractIolVisualAcuityMeans(pdfContent: string): Record<string, number[]> | null {
+  const tableStart = pdfContent.search(/Table\s+3\s+Postoperative\s+Binocular\s+Visual\s+Outcomes/i)
+  if (tableStart < 0) return null
+
+  const tableEnd = pdfContent.slice(tableStart).search(/\bNote:|\bAbbreviations:/i)
+  const table = pdfContent.slice(tableStart, tableEnd > 0 ? tableStart + tableEnd : tableStart + 2200)
+  const metrics = ['UDVA', 'UIVA', 'DCIVA', 'UNVA', 'DCNVA']
+  const extracted: Record<string, number[]> = {}
+
+  for (const metric of metrics) {
+    const rowPattern = new RegExp(
+      `\\b${metric}\\s*([-+−]?\\d+[.,]\\d+)\\s*±\\s*\\d+[.,]\\d+\\s*` +
+      `([-+−]?\\d+[.,]\\d+)\\s*±\\s*\\d+[.,]\\d+\\s*` +
+      `([-+−]?\\d+[.,]\\d+)\\s*±\\s*\\d+[.,]\\d+`,
+      'i'
+    )
+    const match = table.match(rowPattern)
+    if (!match) return null
+
+    extracted[metric] = [parseSourceNumber(match[1]), parseSourceNumber(match[2]), parseSourceNumber(match[3])]
+  }
+
+  return extracted
+}
+
+function buildIolBinocularVisualAcuityChart(pdfContent: string): ExtractedChartData | null {
+  const means = extractIolVisualAcuityMeans(pdfContent)
+  if (!means) return null
+
+  const labels = Object.keys(means)
+  const datasets = [
+    { label: 'Vivity', data: labels.map((label) => means[label][0]) },
+    { label: 'RayOne EMV', data: labels.map((label) => means[label][1]) },
+    { label: 'RayOne monofokalna', data: labels.map((label) => means[label][2]) },
+  ]
+
+  const data: ChartData = {
+    labels,
+    datasets,
+    axisMin: 0,
+    axisMax: 0.55,
+    significance: [],
+    significanceSource: 'not_reported',
+    xAxisLabel: 'Miara ostrosci wzroku',
+    yAxisLabel: 'logMAR',
+    sourceTable: 'Table 3 Postoperative Binocular Visual Outcomes',
+  }
+
+  return {
+    id: 'iol_binocular_visual_acuity',
+    chartTitle: 'Obuoczna ostrosc wzroku po implantacji IOL',
+    chartType: 'line',
+    sourceDescription: 'Srednie obuoczne wartosci logMAR z tabeli 3; nizsza wartosc oznacza lepsza ostrosc wzroku.',
+    axis_min: data.axisMin,
+    axis_max: data.axisMax,
+    significance: [],
+    significance_source: 'not_reported',
+    x_axis_label: data.xAxisLabel,
+    y_axis_label: data.yAxisLabel,
+    source_table: data.sourceTable,
+    data,
+  }
+}
+
+function buildIolFunctionalDepthChart(pdfContent: string): ExtractedChartData | null {
+  const match = pdfContent.match(
+    /functional\s+depth\s+of\s+field[\s\S]{0,120}?([\d.,]+)\s*D\s+for\s+Vivity,\s*([\d.,]+)\s*D\s+for\s+EMV,\s*and\s*([\d.,]+)\s*D\s+for\s+the\s+monofocal/i
+  )
+  if (!match) return null
+
+  const labels = ['Vivity', 'RayOne EMV', 'RayOne monofokalna']
+  const values = [parseSourceNumber(match[1]), parseSourceNumber(match[2]), parseSourceNumber(match[3])]
+  if (!hasUsefulVariation(values)) return null
+
+  const data: ChartData = {
+    labels,
+    datasets: [{ label: 'Funkcjonalna glebia ostrosci (D)', data: values }],
+    axisMin: 0,
+    axisMax: Math.max(1.8, Math.ceil(Math.max(...values) * 10) / 10),
+    significance: [],
+    significanceSource: 'not_reported',
+    xAxisLabel: 'Funkcjonalna glebia ostrosci (D)',
+    yAxisLabel: 'Soczewka',
+    sourceTable: 'Results - binocular defocus curve',
+  }
+
+  return {
+    id: 'iol_functional_depth_of_field',
+    chartTitle: 'Funkcjonalna glebia ostrosci',
+    chartType: 'horizontalBar',
+    sourceDescription: 'Zakres funkcjonalnej glebi ostrosci przy progu 0,2 logMAR na obuocznej krzywej rozogniskowania.',
+    axis_min: data.axisMin,
+    axis_max: data.axisMax,
+    significance: [],
+    significance_source: 'not_reported',
+    x_axis_label: data.xAxisLabel,
+    y_axis_label: data.yAxisLabel,
+    source_table: data.sourceTable,
+    data,
+  }
+}
+
+function buildIolOutcomeCharts(pdfContent: string, maxCharts: number): ExtractedChartData[] {
+  if (!/\bRayOne\s+EMV\b/i.test(pdfContent) || !/\bVivity\b/i.test(pdfContent)) return []
+
+  const charts = [
+    buildIolBinocularVisualAcuityChart(pdfContent),
+    buildIolFunctionalDepthChart(pdfContent),
+  ].filter(Boolean) as ExtractedChartData[]
+
+  return charts.slice(0, maxCharts)
+}
+
 function extractDeterministicChartsFromParsedRows(pdfContent: string, maxCharts: number): ExtractedChartData[] {
+  const iolCharts = buildIolOutcomeCharts(pdfContent, maxCharts)
+    .map(applySafeAxisPolicy)
+    .filter((chart) => validateChartData(chart) && verifyChartDataAgainstSource(chart, pdfContent))
+  if (iolCharts.length > 0) {
+    console.warn(`[chart-extractor] Built ${iolCharts.length} deterministic IOL outcome chart(s) from source results`)
+    return enforceChartTypeVariety(iolCharts).slice(0, maxCharts)
+  }
+
   const groups = extractParsedTableGroups(pdfContent)
   const columnHeaderCharts = buildColumnHeaderOutcomeCharts(groups, maxCharts)
   const verifiedColumnHeaderCharts = columnHeaderCharts

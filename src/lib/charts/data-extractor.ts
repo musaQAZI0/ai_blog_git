@@ -121,6 +121,25 @@ function isBarLikeChartType(chartType: ChartType): boolean {
   return BAR_LIKE_CHART_TYPES.has(chartType)
 }
 
+const DISCRETE_VISUAL_ACUITY_ENDPOINTS = new Set(['UDVA', 'CDVA', 'UIVA', 'DCIVA', 'UNVA', 'DCNVA'])
+
+function isDiscreteVisualAcuityEndpointChart(data: {
+  labels: string[]
+  title?: string
+  sourceDescription?: string
+}): boolean {
+  const { labels, title = '', sourceDescription = '' } = data
+  const endpointCount = labels.filter((label) =>
+    DISCRETE_VISUAL_ACUITY_ENDPOINTS.has(label.trim().toUpperCase())
+  ).length
+
+  if (endpointCount < 2) return false
+
+  const context = `${title} ${sourceDescription}`.toLowerCase()
+  return /visual acuity|ostrosc wzroku|logmar|udva|cdva|uiva|dciva|unva|dcnva/.test(context) ||
+    labels.length === endpointCount
+}
+
 /**
  * Intelligently determines the best chart type based on data characteristics
  * This is used as a fallback when AI doesn't specify a type
@@ -154,6 +173,11 @@ function inferChartTypeFromData(data: {
 
   if (hasBoxPlotStructure) {
     return 'boxplot'
+  }
+
+  // Discrete visual acuity endpoints are categorical clinical endpoints, not a curve.
+  if (isDiscreteVisualAcuityEndpointChart({ labels, title, sourceDescription })) {
+    return 'bar'
   }
 
   // Check if single dataset with percentages summing to ~100
@@ -387,7 +411,15 @@ export function enforceChartTypeVariety(charts: ExtractedChartData[]): Extracted
     const isDuplicateType = usedTypes.has(chart.chartType)
     const isSecondBarLike = isBarLikeChartType(chart.chartType) && hasBarLikeChart
 
-    if (isDuplicateType || isSecondBarLike) {
+    const mustRemainBarLike =
+      isDiscreteVisualAcuityEndpointChart({
+        labels: chart.data?.labels || [],
+        title: chart.chartTitle,
+        sourceDescription: chart.sourceDescription,
+      }) ||
+      /functional depth|glebia ostrosci|depth of field/i.test(`${chart.id || ''} ${chart.chartTitle} ${chart.sourceDescription}`)
+
+    if ((isDuplicateType || isSecondBarLike) && !mustRemainBarLike) {
       const oldType = chart.chartType
       chart.chartType = pickAlternativeChartType(chart, usedTypes, hasBarLikeChart)
       console.warn(
@@ -536,6 +568,14 @@ function normalizeExtractedChart(rawChart: any): ExtractedChartData | null {
       console.log(`[chart-extractor] Overriding chart type from '${chartType}' to 'line' for cumulative interval data`)
     }
     chartType = 'line'
+  }
+
+  // Discrete acuity endpoints such as UDVA/CDVA/UIVA/DCIVA/UNVA/DCNVA must stay bar charts.
+  if (isDiscreteVisualAcuityEndpointChart({ labels, title: chartTitle, sourceDescription })) {
+    if (chartType === 'line') {
+      console.log(`[chart-extractor] Overriding chart type from 'line' to 'bar' for discrete visual acuity endpoints`)
+    }
+    chartType = 'bar'
   }
 
   const normalizedChart: ExtractedChartData = {
@@ -1413,7 +1453,7 @@ function extractIolVisualAcuityMeans(pdfContent: string): Record<string, number[
 
   const tableEnd = pdfContent.slice(tableStart).search(/\bNote:|\bAbbreviations:/i)
   const table = pdfContent.slice(tableStart, tableEnd > 0 ? tableStart + tableEnd : tableStart + 2200)
-  const metrics = ['UDVA', 'UIVA', 'DCIVA', 'UNVA', 'DCNVA']
+  const metrics = ['UDVA', 'CDVA', 'UIVA', 'DCIVA', 'UNVA', 'DCNVA']
   const extracted: Record<string, number[]> = {}
 
   for (const metric of metrics) {
@@ -1458,7 +1498,7 @@ function buildIolBinocularVisualAcuityChart(pdfContent: string): ExtractedChartD
   return {
     id: 'iol_binocular_visual_acuity',
     chartTitle: 'Obuoczna ostrosc wzroku po implantacji IOL',
-    chartType: 'line',
+    chartType: 'bar',
     sourceDescription: 'Srednie obuoczne wartosci logMAR z tabeli 3; nizsza wartosc oznacza lepsza ostrosc wzroku.',
     axis_min: data.axisMin,
     axis_max: data.axisMax,
@@ -1799,6 +1839,7 @@ CHART TYPE SELECTION RULE:
 - Examples include: % eyes within +/-0.25D, +/-0.50D, +/-0.75D, +/-1.0D.
 - Radar charts are only appropriate when axes represent truly independent, non-ordered dimensions.
 - For cumulative-threshold line charts, use interval thresholds as labels and formulas/groups as datasets.
+- For discrete visual acuity endpoints such as UDVA, CDVA, UIVA, DCIVA, UNVA, and DCNVA, NEVER use "line". Use "bar" with one dataset per group/lens/treatment. These endpoints are categorical measurements, not a continuous curve.
 
 7. For categorical comparisons with fewer than 7 categories USE 'bar'
    Examples: "Porównanie MAE dla 3-6 formuł IOL"
@@ -1981,7 +2022,8 @@ RETINA / AMD / VEGF studies:
 - Example: Chart 1 'line' (BCVA over time) + Chart 2 'bar' (mean injections per group)
 
 REFRACTIVE SURGERY / CORNEA studies:
-- Extract: UDVA, CDVA, SE at baseline vs 1M/3M/6M/12M → line chart
+- Extract: UDVA/CDVA/UIVA/DCIVA/UNVA/DCNVA endpoints compared between groups at one visit → bar chart
+- Extract: UDVA, CDVA, SE at baseline vs 1M/3M/6M/12M → line chart only when the labels are true time points
 - Extract: % eyes within ±0.5D, ±1.0D of target refraction per procedure → line or bar
 - Extract: Corneal power, pachymetry, or aberration values pre vs post → bar
 - Example: Chart 1 'bar' (UDVA by group) + Chart 2 'line' (% within target refraction)

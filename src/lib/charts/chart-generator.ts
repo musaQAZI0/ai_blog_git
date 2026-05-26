@@ -181,8 +181,14 @@ function getSignificanceColors(significance: SignificanceStatus[] | undefined, l
   }
 }
 
+function hasMeaningfulSignificance(chartData: ChartData): boolean {
+  if (!Array.isArray(chartData.significance) || chartData.significance.length === 0) return false
+  if (!chartData.significanceSource || chartData.significanceSource === 'not_reported') return false
+  return chartData.significance.some((status) => status === 'best' || status === 'sig_worse')
+}
+
 function createSignificanceLegendPlugin(chartData: ChartData) {
-  if (!Array.isArray(chartData.significance) || chartData.significance.length === 0) return null
+  if (!hasMeaningfulSignificance(chartData)) return null
 
   return {
     id: 'significanceLegend',
@@ -206,9 +212,7 @@ function createSignificanceLegendPlugin(chartData: ChartData) {
         x += ctx.measureText(item.label).width + 36
       }
 
-      const source = chartData.significanceSource && chartData.significanceSource !== 'not_reported'
-        ? `Istotnosc statystyczna: ${chartData.significanceSource}`
-        : 'Porownania parami niedostepne w dokumencie'
+      const source = `Istotnosc statystyczna: ${chartData.significanceSource}`
       ctx.font = "10px 'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif"
       ctx.fillStyle = '#6b7280'
       ctx.fillText(source, startX, y + 18)
@@ -275,6 +279,10 @@ export async function generateChartImage(
   const isBoxPlot = type === 'boxplot'
   const isBarStyle = type === 'bar' || type === 'horizontalBar' || type === 'stackedBar'
   const chartJsType = isStackedBar || isHorizontalBar ? 'bar' : isBoxPlot ? 'boxplot' : type
+  const useSignificanceEncoding =
+    isBarStyle &&
+    chartData.datasets.length === 1 &&
+    hasMeaningfulSignificance(chartData)
 
   // DEBUG: Log chart type and verify controller registration
   console.log(`[chart-generator] 🎨 Generating chart with type: "${type}" (Chart.js type: "${chartJsType}")`)
@@ -302,7 +310,7 @@ export async function generateChartImage(
         const colors = isPieStyle && dataset.data.length > 1
           ? dataset.data.map((_, i) => PROFESSIONAL_COLORS[i % PROFESSIONAL_COLORS.length])
           : [PROFESSIONAL_COLORS[datasetIndex % PROFESSIONAL_COLORS.length]]
-        const sigColors = isBarStyle && datasetIndex === 0
+        const sigColors = useSignificanceEncoding && datasetIndex === 0
           ? getSignificanceColors(chartData.significance, dataset.data.length)
           : null
 
@@ -423,6 +431,7 @@ export async function generateChartImage(
             label: (context: any) => {
               const value = isHorizontalBar ? context.parsed?.x : context.parsed?.y
               const baseLabel = `${context.dataset.label}: ${isFiniteNumber(value) ? value.toFixed(2) : context.formattedValue}`
+              if (!useSignificanceEncoding) return baseLabel
               const sig = chartData.significance?.[context.dataIndex]
               const sigLabel = sig === 'best'
                 ? ' - najlepsza (p<0,05)'
@@ -541,7 +550,7 @@ export async function generateChartImage(
       // Layout padding for better spacing
       layout: {
         padding: {
-          top: Array.isArray(chartData.significance) && chartData.significance.length > 0 ? 58 : 20,
+          top: useSignificanceEncoding ? 58 : 20,
           right: isHorizontalBar ? 64 : 30, // Extra right padding for horizontal value labels
           bottom: 20,
           left: isHorizontalBar ? 20 : 30, // Less left padding for horizontal bars
@@ -566,7 +575,7 @@ export async function generateChartImage(
     configuration.plugins.push(radarAllSpokeTicksPlugin)
   }
 
-  const significanceLegendPlugin = createSignificanceLegendPlugin(chartData)
+  const significanceLegendPlugin = useSignificanceEncoding ? createSignificanceLegendPlugin(chartData) : null
   if (significanceLegendPlugin) {
     if (!configuration.plugins) {
       configuration.plugins = []

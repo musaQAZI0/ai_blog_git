@@ -49,19 +49,20 @@ State the methodological limitations, missing data, generalizability issues, or 
 Ground all claims strictly in the provided document. Do not hallucinate data.
 
 NUMERIC ACCURACY - MANDATORY:
-6. Before writing any numeric value (SD, RMSAE, p-value, percentage, mean, n), trace it to a specific table or figure in the document. If you cannot confirm a number exists verbatim in a table or figure, omit it entirely rather than approximate. Never report a value for one formula that belongs to another formula in the same table.
+6. Before writing any numeric value (SD, p-value, percentage, mean, n, score, visual acuity, dose, or follow-up interval), trace it to a specific table, figure, abstract, or results paragraph in the document. If you cannot confirm a number exists verbatim in the document, omit it entirely rather than approximate. Never report a value for one group, endpoint, or intervention that belongs to another row or column in the same table.
 
 NON-SIGNIFICANT COMPARISONS - MANDATORY:
-7. For every statistically significant finding you report, explicitly state which comparisons did NOT reach significance (p>=0.05). Both significant and non-significant results are clinically actionable. Example format: "Formula X wykazala istotnie nizsze SD niz A, B i C (p<0,05), nie roznic sie istotnie od D, E i F."
+7. Do not describe a group, treatment, lens, drug, formula, or device as "better", "superior", or "improved" unless the relevant pairwise comparison is statistically significant. If only the overall p-value is significant, state only that the overall difference was significant and do not assign superiority unless pairwise p-values support it. For every statistically significant finding you report, explicitly state which clinically relevant comparisons did NOT reach significance (p>=0.05) when reported.
 
-SUBGROUP REPORTING - MANDATORY:
-8. For each subgroup (oczy dlugie, oczy krotkie, typ IOL), report BOTH the primary endpoint winner AND any notable secondary endpoint findings (interval analysis, median AE) even when a different formula leads the secondary result. Do not report only one formula per subgroup.
+ENDPOINT REPORTING - MANDATORY:
+8. Identify the actual primary and secondary endpoints used in the source document. Do not assume endpoints such as RMSAE, prediction error, subgroup eye length, formula comparison, or IOL type unless they are explicitly present in the paper. When subgroups are explicitly analyzed, report both the main endpoint and notable secondary endpoint findings without cherry-picking only the most favorable result.
 
-ENDPOINT LABELING - MANDATORY:
-9. Always label whether a finding comes from a primary endpoint (SD, RMSAE) or a secondary endpoint (odsetek w przedzialach, mediana AE). Use explicit labels such as "(pierwszorzedowy punkt koncowy)" or "(drugorzedowy punkt koncowy)" on first mention within each section.
+CLINICAL VS STATISTICAL INTERPRETATION:
+9. Separate statistical significance from clinical relevance. If the paper says a statistically significant difference is small, minor, modest, or unlikely to be clinically meaningful, include that qualification. Do not convert statistical significance into clinical importance unless the authors support it.
+For the Vivity contrast-sensitivity trade-off, if the source describes the absolute difference as small or unlikely clinically meaningful, write that qualification explicitly. Do not phrase it simply as "the price/cost is reduced contrast sensitivity."
 
-ZEROED-MEAN ANALYSIS:
-10. If the paper reports an analysis after adjusting mean PE to zero (per Hoffer et al. protocol), include this as a separate sub-paragraph within "Kluczowe wyniki" under the heading "Analiza po wyzerowaniu sredniego bledu predykcji". This is a primary analytical result, not a limitation.`
+LIMITATIONS - MANDATORY:
+10. In "Ograniczenia", separate limitations explicitly stated or directly documented in the paper from editorially inferred limitations. Mark inferred limitations as "ograniczenie interpretacyjne" or "wniosek redakcyjny".`
 
 export async function generateArticleWithClaude(
   pdfContent: string,
@@ -77,7 +78,9 @@ export async function generateArticleWithClaude(
       ? `- Include MAXIMUM 2 figures. PRIORITIZE data charts/graphs (bar charts, line graphs, scatter plots, etc.) that visualize REAL DATA from the PDF source document.
 - CRITICAL for charts/graphs: Include data labels and text ONLY if they come from the source document. Use EXACT values from the PDF - do NOT make up or estimate numbers.
 - Keep labels concise and to the point. Request simple, clear text (e.g., "Baseline: 20.5 mmHg, Month 6: 15.2 mmHg", "Cooke K6", "Barrett Universal II").
-- Focus on DATA VISUALIZATION (charts showing statistics, results, comparisons) rather than anatomical illustrations.`
+- Focus on DATA VISUALIZATION (charts showing statistics, results, comparisons) rather than anatomical illustrations.
+- Every chart must include the source table/figure number when available, exact units, whether values are mean, mean ± SD, percentage, or score, and p-values only when present in the source.
+- For visual acuity charts using logMAR, always state that lower logMAR values indicate better visual acuity. For discrete visual acuity endpoints such as UDVA, CDVA, UIVA, DCIVA, UNVA, and DCNVA, NEVER use a line chart. Use a grouped bar chart only (chartType "bar" with multiple datasets). Line charts are allowed only for true ordered curves such as defocus curves across diopters.`
       : `- Include up to 3 figures (simple anatomical illustrations ONLY).
 - CRITICAL: ALL figures MUST be completely clean - NO TEXT, NO LABELS, NO WORDS, NO NUMBERS, NO DATA.
 - Request only pure visual illustrations without any text elements.
@@ -94,9 +97,11 @@ export async function generateArticleWithClaude(
   ## Ograniczenia
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
 - Write a concise professional review. Use about 500 words for the "content" field when the document contains enough information.
-- For each subgroup analyzed (oczy dlugie, oczy krotkie, typ IOL), report BOTH the primary endpoint result and any secondary endpoint finding, even if led by different formulas.
-- When reporting the primary SD comparison for the whole dataset, name formulas with no statistically significant difference from the best formula.
-- If the paper reports mean PE adjusted to zero (Hoffer et al. protocol), add "### Analiza po wyzerowaniu sredniego bledu predykcji" inside "## Kluczowe wyniki" and report exact values.
+- Identify the actual endpoints used in the source document; do not assume formula-study endpoints or subgroup structures unless explicitly present.
+- Do not claim superiority for any comparison unless the relevant pairwise p-value supports it. State non-significant comparisons when clinically relevant.
+- When reporting EMV vs monofocal intermediate vision, or any similar multi-endpoint comparison, distinguish uncorrected and corrected endpoints (for example UIVA vs DCIVA). Do not summarize both as significant unless both pairwise p-values are significant.
+- Do not write "klinicznie istotna poprawa" unless the paper explicitly supports clinical meaningfulness. For small but significant differences, use "statystycznie istotna, umiarkowana poprawa" and name the exact endpoint.
+- For charted outcomes, name the source table/figure and preserve the direction of interpretation (for example, lower logMAR means better visual acuity).
 - For charts, use the provided chart placeholder URL or a token in the format {{CHART:dataset_name:chart_type}}.
 `
       : `AudienceInstructions (patient):
@@ -119,13 +124,14 @@ IMPORTANT:
 ${figureInstructions}
 - In "content" markdown, include each figure placeholder exactly once as an image URL token (not the full markdown), e.g. https://www.google.com/search?q=%7B%7BFIGURE_1_URL%7D%7D.
 - MUST include a "## Źródło" section at the END of the content with the original article reference extracted from the PDF.
-- Reference format: Authors (one line), Title (one line), Journal Year Vol. X Issue Y Pages Z-W (one line).
+- Reference format: Authors (one line), Title (one line), Journal. Year;volume(issue if available):pages if true page range is available. doi:DOI if available.
+- Never write "Pages" followed by an article ID, manuscript ID, DOI suffix, or number like S595557/595557. If no true page range is available, omit pages and include doi instead.
 - Example reference format:
   ## Źródło
 
   J. Skrzypecki, D. D. Koch and L. Wang
   Performance of formulas included in the ESCRS intraocular lens power calculator
-  J Cataract Refract Surg 2024 Vol. 50 Issue 12 Pages 1224-1229
+  J Cataract Refract Surg. 2024;50(12):1224-1229. doi:10.xxxx/example
 ${audienceInstructions}
 
 Required JSON format:

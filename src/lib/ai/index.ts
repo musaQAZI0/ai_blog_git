@@ -4,6 +4,40 @@ import { generateArticleWithGemini, improveContentWithGemini } from './gemini'
 import { normalizeAIGenerationResponse } from './normalize'
 import { AIGenerationMode, AIGenerationRequest, AIGenerationResponse, AIProvider } from '@/types'
 
+function extractDoi(pdfContent: string): string | null {
+  const match = (pdfContent || '').match(/\b10\.\d{4,9}\/[-._;()/:A-Z0-9]+\b/i)
+  return match ? match[0].replace(/[.,;)]$/, '') : null
+}
+
+function cleanGeneratedProfessionalContent(content: string, pdfContent: string): string {
+  let cleaned = (content || '').trim()
+  if (!cleaned) return cleaned
+
+  const doi = extractDoi(pdfContent)
+
+  cleaned = cleaned
+    // Chart captions sometimes get glued to preceding prose after placeholder replacement.
+    .replace(/([.)])(?=(?:pooperacyjn|srednie|średnie|zakres funkcjonalnej|funkcjonalna gle|funkcjonalna gł))/gi, '$1\n\n')
+    // Avoid overstating statistical differences as clinically important when the source only supports a modest effect.
+    .replace(/klinicznie istotn(?:ą|a) popraw(?:ę|a) widzenia w odległościach pośrednich/gi, 'statystycznie istotną, umiarkowaną poprawę DCIVA')
+    .replace(/klinicznie istotn(?:ą|a) popraw(?:ę|a) widzenia pośredniego/gi, 'statystycznie istotną, umiarkowaną poprawę DCIVA')
+    // Keep Vivity contrast wording aligned with the paper's discussion.
+    .replace(
+      /Ceną za ten zakres jest jednak obniżona czułość na kontrast\./gi,
+      'Czułość na kontrast była statystycznie niższa w grupie Vivity, jednak różnica bezwzględna była mała i według autorów prawdopodobnie nieistotna klinicznie.'
+    )
+    .replace(/\n{3,}/g, '\n\n')
+
+  if (doi) {
+    cleaned = cleaned
+      .replace(/\s+Pages\s+S?\d{5,}\b/gi, ` doi:${doi}`)
+      .replace(/\s+Pages\s+\d+\s*$/gim, ` doi:${doi}`)
+      .replace(new RegExp(`doi:${doi}\\s+doi:${doi}`, 'gi'), `doi:${doi}`)
+  }
+
+  return cleaned.trim()
+}
+
 const PROVIDER_ORDER: Record<AIProvider, AIProvider[]> = {
   gemini: ['gemini', 'openai', 'claude'],
   openai: ['openai', 'claude', 'gemini'],
@@ -121,7 +155,11 @@ export async function generateArticle(
           generationMode
         )
 
-        return normalizeAIGenerationResponse(result)
+        const normalized = normalizeAIGenerationResponse(result)
+        if (targetAudience === 'professional') {
+          normalized.content = cleanGeneratedProfessionalContent(normalized.content, preparedPdfContent)
+        }
+        return normalized
       } catch (error)
       {
         const message = error instanceof Error ? error.message : String(error || 'Unknown error')

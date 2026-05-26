@@ -56,6 +56,42 @@ async function fetchWithTimeout(
   }
 }
 
+async function readJsonResponse(response: Response): Promise<any> {
+  const text = await response.text()
+  if (!text) return null
+
+  try {
+    return JSON.parse(text)
+  } catch {
+    throw new Error(text.slice(0, 240) || 'Nieprawidlowa odpowiedz serwera')
+  }
+}
+
+function sanitizeGeneratedPayload(data: AIGenerationResponse): AIGenerationResponse {
+  const payload = normalizeAIGenerationResponse(data)
+  const seoTitle = (payload.seoMeta?.title || payload.title || '').slice(0, 60)
+  const seoDescription = (payload.seoMeta?.description || payload.excerpt || '').slice(0, 160)
+
+  return {
+    ...payload,
+    seoMeta: {
+      ...payload.seoMeta,
+      title: seoTitle,
+      description: seoDescription,
+    },
+  } as AIGenerationResponse
+}
+
+function isNetworkFetchFailure(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const message = error.message.toLowerCase()
+  return error.name === 'TypeError' && (
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('load failed')
+  )
+}
+
 function CreateArticleContent() {
   const { user, firebaseUser } = useAuth()
   const router = useRouter()
@@ -99,15 +135,16 @@ function CreateArticleContent() {
       const idToken = await firebaseUser?.getIdToken?.()
       const isMobile = isMobileBrowser()
       const extractTimeout = 120000
-      const generateTimeout = isMobile ? 90000 : 300000
+      const generateTimeout = isMobile ? 240000 : 300000
       const headers = idToken ? { authorization: `Bearer ${idToken}` } : undefined
+      const audience = lockedTargetAudience || targetAudience
 
       const formData = new FormData()
       files.forEach((file) => {
         formData.append('files', file)
       })
       formData.append('action', 'extract')
-      formData.append('targetAudience', lockedTargetAudience || targetAudience)
+      formData.append('targetAudience', audience)
 
       setGenerationStage('extracting')
       let extractedPdfContent = ''
@@ -123,7 +160,7 @@ function CreateArticleContent() {
           },
           extractTimeout
         )
-        const extractPayload = await extractResponse.json()
+        const extractPayload = await readJsonResponse(extractResponse)
 
         if (!extractResponse.ok)
         {
@@ -146,6 +183,47 @@ function CreateArticleContent() {
 
       setGenerationStage('generating')
 
+      const requestGeneration = async (options?: {
+        mobileSafeRetry?: boolean
+        provider?: 'gemini' | 'openai'
+        maxChars?: number
+      }) => {
+        const mobileSafeRetry = Boolean(options?.mobileSafeRetry)
+        const provider = options?.provider || (isMobile ? 'gemini' : 'openai')
+        const maxChars = options?.maxChars || (mobileSafeRetry ? 12000 : undefined)
+        const bodyPdfContent = maxChars
+          ? extractedPdfContent.slice(0, maxChars)
+          : extractedPdfContent
+
+        const response = await fetchWithTimeout(
+          '/api/ai/generate',
+          {
+            method: 'POST',
+            headers: {
+              'content-type': 'application/json',
+              ...(headers || {}),
+            },
+            body: JSON.stringify({
+              action: 'generate',
+              pdfContent: bodyPdfContent,
+              targetAudience: audience,
+              provider,
+              generateImage: !isMobile,
+              generationMode: isMobile || mobileSafeRetry ? 'fast' : 'full',
+            }),
+          },
+          mobileSafeRetry ? 180000 : generateTimeout
+        )
+        const data = await readJsonResponse(response)
+
+        if (!response.ok)
+        {
+          throw new Error(data?.error || 'Blad generowania artykulu')
+        }
+
+        return sanitizeGeneratedPayload(data.data as AIGenerationResponse)
+      }
+
       try
       {
         const response = await fetchWithTimeout(
@@ -159,41 +237,53 @@ function CreateArticleContent() {
             body: JSON.stringify({
               action: 'generate',
               pdfContent: extractedPdfContent,
-              targetAudience: lockedTargetAudience || targetAudience,
+              targetAudience: audience,
               provider: isMobile ? 'gemini' : 'openai',
-              generateImage: !isMobile,
+              generateImage: false,
               generationMode: isMobile ? 'fast' : 'full',
             }),
           },
           generateTimeout
         )
-        const data = await response.json()
+        const data = await readJsonResponse(response)
 
         if (!response.ok)
         {
-          throw new Error(data.error || 'Blad generowania artykulu')
+          throw new Error(data?.error || 'Blad generowania artykulu')
         }
 
         setGenerationStage('finalizing')
 
-        const sanitized = (() => {
-          const payload = normalizeAIGenerationResponse(data.data as AIGenerationResponse)
-          const seoTitle = (payload.seoMeta?.title || payload.title || '').slice(0, 60)
-          const seoDescription = (payload.seoMeta?.description || payload.excerpt || '').slice(0, 160)
-          return {
-            ...payload,
-            seoMeta: {
-              ...payload.seoMeta,
-              title: seoTitle,
-              description: seoDescription,
-            },
-          } as AIGenerationResponse
-        })()
+        const sanitized = sanitizeGeneratedPayload(data.data as AIGenerationResponse)
 
         setGeneratedContent(sanitized)
         setStep('edit')
       } catch (generateErr)
       {
+        if (isMobile && isNetworkFetchFailure(generateErr))
+        {
+          console.warn('[create-article] Mobile fetch failed; retrying with compact payload and OpenAI fallback')
+          setGenerationStage('generating')
+          try
+          {
+            const sanitized = await requestGeneration({
+              mobileSafeRetry: true,
+              provider: 'openai',
+              maxChars: 10000,
+            })
+            setGeneratedContent(sanitized)
+            setStep('edit')
+            return
+          } catch (retryErr)
+          {
+            throw new Error(
+              retryErr instanceof Error
+                ? `Mobilne generowanie nie powiodlo sie po probie awaryjnej: ${retryErr.message}`
+                : 'Mobilne generowanie nie powiodlo sie po probie awaryjnej.'
+            )
+          }
+        }
+
         if (generateErr instanceof Error && generateErr.name === 'AbortError')
         {
           const minutes = Math.floor(generateTimeout / 60000)

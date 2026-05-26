@@ -74,8 +74,8 @@ function preparePdfContentForGeneration(
   const maxChars =
     generationMode === 'fast'
       ? targetAudience === 'professional'
-        ? 22000
-        : 9000
+        ? 14000
+        : 7000
       : targetAudience === 'professional'
         ? 55000 // Increased from 45000 for desktop professional full mode
         : 18000 // Increased from 14000 for desktop patient full mode
@@ -126,7 +126,9 @@ export async function generateArticle(
   const { pdfContent, targetAudience, provider, generateImage, generationMode = 'full' } = request
   const preparedPdfContent = preparePdfContentForGeneration(pdfContent, targetAudience, generationMode)
   const attemptedErrors: string[] = []
-  const providerOrder = generationMode === 'fast' ? [provider] : PROVIDER_ORDER[provider]
+  const providerOrder = generationMode === 'fast'
+    ? [provider, ...PROVIDER_ORDER[provider].filter((candidate) => candidate !== provider)]
+    : PROVIDER_ORDER[provider]
 
   for (const candidate of providerOrder)
   {

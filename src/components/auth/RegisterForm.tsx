@@ -14,7 +14,6 @@ import {
   Alert,
   AlertDescription,
 } from '@/components/ui'
-import { registerUser } from '@/lib/firebase/auth'
 import { validatePWZ } from '@/lib/utils'
 
 const registerSchema = z
@@ -113,6 +112,7 @@ export function RegisterForm() {
     setLoading(true)
     setError(null)
 
+    const { registerUser } = await import('@/lib/firebase/auth')
     const result = await registerUser({
       email: data.email,
       password: data.password,
@@ -266,7 +266,7 @@ export function RegisterForm() {
           error={errors.registrationNumber?.message}
           {...register('registrationNumber')}
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-foreground/70">
           {professionalType === 'lekarz'
             ? 'Podaj 7-cyfrowy numer PWZ'
             : 'Podaj numer rejestracyjny lub certyfikatu'}
@@ -305,7 +305,7 @@ export function RegisterForm() {
           <p className="text-xs text-destructive">{errors.gdprConsent.message}</p>
         )}
 
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-foreground/70">
           Rejestracja automatycznie zapisuje konto do newslettera z aktualizacjami medycznymi.
         </p>
       </div>
@@ -314,7 +314,7 @@ export function RegisterForm() {
         Zarejestruj się
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-foreground/70">
         Masz już konto?{' '}
         <Link href="/login" className="text-primary hover:underline">
           Zaloguj się

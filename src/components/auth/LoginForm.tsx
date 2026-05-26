@@ -7,7 +7,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { Button, Input, Label, Alert, AlertDescription } from '@/components/ui'
-import { signIn } from '@/lib/firebase/auth'
 
 const loginSchema = z.object({
   email: z
@@ -41,6 +40,7 @@ export function LoginForm() {
     setError(null)
 
     console.log('[auth] login submit', { email: data.email })
+    const { signIn } = await import('@/lib/firebase/auth')
     const result = await signIn(data.email, data.password)
 
     if (result.error) {
@@ -100,7 +100,7 @@ export function LoginForm() {
         Zaloguj się
       </Button>
 
-      <p className="text-center text-sm text-muted-foreground">
+      <p className="text-center text-sm text-foreground/70">
         Nie masz konta?{' '}
         <Link href="/register" className="text-primary hover:underline">
           Zarejestruj się

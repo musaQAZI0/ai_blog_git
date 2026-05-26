@@ -746,47 +746,48 @@ Required JSON format:
         })
       )
 
-      for (let i = 0; i < renderableCharts.length; i++)
-      {
-        const extractedChart = renderableCharts[i]
+      const chartResults = await Promise.allSettled(
+        renderableCharts.map(async (extractedChart, index) => {
+          const chartNumber = index + 1
+          const chartId = `chart-${chartNumber}`
+          const placeholder = getFigurePlaceholderUrl(chartNumber)
+          const chartToken = `{{CHART:${extractedChart.id || `chart_${chartNumber}`}:${extractedChart.chartType}}}`
 
-        try
-        {
-          const chartId = `chart-${i + 1}`
-          const placeholder = getFigurePlaceholderUrl(i + 1)
-          const chartToken = `{{CHART:${extractedChart.id || `chart_${i + 1}`}:${extractedChart.chartType}}}`
-
-          console.log(`[gemini] Generating chart ${i + 1}: ${extractedChart.chartTitle} (${extractedChart.chartType})`)
+          console.log(`[gemini] Generating chart ${chartNumber}: ${extractedChart.chartTitle} (${extractedChart.chartType})`)
           const url = await generateAndUploadChart(
             extractedChart.data,
             extractedChart.chartTitle,
             chartId,
-            extractedChart.chartType  // Pass the AI-selected chart type
+            extractedChart.chartType
           )
 
           const alt = `Wykres: ${extractedChart.chartTitle}`
           const captionLine = extractedChart.sourceDescription ? `\n\n*${sanitizeChartCaption(extractedChart.sourceDescription)}*` : ''
           const markdownImage = `![${alt}](${url})${captionLine}`
 
-          if (content.includes(placeholder))
-          {
-            content = content.split(placeholder).join(markdownImage)
-            console.log(`[gemini] Chart ${i + 1} injected into content: ${url}`)
-          } else if (content.includes(chartToken))
-          {
-            content = content.split(chartToken).join(markdownImage)
-            console.log(`[gemini] Chart ${i + 1} injected into content via chart token: ${url}`)
-          } else
-          {
-            console.warn(`[gemini] Placeholder ${placeholder} or token ${chartToken} not found in content`)
-            content = `${content.trim()}\n\n${markdownImage}`
-            console.log(`[gemini] Chart ${i + 1} appended to content: ${url}`)
-          }
-        } catch (error)
-        {
-          console.error(`[gemini] Failed to generate/upload chart ${i + 1}:`, error)
+          return { chartNumber, placeholder, chartToken, markdownImage, url }
+        })
+      )
+
+      chartResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`[gemini] Failed to generate/upload chart ${index + 1}:`, result.reason)
+          return
         }
-      }
+
+        const { chartNumber, placeholder, chartToken, markdownImage, url } = result.value
+        if (content.includes(placeholder)) {
+          content = content.split(placeholder).join(markdownImage)
+          console.log(`[gemini] Chart ${chartNumber} injected into content: ${url}`)
+        } else if (content.includes(chartToken)) {
+          content = content.split(chartToken).join(markdownImage)
+          console.log(`[gemini] Chart ${chartNumber} injected into content via chart token: ${url}`)
+        } else {
+          console.warn(`[gemini] Placeholder ${placeholder} or token ${chartToken} not found in content`)
+          content = `${content.trim()}\n\n${markdownImage}`
+          console.log(`[gemini] Chart ${chartNumber} appended to content: ${url}`)
+        }
+      })
     } catch (error)
     {
       console.error('[gemini] Chart generation failed:', error)
@@ -800,40 +801,47 @@ Required JSON format:
   {
     // Patient articles: use AI image generation for anatomical illustrations
     const limitedFigures = figures.slice(0, 3)
-    for (let i = 0; i < limitedFigures.length; i++)
-    {
-      const figure = limitedFigures[i]
-      if (!figure?.prompt) continue
+    const figureResults = await Promise.allSettled(
+      limitedFigures.map(async (figure, index) => {
+        if (!figure?.prompt) return null
 
-      try
-      {
+        const figureNumber = index + 1
         const url = await generateAndUploadImagen(
           figure.prompt,
-          figure.id || `figure-${i + 1}`,
+          figure.id || `figure-${figureNumber}`,
           'ai-figure',
           'illustration'
         )
 
-        const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
-        const alt = figure.alt || figure.caption || `Rycina ${i + 1}`
+        const placeholder = figure.placeholder || getFigurePlaceholderUrl(figureNumber)
+        const alt = figure.alt || figure.caption || `Rycina ${figureNumber}`
         const captionLine = figure.caption ? `\n\n*${figure.caption}*` : ''
         const markdownImage = `![${alt}](${url})${captionLine}`
 
-        if (content.includes(placeholder))
-        {
-          content = content.split(placeholder).join(markdownImage)
+        return { placeholder, markdownImage }
+      })
+    )
+
+    figureResults.forEach((result, index) => {
+      const figure = limitedFigures[index]
+      const placeholder = figure?.placeholder || getFigurePlaceholderUrl(index + 1)
+
+      if (result.status === 'fulfilled' && result.value) {
+        if (content.includes(result.value.placeholder)) {
+          content = content.split(result.value.placeholder).join(result.value.markdownImage)
         }
-      } catch (error)
-      {
-        console.error('Gemini figure generation failed:', error)
-        const placeholder = figure.placeholder || getFigurePlaceholderUrl(i + 1)
-        if (coverFallbackUrl && content.includes(placeholder))
-        {
-          const alt = figure.alt || figure.caption || `Rycina ${i + 1}`
-          content = content.split(placeholder).join(`![${alt}](${coverFallbackUrl})`)
-        }
+        return
       }
-    }
+
+      if (result.status === 'rejected') {
+        console.error('Gemini figure generation failed:', result.reason)
+      }
+
+      if (coverFallbackUrl && content.includes(placeholder)) {
+        const alt = figure?.alt || figure?.caption || `Rycina ${index + 1}`
+        content = content.split(placeholder).join(`![${alt}](${coverFallbackUrl})`)
+      }
+    })
   }
 
   // Safety net: remove any leftover figure placeholders so users don't see them.

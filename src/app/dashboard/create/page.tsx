@@ -156,10 +156,13 @@ function CreateArticleContent() {
     try
     {
       const idToken = await firebaseUser?.getIdToken?.()
+      if (!idToken) {
+        throw new Error('Sesja logowania wygasla. Zaloguj sie ponownie przed generowaniem artykulu.')
+      }
       const isMobile = isMobileBrowser()
-      const extractTimeout = 120000
-      const generateTimeout = isMobile ? 240000 : 300000
-      const headers = idToken ? { authorization: `Bearer ${idToken}` } : undefined
+      const extractTimeout = isMobile ? 90000 : 120000
+      const generateTimeout = isMobile ? 120000 : 150000
+      const headers = { authorization: `Bearer ${idToken}` }
       const audience = lockedTargetAudience || targetAudience
 
       const formData = new FormData()
@@ -212,8 +215,8 @@ function CreateArticleContent() {
         maxChars?: number
       }) => {
         const mobileSafeRetry = Boolean(options?.mobileSafeRetry)
-        const provider = options?.provider || (isMobile ? 'gemini' : 'openai')
-        const maxChars = options?.maxChars || (mobileSafeRetry ? 12000 : undefined)
+        const provider = options?.provider || 'gemini'
+        const maxChars = options?.maxChars || (audience === 'professional' ? 14000 : 8000)
         const bodyPdfContent = maxChars
           ? extractedPdfContent.slice(0, maxChars)
           : extractedPdfContent
@@ -231,8 +234,8 @@ function CreateArticleContent() {
               pdfContent: bodyPdfContent,
               targetAudience: audience,
               provider,
-              generateImage: !isMobile,
-              generationMode: isMobile || mobileSafeRetry ? 'fast' : 'full',
+              generateImage: true,
+              generationMode: 'full',
             }),
           },
           mobileSafeRetry ? 180000 : generateTimeout
@@ -249,51 +252,29 @@ function CreateArticleContent() {
 
       try
       {
-        const response = await fetchWithTimeout(
-          '/api/ai/generate',
-          {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              ...(headers || {}),
-            },
-            body: JSON.stringify({
-              action: 'generate',
-              pdfContent: extractedPdfContent,
-              targetAudience: audience,
-              provider: isMobile ? 'gemini' : 'openai',
-              generateImage: false,
-              generationMode: isMobile ? 'fast' : 'full',
-            }),
-          },
-          generateTimeout
-        )
-        const data = await readJsonResponse(response)
-
-        if (!response.ok)
-        {
-          throw new Error(data?.error || 'Blad generowania artykulu')
-        }
+        setGenerationStage('generating')
+        const sanitized = await requestGeneration({
+          provider: 'gemini',
+          maxChars: audience === 'professional' ? 14000 : 8000,
+        })
 
         setGenerationStage('finalizing')
-
-        const sanitized = sanitizeGeneratedPayload(data.data as AIGenerationResponse)
-
         setGeneratedContent(sanitized)
         setStep('edit')
       } catch (generateErr)
       {
-        if (isMobile && isNetworkFetchFailure(generateErr))
+        if (isNetworkFetchFailure(generateErr) || generateErr instanceof Error)
         {
-          console.warn('[create-article] Mobile fetch failed; retrying with compact payload and OpenAI fallback')
+          console.warn('[create-article] Primary generation failed; retrying with compact OpenAI fallback')
           setGenerationStage('generating')
           try
           {
             const sanitized = await requestGeneration({
               mobileSafeRetry: true,
               provider: 'openai',
-              maxChars: 10000,
+              maxChars: audience === 'professional' ? 10000 : 6000,
             })
+            setGenerationStage('finalizing')
             setGeneratedContent(sanitized)
             setStep('edit')
             return
@@ -301,8 +282,8 @@ function CreateArticleContent() {
           {
             throw new Error(
               retryErr instanceof Error
-                ? `Mobilne generowanie nie powiodlo sie po probie awaryjnej: ${retryErr.message}`
-                : 'Mobilne generowanie nie powiodlo sie po probie awaryjnej.'
+                ? `Generowanie nie powiodlo sie po probie awaryjnej: ${retryErr.message}`
+                : 'Generowanie nie powiodlo sie po probie awaryjnej.'
             )
           }
         }

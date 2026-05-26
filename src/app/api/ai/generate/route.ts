@@ -32,6 +32,20 @@ function parseGenerationMode(value: unknown): AIGenerationMode {
   return value === 'fast' ? 'fast' : 'full'
 }
 
+function compactPdfContentForGeneration(pdfContent: string, targetAudience: TargetAudience): string {
+  const normalized = normalizeExtractedPdfText(pdfContent)
+  const maxChars = targetAudience === 'professional' ? 14000 : 8000
+  if (normalized.length <= maxChars) return normalized
+
+  const headLength = Math.floor(maxChars * 0.72)
+  const tailLength = maxChars - headLength
+  return [
+    normalized.slice(0, headLength).trim(),
+    '\n\n[...skrocono dlugi dokument dla stabilnego generowania...]\n\n',
+    normalized.slice(-tailLength).trim(),
+  ].join('')
+}
+
 export async function POST(request: NextRequest) {
   try {
     const user = await getRequestUser(request)
@@ -125,13 +139,16 @@ export async function POST(request: NextRequest) {
     }
 
     if (action === 'extract') {
+      const generationContent = compactPdfContentForGeneration(pdfContent, targetAudience)
+
       return NextResponse.json({
         success: true,
         data: {
-          pdfContent,
+          pdfContent: generationContent,
           stats: {
             fileCount: files.length,
             normalizedChars: pdfContent.length,
+            generationChars: generationContent.length,
           },
         },
       })

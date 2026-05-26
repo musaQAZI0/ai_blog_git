@@ -59,9 +59,9 @@ export function ProtectedRoute({
   }
 
   // Return null while redirect is in progress — navigation is already queued
-  if (!user) return null
-  if (requireApproved && !isApproved) return null
-  if (requireAdmin && !isAdmin) return null
+  if (!user) return loadingFallback ? <>{loadingFallback}</> : null
+  if (requireApproved && !isApproved) return loadingFallback ? <>{loadingFallback}</> : null
+  if (requireAdmin && !isAdmin) return loadingFallback ? <>{loadingFallback}</> : null
 
   return <>{children}</>
 }

@@ -323,33 +323,42 @@ Required JSON format:
       // Patient articles: use AI image generation for anatomical illustrations
       const limitedFigures = figures.slice(0, 3)
 
-      for (let i = 0; i < limitedFigures.length; i++) {
-        const figure = limitedFigures[i]
-        if (!figure?.prompt) continue
+      const figureResults = await Promise.allSettled(
+        limitedFigures.map(async (figure, index) => {
+          if (!figure?.prompt) return null
 
-        try {
+          const figureNumber = index + 1
           const url = await generateAndUploadImagen(
             figure.prompt,
-            figure.id || `figure-${i + 1}`,
+            figure.id || `figure-${figureNumber}`,
             'ai-figure',
             'illustration'
           )
 
-          const placeholder =
-            figure.placeholder ||
-            getFigurePlaceholderUrl(i + 1)
-          const alt = figure.alt || `Ilustracja ${i + 1}`
-          content = injectFigure({
-            content,
-            placeholder,
+          return {
+            placeholder: figure.placeholder || getFigurePlaceholderUrl(figureNumber),
             url,
-            alt,
+            alt: figure.alt || `Ilustracja ${figureNumber}`,
             caption: figure.caption,
-          })
-        } catch (error) {
-          console.error('Gemini figure generation failed:', error)
+          }
+        })
+      )
+
+      figureResults.forEach((result, index) => {
+        if (result.status === 'rejected') {
+          console.error(`Gemini figure generation failed for figure ${index + 1}:`, result.reason)
+          return
         }
-      }
+        if (!result.value) return
+
+        content = injectFigure({
+          content,
+          placeholder: result.value.placeholder,
+          url: result.value.url,
+          alt: result.value.alt,
+          caption: result.value.caption,
+        })
+      })
     }
 
     // If any placeholders remain (image generation failed), remove them so users don't see raw tokens.

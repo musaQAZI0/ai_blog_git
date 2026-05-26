@@ -1,9 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User as FirebaseUser } from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
-import { auth, db, ensureFirebaseInitialized } from '@/lib/firebase/config.client'
+import type { User as FirebaseUser } from 'firebase/auth'
 import { User } from '@/types'
 
 interface AuthContextType {
@@ -40,7 +38,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     ;(async () => {
       setLoading(true)
-      const configured = await ensureFirebaseInitialized()
+      const firebaseConfig = await import('@/lib/firebase/config.client')
+      const configured = await firebaseConfig.ensureFirebaseInitialized()
       if (cancelled) return
 
       if (!configured) {
@@ -52,17 +51,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setIsDemoMode(false)
 
       const { onAuthStateChanged } = await import('firebase/auth')
-      if (!auth) {
+      const { doc, getDoc } = await import('firebase/firestore')
+      const firebaseAuth = firebaseConfig.auth
+      if (!firebaseAuth) {
         setLoading(false)
         return
       }
+      const firestore = firebaseConfig.db
 
-      unsubscribe = onAuthStateChanged(auth, async (fbUser: FirebaseUser | null) => {
+      unsubscribe = onAuthStateChanged(firebaseAuth, async (fbUser: FirebaseUser | null) => {
         setFirebaseUser(fbUser)
 
-        if (fbUser && db) {
+        if (fbUser && firestore) {
           try {
-            const userDoc = await getDoc(doc(db, 'users', fbUser.uid))
+            const userDoc = await getDoc(doc(firestore, 'users', fbUser.uid))
             if (userDoc.exists()) {
               const userData = userDoc.data()
               setUser({

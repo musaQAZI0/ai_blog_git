@@ -1,0 +1,223 @@
+'use client'
+
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { Article } from '@/types'
+import { ArticleGrid } from '@/components/blog/ArticleGrid'
+import { SearchBar } from '@/components/blog/SearchBar'
+import { NewsletterForm } from '@/components/blog/NewsletterForm'
+import { Button } from '@/components/ui'
+import { ChevronDown, Grid3X3, List } from 'lucide-react'
+import { cn } from '@/lib/utils'
+
+type SortOption = 'newest' | 'oldest' | 'az' | 'za'
+type ViewMode = 'grid' | 'list'
+
+const SORT_LABELS: Record<SortOption, string> = {
+  newest: 'Najnowsze',
+  oldest: 'Najstarsze',
+  az: 'A-Z',
+  za: 'Z-A',
+}
+
+const SORT_OPTIONS: SortOption[] = ['newest', 'oldest', 'az', 'za']
+
+function toMillis(input: unknown): number {
+  if (!input) return 0
+  if (input instanceof Date) return Number.isNaN(input.getTime()) ? 0 : input.getTime()
+  if (typeof input === 'object') {
+    const maybe = input as { toDate?: () => Date; seconds?: number; _seconds?: number; nanoseconds?: number; _nanoseconds?: number }
+    if (typeof maybe.toDate === 'function') {
+      const d = maybe.toDate()
+      return Number.isNaN(d.getTime()) ? 0 : d.getTime()
+    }
+    const seconds = typeof maybe.seconds === 'number' ? maybe.seconds : typeof maybe._seconds === 'number' ? maybe._seconds : null
+    const nanos = typeof maybe.nanoseconds === 'number' ? maybe.nanoseconds : typeof maybe._nanoseconds === 'number' ? maybe._nanoseconds : 0
+    if (seconds !== null) return seconds * 1000 + Math.floor(nanos / 1e6)
+  }
+  const d = new Date(input as string | number)
+  return Number.isNaN(d.getTime()) ? 0 : d.getTime()
+}
+
+function sortArticles(list: Article[], sort: SortOption): Article[] {
+  const copy = [...list]
+  if (sort === 'az') return copy.sort((a, b) => a.title.localeCompare(b.title))
+  if (sort === 'za') return copy.sort((a, b) => b.title.localeCompare(a.title))
+  const getTime = (a: Article) => toMillis(a.publishedAt ?? a.createdAt)
+  if (sort === 'oldest') return copy.sort((a, b) => getTime(a) - getTime(b))
+  return copy.sort((a, b) => getTime(b) - getTime(a))
+}
+
+export function PatientBlogClient({
+  initialArticles,
+  hasFirebaseConfig,
+}: {
+  initialArticles: Article[]
+  hasFirebaseConfig: boolean
+}) {
+  const [articles, setArticles] = useState<Article[]>(initialArticles)
+  const [loading, setLoading] = useState(hasFirebaseConfig && initialArticles.length === 0)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [sortOption, setSortOption] = useState<SortOption>('newest')
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+  const [isSortOpen, setIsSortOpen] = useState(false)
+  const sortMenuRef = useRef<HTMLDivElement>(null)
+
+  const fetchArticles = useCallback(async () => {
+    if (!hasFirebaseConfig) {
+      setArticles(
+        searchQuery
+          ? initialArticles.filter(
+              (a) =>
+                a.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                a.excerpt.toLowerCase().includes(searchQuery.toLowerCase())
+            )
+          : initialArticles
+      )
+      setLoading(false)
+      return
+    }
+
+    setLoading(true)
+    try {
+      const { getArticles, searchArticles } = await import('@/lib/firebase/articles')
+      if (searchQuery) {
+        const results = await searchArticles(searchQuery, 'patient')
+        setArticles(results)
+      } else {
+        const { articles: fetchedArticles } = await getArticles({
+          targetAudience: 'patient',
+        })
+        setArticles(fetchedArticles)
+      }
+    } catch (error) {
+      console.error('Error fetching articles:', error)
+      setArticles(initialArticles)
+    } finally {
+      setLoading(false)
+    }
+  }, [hasFirebaseConfig, initialArticles, searchQuery])
+
+  useEffect(() => {
+    if (!hasFirebaseConfig && !searchQuery) return
+    if (hasFirebaseConfig && initialArticles.length > 0 && !searchQuery) return
+    fetchArticles()
+  }, [fetchArticles, hasFirebaseConfig, initialArticles.length, searchQuery])
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node
+      if (sortMenuRef.current && !sortMenuRef.current.contains(target)) {
+        setIsSortOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const visibleArticles = useMemo(() => {
+    return sortArticles(articles, sortOption)
+  }, [articles, sortOption])
+
+  return (
+    <>
+      <div className="pt-6 pb-8">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs uppercase tracking-[0.14em] text-black/65">
+            {loading ? 'Ladowanie artykulow' : `${visibleArticles.length} artykulow`}
+          </p>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-end">
+            <SearchBar onSearch={setSearchQuery} className="w-full sm:min-w-[20rem] sm:max-w-sm" />
+            <div className="flex items-center gap-1.5">
+              <div className="relative" ref={sortMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSortOpen((prev) => !prev)
+                  }}
+                  title={`Sortowanie: ${SORT_LABELS[sortOption]}`}
+                  className="inline-flex h-9 items-center gap-1 rounded-lg px-3 text-[15px] font-medium text-black transition-colors hover:bg-black/[0.04]"
+                >
+                  Sortuj
+                  <ChevronDown className="h-3.5 w-3.5" />
+                </button>
+                {isSortOpen && (
+                  <div className="absolute right-0 z-20 mt-1.5 min-w-[180px] overflow-hidden rounded-xl border border-black/[0.1] bg-white py-1 shadow-[0_10px_25px_-12px_rgba(0,0,0,0.24)]">
+                    {SORT_OPTIONS.map((option) => (
+                      <button
+                        key={option}
+                        type="button"
+                        onClick={() => {
+                          setSortOption(option)
+                          setIsSortOpen(false)
+                        }}
+                        className={cn(
+                          'block w-full px-3 py-2 text-left text-[14px] transition-colors hover:bg-black/[0.04]',
+                          sortOption === option ? 'font-medium text-black' : 'text-black/70'
+                        )}
+                      >
+                        {SORT_LABELS[option]}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="ml-0.5 flex items-center gap-0.5">
+                <button
+                  type="button"
+                  aria-label="Widok siatki"
+                  onClick={() => setViewMode('grid')}
+                  className={cn(
+                    'inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+                    viewMode === 'grid'
+                      ? 'text-black'
+                      : 'text-black/50 hover:bg-black/[0.04] hover:text-black/70'
+                  )}
+                >
+                  <Grid3X3 className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Widok listy"
+                  onClick={() => setViewMode('list')}
+                  className={cn(
+                    'inline-flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
+                    viewMode === 'list'
+                      ? 'text-black'
+                      : 'text-black/50 hover:bg-black/[0.04] hover:text-black/70'
+                  )}
+                >
+                  <List className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <ArticleGrid
+        articles={visibleArticles}
+        loading={loading}
+        basePath="/patient"
+        viewMode={viewMode}
+      />
+
+      <div className="mt-14 pt-10">
+        <div className="max-w-lg">
+          <NewsletterForm variant="card" />
+        </div>
+      </div>
+
+      {!loading && visibleArticles.length > 0 && (
+        <div className="mt-12 flex justify-center">
+          <Button
+            variant="outline"
+            className="h-10 rounded-full border-black/[0.1] px-6 text-xs font-medium text-black/70 hover:border-black/20 hover:text-black"
+          >
+            Zaladuj wiecej
+          </Button>
+        </div>
+      )}
+    </>
+  )
+}

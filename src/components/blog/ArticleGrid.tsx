@@ -39,16 +39,21 @@ export function ArticleGrid({ articles, loading, basePath, viewMode = 'grid' }: 
   if (articles.length === 0) {
     return (
       <div className="py-16 text-center">
-        <p className="text-sm text-black/35">Brak artykulow do wyswietlenia.</p>
+        <p className="text-sm text-black/65">Brak artykulow do wyswietlenia.</p>
       </div>
     )
   }
 
   return (
     <div className={isList ? 'space-y-8' : 'grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 xl:grid-cols-3'}>
-      {articles.map((article) => (
+      {articles.map((article, index) => (
         <div key={article.id} className="min-w-0">
-          <ArticleCard article={article} basePath={basePath} variant={viewMode} />
+          <ArticleCard
+            article={article}
+            basePath={basePath}
+            variant={viewMode}
+            priority={index === 0}
+          />
         </div>
       ))}
     </div>

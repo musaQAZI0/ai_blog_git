@@ -7,9 +7,10 @@ interface ArticleCardProps {
   article: Article
   basePath?: string
   variant?: 'grid' | 'list'
+  priority?: boolean
 }
 
-export function ArticleCard({ article, basePath = '/blog', variant = 'grid' }: ArticleCardProps) {
+export function ArticleCard({ article, basePath = '/blog', variant = 'grid', priority = false }: ArticleCardProps) {
   const categoryLabel =
     article.category ||
     (article.targetAudience === 'professional' ? 'Specjaliści' : 'Pacjenci')
@@ -28,6 +29,7 @@ export function ArticleCard({ article, basePath = '/blog', variant = 'grid' }: A
                 src={article.coverImage}
                 alt={article.title}
                 fill
+                priority={priority}
                 sizes="(max-width: 640px) 100vw, 320px"
                 className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
               />
@@ -37,16 +39,16 @@ export function ArticleCard({ article, basePath = '/blog', variant = 'grid' }: A
           </div>
 
           <div className="pt-1">
-            <h3 className="text-[clamp(1.25rem,2.2vw,1.8rem)] font-medium leading-[1.15] tracking-tight text-black transition-colors group-hover:text-black/75">
+            <h2 className="text-[clamp(1.25rem,2.2vw,1.8rem)] font-medium leading-[1.15] tracking-tight text-black transition-colors group-hover:text-black/75">
               {article.title}
-            </h3>
+            </h2>
             {excerpt ? (
-              <p className="mt-2 text-[15px] leading-relaxed text-black/60">{excerpt}</p>
+              <p className="mt-2 text-[15px] leading-relaxed text-black/70">{excerpt}</p>
             ) : null}
 
             <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[clamp(0.95rem,1.1vw,1.05rem)]">
               <span className="font-semibold text-black">{categoryLabel}</span>
-              <span className="text-black/40">
+              <span className="text-black/65">
                 {formatDateShort(article.publishedAt || article.createdAt)}
               </span>
             </div>
@@ -65,6 +67,7 @@ export function ArticleCard({ article, basePath = '/blog', variant = 'grid' }: A
               src={article.coverImage}
               alt={article.title}
               fill
+              priority={priority}
               sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
               className="object-cover transition-transform duration-500 ease-out group-hover:scale-[1.02]"
             />
@@ -74,13 +77,13 @@ export function ArticleCard({ article, basePath = '/blog', variant = 'grid' }: A
         </div>
 
         <div className="pt-4">
-          <h3 className="text-[clamp(1.35rem,2.2vw,2rem)] font-medium leading-[1.15] tracking-tight text-black transition-colors group-hover:text-black/75">
+          <h2 className="text-[clamp(1.35rem,2.2vw,2rem)] font-medium leading-[1.15] tracking-tight text-black transition-colors group-hover:text-black/75">
             {article.title}
-          </h3>
+          </h2>
 
           <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[clamp(0.95rem,1.1vw,1.05rem)]">
             <span className="font-semibold text-black">{categoryLabel}</span>
-            <span className="text-black/40">
+            <span className="text-black/65">
               {formatDateShort(article.publishedAt || article.createdAt)}
             </span>
           </div>

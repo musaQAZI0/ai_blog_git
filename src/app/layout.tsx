@@ -62,6 +62,12 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`notranslate ${poppins.variable} ${notoSans.variable}`}
     >
+      <head>
+        <link rel="preconnect" href="https://identitytoolkit.googleapis.com" />
+        <link rel="preconnect" href="https://firestore.googleapis.com" />
+        <link rel="preconnect" href="https://apis.google.com" />
+        <link rel="preconnect" href="https://medical-blog-web.firebaseapp.com" />
+      </head>
       <body className="font-sans antialiased notranslate" suppressHydrationWarning>
         <AuthProvider>
           <div className="flex min-h-screen flex-col">

@@ -59,7 +59,7 @@ export function NewsletterForm({ variant = 'inline', defaultEmail }: NewsletterF
       <div className="rounded-lg border bg-muted/50 p-6">
         <div className="mb-4 flex items-center gap-2">
           <Mail className="h-5 w-5 text-primary" />
-          <h3 className="font-semibold">Newsletter</h3>
+          <h2 className="font-semibold">Newsletter</h2>
         </div>
         <p className="mb-4 text-sm text-muted-foreground">
           Otrzymuj najnowsze artykuly i aktualnosci medyczne prosto na skrzynke.

@@ -37,7 +37,7 @@ export function PDFUploader({
     setIsMobile(mobile)
     setDeviceMaxFiles(maxFiles ?? (mobile ? 2 : 5))
     setDeviceMaxTotalSizeMb(maxTotalSizeMb ?? (mobile ? 12 : 30))
-  }, [])
+  }, [maxFiles, maxTotalSizeMb])
   const [files, setFiles] = useState<File[]>([])
   const [error, setError] = useState<string | null>(null)
   const totalSizeMb = files.reduce((sum, file) => sum + file.size, 0) / 1024 / 1024
@@ -94,7 +94,7 @@ export function PDFUploader({
       <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.9),transparent_52%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.7),transparent_58%)]" />
       <div className="relative grid gap-6 md:grid-cols-[minmax(0,1fr)_260px]">
         <div className="space-y-4">
-          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+          <div className="inline-flex items-center gap-2 rounded-full border border-border bg-background px-3 py-1 text-[11px] font-medium uppercase tracking-[0.16em] text-foreground/70">
             <Sparkles className="h-3.5 w-3.5" />
             Codex Input
           </div>
@@ -103,7 +103,7 @@ export function PDFUploader({
             <h3 className="text-xl font-semibold tracking-tight text-foreground md:text-2xl">
               Upload source PDFs for generation
             </h3>
-            <p className="mt-2 text-sm text-muted-foreground">
+            <p className="mt-2 text-sm text-foreground/70">
               Drag files into the workspace or click to attach. Keep inputs concise and relevant.
             </p>
           </div>
@@ -118,8 +118,8 @@ export function PDFUploader({
               disabled && 'cursor-not-allowed opacity-50'
             )}
           >
-            <input {...getInputProps()} />
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-muted text-muted-foreground transition-colors group-hover:text-foreground">
+            <input {...getInputProps({ 'aria-label': 'Wgraj pliki PDF' })} />
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border border-border bg-muted text-foreground/70 transition-colors group-hover:text-foreground">
               <Upload className="h-6 w-6" />
             </div>
             {isDragActive ? (
@@ -129,7 +129,7 @@ export function PDFUploader({
                 <p className="text-sm font-medium text-foreground">
                   Drag and drop PDF files
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-foreground/70">
                   or click to browse ({deviceMaxFiles} max)
                 </p>
               </div>
@@ -138,18 +138,18 @@ export function PDFUploader({
         </div>
 
         <div className="rounded-2xl border border-border bg-background/80 p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Queue</p>
+          <p className="text-xs font-semibold uppercase tracking-[0.12em] text-foreground/70">Queue</p>
           <div className="mt-4 grid grid-cols-2 gap-3">
             <div className="rounded-xl border border-border bg-card p-3">
-              <p className="text-xs text-muted-foreground">Files</p>
+              <p className="text-xs text-foreground/70">Files</p>
               <p className="mt-1 text-lg font-semibold text-foreground">{files.length}</p>
             </div>
             <div className="rounded-xl border border-border bg-card p-3">
-              <p className="text-xs text-muted-foreground">Total</p>
+              <p className="text-xs text-foreground/70">Total</p>
               <p className="mt-1 text-lg font-semibold text-foreground">{totalSizeMb.toFixed(2)} MB</p>
             </div>
           </div>
-          <p className="mt-4 text-xs leading-relaxed text-muted-foreground">
+          <p className="mt-4 text-xs leading-relaxed text-foreground/70">
             Accepted format: PDF. Limit: {deviceMaxTotalSizeMb} MB total.
           </p>
         </div>
@@ -163,7 +163,7 @@ export function PDFUploader({
 
       {files.length > 0 && (
         <div className="relative mt-5 space-y-2">
-          <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">Selected Files</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-[0.12em] text-foreground/70">Selected Files</h4>
           {files.map((file, index) => (
             <div
               key={index}
@@ -171,11 +171,11 @@ export function PDFUploader({
             >
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-muted">
-                  <FileText className="h-4 w-4 text-muted-foreground" />
+                  <FileText className="h-4 w-4 text-foreground/70" />
                 </div>
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-foreground">{file.name}</p>
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-xs text-foreground/70">
                     {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
@@ -183,7 +183,7 @@ export function PDFUploader({
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-muted-foreground hover:bg-muted hover:text-foreground"
+                className="text-foreground/70 hover:bg-muted hover:text-foreground"
                 onClick={() => removeFile(index)}
                 disabled={disabled}
               >

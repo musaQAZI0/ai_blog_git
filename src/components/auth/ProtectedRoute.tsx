@@ -9,12 +9,14 @@ interface ProtectedRouteProps {
   children: React.ReactNode
   requireAdmin?: boolean
   requireApproved?: boolean
+  loadingFallback?: React.ReactNode
 }
 
 export function ProtectedRoute({
   children,
   requireAdmin = false,
   requireApproved = true,
+  loadingFallback,
 }: ProtectedRouteProps) {
   const { user, loading, isAdmin, isApproved } = useAuth()
   const router = useRouter()
@@ -43,6 +45,8 @@ export function ProtectedRoute({
   }, [user, loading, isAdmin, isApproved, requireAdmin, requireApproved, router])
 
   if (loading) {
+    if (loadingFallback) return <>{loadingFallback}</>
+
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="space-y-4">

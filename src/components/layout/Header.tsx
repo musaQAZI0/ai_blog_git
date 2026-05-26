@@ -87,10 +87,11 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-2">
+          <div className="hidden min-h-9 min-w-[10.5rem] items-center justify-end sm:flex">
           {mounted && !loading && (
             <>
               {user ? (
-                <div className="relative hidden sm:block" ref={userMenuRef}>
+                <div className="relative" ref={userMenuRef}>
                   <button
                     onClick={() => setUserMenuOpen(!userMenuOpen)}
                     className={cn(
@@ -144,7 +145,7 @@ export function Header() {
                   )}
                 </div>
               ) : (
-                <div className="hidden items-center gap-2 sm:flex">
+                <div className="flex items-center gap-2">
                   <Link
                     href="/login"
                     className="inline-flex items-center gap-1 rounded-full bg-[#f2f2f2] px-4 py-2 text-[14px] font-medium text-black transition-colors hover:bg-[#ebebeb]"
@@ -163,10 +164,12 @@ export function Header() {
               )}
             </>
           )}
+          </div>
 
+          <div className="ml-1 flex h-9 w-9 items-center justify-center sm:hidden">
           {mounted && !loading && (
             <button
-              className="ml-1 rounded-lg p-1.5 text-black/50 transition-colors hover:bg-black/[0.04] hover:text-black sm:hidden"
+              className="rounded-lg p-1.5 text-black/60 transition-colors hover:bg-black/[0.04] hover:text-black"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               aria-label={mobileMenuOpen ? 'Zamknij menu' : 'Otwórz menu'}
               aria-expanded={mobileMenuOpen}
@@ -174,6 +177,7 @@ export function Header() {
               {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
           )}
+          </div>
         </div>
       </nav>
 

@@ -262,7 +262,7 @@ export function ArticleEditor({
         </div>
 
         <div className="rounded-lg border bg-muted/50 p-4">
-          <h3 className="mb-4 font-semibold">SEO settings</h3>
+          <h2 className="mb-4 text-base font-semibold">SEO settings</h2>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="seoTitle">SEO title (max 60 chars)</Label>
@@ -306,7 +306,7 @@ export function ArticleEditor({
           <h1 className="mb-4 text-3xl font-bold">
             {watch('title') || 'Article title'}
           </h1>
-          <p className="mb-6 text-lg text-muted-foreground">
+          <p className="mb-6 text-lg text-foreground/70">
             {watch('excerpt') || 'Article excerpt...'}
           </p>
           <div className="prose prose-lg max-w-none dark:prose-invert">

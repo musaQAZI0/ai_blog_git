@@ -1,11 +1,10 @@
 'use client'
 
 import React, { useState } from 'react'
+import dynamic from 'next/dynamic'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { ProtectedRoute } from '@/components/auth/ProtectedRoute'
-import { PDFUploader } from '@/components/dashboard/PDFUploader'
-import { ArticleEditor } from '@/components/dashboard/ArticleEditor'
 import {
   Card,
   CardContent,
@@ -18,11 +17,35 @@ import {
   Alert,
   AlertDescription,
 } from '@/components/ui'
-import { createArticle, publishArticle } from '@/lib/firebase/articles'
 import { ArticleCreateData, TargetAudience, AIGenerationResponse } from '@/types'
 import { Wand2, FileText, ArrowLeft, Loader2 } from 'lucide-react'
 import Link from 'next/link'
 import { normalizeAIGenerationResponse } from '@/lib/ai/normalize'
+
+const PDFUploader = dynamic(
+  () => import('@/components/dashboard/PDFUploader').then((mod) => mod.PDFUploader),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="rounded-3xl border border-border bg-card/80 p-5 md:p-7">
+        <div className="h-[260px] animate-pulse rounded-2xl bg-muted" />
+      </div>
+    ),
+  }
+)
+
+const ArticleEditor = dynamic(
+  () => import('@/components/dashboard/ArticleEditor').then((mod) => mod.ArticleEditor),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="space-y-4">
+        <div className="h-10 animate-pulse rounded-lg bg-muted" />
+        <div className="h-64 animate-pulse rounded-lg bg-muted" />
+      </div>
+    ),
+  }
+)
 
 type GenerationStage = 'extracting' | 'generating' | 'finalizing'
 
@@ -408,6 +431,7 @@ function CreateArticleContent() {
     setSaving(true)
     try
     {
+      const { createArticle, publishArticle } = await import('@/lib/firebase/articles')
       const normalizedData: ArticleCreateData = {
         ...data,
         targetAudience: lockedTargetAudience || data.targetAudience,
@@ -434,13 +458,13 @@ function CreateArticleContent() {
       <div className="mb-10">
         <Link
           href="/dashboard"
-          className="mb-5 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+          className="mb-5 inline-flex items-center gap-2 text-sm text-foreground/70 transition-colors hover:text-foreground"
         >
           <ArrowLeft className="h-4 w-4" />
           Powrot do panelu
         </Link>
         <h1 className="text-[clamp(1.85rem,5vw,2.5rem)] font-semibold tracking-tight text-foreground">Utworz nowy artykul</h1>
-        <p className="mt-3 max-w-2xl text-muted-foreground">
+        <p className="mt-3 max-w-2xl text-foreground/75">
           Wgraj dokumenty PDF i pozwol AI wygenerować treść artykułu
         </p>
       </div>
@@ -452,7 +476,7 @@ function CreateArticleContent() {
       )}
 
       {generating && generationStage && (
-        <div className="mb-6 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-muted-foreground">
+        <div className="mb-6 rounded-lg border border-border bg-muted/40 px-4 py-3 text-sm text-foreground/70">
           {generationStage === 'extracting' && 'Etap 1 z 3: wyodrebnianie tekstu z PDF.'}
           {generationStage === 'generating' && 'Etap 2 z 3: generowanie artykulu z retry i fallbackiem modeli.'}
           {generationStage === 'finalizing' && 'Etap 3 z 3: finalizowanie tresci i przygotowanie edytora.'}
@@ -466,7 +490,7 @@ function CreateArticleContent() {
               <FileText className="h-5 w-5" />
               Krok 1: Wgraj dokumenty
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardDescription className="text-foreground/70">
               Wgraj jeden lub wiecej plikow PDF, na podstawie ktorych AI wygeneruje artykul
             </CardDescription>
           </CardHeader>
@@ -542,7 +566,7 @@ function CreateArticleContent() {
               <Wand2 className="h-5 w-5" />
               Krok 2: Edytuj i opublikuj
             </CardTitle>
-            <CardDescription className="text-muted-foreground">
+            <CardDescription className="text-foreground/70">
               Przejrzyj wygenerowana treść i wprowadź ewentualne poprawki
             </CardDescription>
           </CardHeader>
@@ -568,9 +592,50 @@ function CreateArticleContent() {
   )
 }
 
+function CreateArticleLoadingShell() {
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-14 sm:px-6 lg:px-8">
+      <div className="mb-10">
+        <Link
+          href="/dashboard"
+          className="mb-5 inline-flex items-center gap-2 text-sm text-foreground/70 transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Powrot do panelu
+        </Link>
+        <h1 className="text-[clamp(1.85rem,5vw,2.5rem)] font-semibold tracking-tight text-foreground">Utworz nowy artykul</h1>
+        <p className="mt-3 max-w-2xl text-foreground/75">
+          Wgraj dokumenty PDF i pozwol AI wygenerowaÄ‡ treÅ›Ä‡ artykuÅ‚u
+        </p>
+      </div>
+
+      <Card className="overflow-hidden border-border bg-card/85 shadow-[0_20px_44px_-30px_rgba(0,0,0,0.2)]">
+        <CardHeader className="border-b border-border/70 pb-5">
+          <CardTitle className="flex items-center gap-2 text-foreground">
+            <FileText className="h-5 w-5" />
+            Krok 1: Wgraj dokumenty
+          </CardTitle>
+          <CardDescription className="text-foreground/70">
+            Wgraj jeden lub wiecej plikow PDF, na podstawie ktorych AI wygeneruje artykul
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="rounded-3xl border border-border bg-card/80 p-5 md:p-7">
+            <div className="h-[260px] animate-pulse rounded-2xl bg-muted" />
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
+
 export default function CreateArticlePage() {
   return (
-    <ProtectedRoute requireAdmin requireApproved={false}>
+    <ProtectedRoute
+      requireAdmin
+      requireApproved={false}
+      loadingFallback={<CreateArticleLoadingShell />}
+    >
       <CreateArticleContent />
     </ProtectedRoute>
   )

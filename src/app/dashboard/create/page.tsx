@@ -90,6 +90,10 @@ async function readJsonResponse(response: Response): Promise<any> {
   }
 }
 
+function delay(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 function sanitizeGeneratedPayload(data: AIGenerationResponse): AIGenerationResponse {
   const payload = normalizeAIGenerationResponse(data)
   const seoTitle = (payload.seoMeta?.title || payload.title || '').slice(0, 60)
@@ -103,16 +107,6 @@ function sanitizeGeneratedPayload(data: AIGenerationResponse): AIGenerationRespo
       description: seoDescription,
     },
   } as AIGenerationResponse
-}
-
-function isNetworkFetchFailure(error: unknown): boolean {
-  if (!(error instanceof Error)) return false
-  const message = error.message.toLowerCase()
-  return error.name === 'TypeError' && (
-    message.includes('failed to fetch') ||
-    message.includes('networkerror') ||
-    message.includes('load failed')
-  )
 }
 
 function CreateArticleContent() {
@@ -218,8 +212,8 @@ function CreateArticleContent() {
           ? extractedPdfContent.slice(0, maxChars)
           : extractedPdfContent
 
-        const response = await fetch(
-          '/api/ai/generate',
+        const startResponse = await fetch(
+          '/api/ai/generate/jobs',
           {
             method: 'POST',
             headers: {
@@ -236,61 +230,57 @@ function CreateArticleContent() {
             }),
           }
         )
-        const data = await readJsonResponse(response)
+        const startData = await readJsonResponse(startResponse)
 
-        if (!response.ok)
+        if (!startResponse.ok)
         {
-          throw new Error(data?.error || 'Blad generowania artykulu')
+          throw new Error(startData?.error || 'Nie udalo sie uruchomic zadania generowania')
         }
 
-        return sanitizeGeneratedPayload(data.data as AIGenerationResponse)
-      }
+        const jobId = String(startData?.data?.jobId || '')
+        if (!jobId) {
+          throw new Error('Serwer nie zwrocil identyfikatora zadania generowania')
+        }
 
-      try
-      {
-        setGenerationStage('generating')
-        const sanitized = await requestGeneration({
-          provider: 'gemini',
-          maxChars: audience === 'professional' ? 24000 : 8000,
-        })
+        let pollCount = 0
+        while (true) {
+          await delay(pollCount < 8 ? 2500 : 5000)
+          pollCount += 1
 
-        setGenerationStage('finalizing')
-        setGeneratedContent(sanitized)
-        setStep('edit')
-      } catch (generateErr)
-      {
-        if (isNetworkFetchFailure(generateErr) || generateErr instanceof Error)
-        {
-          console.warn('[create-article] Primary generation failed; retrying with compact OpenAI fallback')
-          setGenerationStage('generating')
-          try
-          {
-            const sanitized = await requestGeneration({
-              provider: 'openai',
-              maxChars: audience === 'professional' ? 20000 : 6000,
-            })
-            setGenerationStage('finalizing')
-            setGeneratedContent(sanitized)
-            setStep('edit')
-            return
-          } catch (retryErr)
-          {
-            throw new Error(
-              retryErr instanceof Error
-                ? `Generowanie nie powiodlo sie po probie awaryjnej: ${retryErr.message}`
-                : 'Generowanie nie powiodlo sie po probie awaryjnej.'
-            )
+          const statusResponse = await fetchWithTimeout(
+            `/api/ai/generate/jobs/${encodeURIComponent(jobId)}`,
+            {
+              method: 'GET',
+              headers,
+              cache: 'no-store',
+            },
+            20000
+          )
+          const statusData = await readJsonResponse(statusResponse)
+
+          if (!statusResponse.ok) {
+            throw new Error(statusData?.error || 'Nie udalo sie sprawdzic statusu generowania')
+          }
+
+          const status = statusData?.data?.status
+          if (status === 'completed') {
+            return sanitizeGeneratedPayload(statusData.data.result as AIGenerationResponse)
+          }
+          if (status === 'failed') {
+            throw new Error(statusData?.data?.error || 'Generowanie nie powiodlo sie')
           }
         }
-
-        if (generateErr instanceof Error && generateErr.name === 'AbortError')
-        {
-          throw new Error(
-            'Polaczenie zostalo przerwane przez przegladarke podczas generowania. Sprobuj ponownie bez odswiezania strony.'
-          )
-        }
-        throw generateErr
       }
+
+      setGenerationStage('generating')
+      const sanitized = await requestGeneration({
+        provider: 'gemini',
+        maxChars: audience === 'professional' ? 24000 : 8000,
+      })
+
+      setGenerationStage('finalizing')
+      setGeneratedContent(sanitized)
+      setStep('edit')
     } catch (err)
     {
       console.error('[create-article] Generation error:', err)

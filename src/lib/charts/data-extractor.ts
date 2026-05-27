@@ -543,6 +543,56 @@ function isCumulativeIntervalLineChart(chart: ExtractedChartData): boolean {
   return chart.chartType === 'line' && hasCumulativeIntervalData(chart)
 }
 
+function parseOrderedNumericLabel(label: string): number | null {
+  const normalized = label
+    .replace(',', '.')
+    .replace(/[+±]/g, '')
+    .trim()
+  const match = normalized.match(/-?\d+(?:\.\d+)?/)
+  if (!match) return null
+  const value = Number(match[0])
+  return Number.isFinite(value) ? value : null
+}
+
+function normalizeNumericLabelOrder(data: ChartData): void {
+  const labelCount = data.labels.length
+  if (labelCount < 2 || data.datasets.length === 0) return
+
+  const values: number[] = []
+  let ascending = true
+  let descending = true
+
+  for (let index = 0; index < labelCount; index += 1) {
+    const value = parseOrderedNumericLabel(data.labels[index])
+    if (value === null) return
+
+    values.push(value)
+    if (index > 0) {
+      if (values[index - 1] > value) ascending = false
+      if (values[index - 1] < value) descending = false
+    }
+  }
+
+  if (ascending) return
+
+  const order = descending
+    ? Array.from({ length: labelCount }, (_, index) => labelCount - 1 - index)
+    : values
+        .map((value, index) => ({ value, index }))
+        .sort((a, b) => a.value - b.value)
+        .map((item) => item.index)
+
+  data.labels = order.map((index) => data.labels[index])
+  data.datasets = data.datasets.map((dataset) => ({
+    ...dataset,
+    data: order.map((index) => dataset.data[index]) as typeof dataset.data,
+  }))
+
+  if (Array.isArray(data.significance) && data.significance.length === labelCount) {
+    data.significance = order.map((index) => data.significance?.[index] || 'ns')
+  }
+}
+
 function normalizeExtractedChart(rawChart: any): ExtractedChartData | null {
   const labels = rawChart.data?.labels || rawChart.labels || []
   const datasets = rawChart.data?.datasets || rawChart.datasets || []
@@ -612,6 +662,7 @@ function normalizeExtractedChart(rawChart: any): ExtractedChartData | null {
   data.xAxisLabel = rawChart.x_axis_label || ''
   data.yAxisLabel = rawChart.y_axis_label || ''
   data.sourceTable = rawChart.source_table || rawChart.sourceDescription || ''
+  normalizeNumericLabelOrder(data)
 
   normalizedChart.axis_min = data.axisMin
   normalizedChart.axis_max = data.axisMax
@@ -895,27 +946,43 @@ function mostCommonValueLength(rows: ParsedTableRow[]): number {
     counts.set(row.values.length, (counts.get(row.values.length) || 0) + 1)
   }
 
-  return Array.from(counts.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || 0
+  let bestLength = 0
+  let bestCount = 0
+  for (const [length, count] of counts) {
+    if (count > bestCount) {
+      bestLength = length
+      bestCount = count
+    }
+  }
+
+  return bestLength
 }
 
 function chooseBestParsedTable(groups: ParsedTableGroup[]): ParsedTableGroup | null {
-  const candidates = groups
-    .map((group) => {
-      const commonLength = mostCommonValueLength(group.rows)
-      const rows = group.rows.filter((row) => row.values.length >= Math.max(3, commonLength))
-      const formulaRows = rows.filter((row) => isFormulaComparisonLabel(row.label)).length
-      const score =
-        rows.length * 10 +
-        formulaRows * 50 +
-        (/\b(ESCRS|formula|formulas|whole|overall|primary|dataset|results?|comparison|porown|wynik)/i.test(group.caption) ? 20 : 0) +
-        (/\bwhole dataset\b/i.test(group.caption) ? 250 : 0) +
-        (/\b(short|long)\s+eyes\b|[<>]\s*\d+\s*mm/i.test(group.caption) ? -120 : 0) +
-        (rows.some((row) => row.values.slice(1, 5).filter((value) => value > 1 && value <= 100).length >= 3) ? 5 : 0)
-      return { group: { ...group, rows }, score }
-    })
-    .filter((candidate) => candidate.group.rows.length >= 3 && candidate.group.rows.filter((row) => isFormulaComparisonLabel(row.label)).length >= 3)
+  let bestGroup: ParsedTableGroup | null = null
+  let bestScore = -Infinity
 
-  return candidates.sort((a, b) => b.score - a.score)[0]?.group || null
+  for (const group of groups) {
+    const commonLength = mostCommonValueLength(group.rows)
+    const rows = group.rows.filter((row) => row.values.length >= Math.max(3, commonLength))
+    const formulaRows = rows.filter((row) => isFormulaComparisonLabel(row.label)).length
+    if (rows.length < 3 || formulaRows < 3) continue
+
+    const score =
+      rows.length * 10 +
+      formulaRows * 50 +
+      (/\b(ESCRS|formula|formulas|whole|overall|primary|dataset|results?|comparison|porown|wynik)/i.test(group.caption) ? 20 : 0) +
+      (/\bwhole dataset\b/i.test(group.caption) ? 250 : 0) +
+      (/\b(short|long)\s+eyes\b|[<>]\s*\d+\s*mm/i.test(group.caption) ? -120 : 0) +
+      (rows.some((row) => row.values.slice(1, 5).filter((value) => value > 1 && value <= 100).length >= 3) ? 5 : 0)
+
+    if (score > bestScore) {
+      bestScore = score
+      bestGroup = { ...group, rows }
+    }
+  }
+
+  return bestGroup
 }
 
 function normalizeColumnFormulaLabel(label: string): string {
@@ -1068,23 +1135,29 @@ function buildColumnHeaderOutcomeCharts(groups: ParsedTableGroup[], maxCharts: n
 }
 
 function chooseBestGenericParsedTable(groups: ParsedTableGroup[]): ParsedTableGroup | null {
-  const candidates = groups
-    .map((group) => {
-      const rows = genericRows(group)
-        .filter((row) => row.values.length >= 2)
-        .slice(0, 8)
+  let bestGroup: ParsedTableGroup | null = null
+  let bestScore = -Infinity
 
-      const score =
-        rows.length * 10 +
-        (/\b(reliability|validity|responsiveness|fit indices|CFA|mean|scores?|metrics?)\b/i.test(group.caption) ? 70 : 0) +
-        (/\b(domain|item composition|questionnaire)\b/i.test(group.caption) ? -30 : 0) +
-        (rows.some((row) => row.values.some((value) => value > 0 && value <= 1)) ? 10 : 0)
+  for (const group of groups) {
+    const rows = genericRows(group)
+      .filter((row) => row.values.length >= 2)
+      .slice(0, 8)
 
-      return { group: { ...group, rows }, score }
-    })
-    .filter((candidate) => candidate.group.rows.length >= 3)
+    if (rows.length < 3) continue
 
-  return candidates.sort((a, b) => b.score - a.score)[0]?.group || null
+    const score =
+      rows.length * 10 +
+      (/\b(reliability|validity|responsiveness|fit indices|CFA|mean|scores?|metrics?)\b/i.test(group.caption) ? 70 : 0) +
+      (/\b(domain|item composition|questionnaire)\b/i.test(group.caption) ? -30 : 0) +
+      (rows.some((row) => row.values.some((value) => value > 0 && value <= 1)) ? 10 : 0)
+
+    if (score > bestScore) {
+      bestScore = score
+      bestGroup = { ...group, rows }
+    }
+  }
+
+  return bestGroup
 }
 
 function isUsableGenericLabel(label: string): boolean {
@@ -1124,23 +1197,48 @@ function chartFamilyRank(chart: ExtractedChartData): number {
 
 function chooseMetricColumn(rows: ParsedTableRow[], excludedColumns: Set<number> = new Set()): number | null {
   const maxColumns = Math.max(...rows.map((row) => row.values.length), 0)
-  const candidates: { index: number; score: number }[] = []
+  let bestIndex: number | null = null
+  let bestScore = -Infinity
 
   for (let index = 0; index < maxColumns; index++) {
     if (excludedColumns.has(index)) continue
-    const values = rows.map((row) => row.values[index]).filter((value): value is number => typeof value === 'number')
-    if (values.length < Math.max(3, Math.ceil(rows.length * 0.75))) continue
-    if (!hasUsefulVariation(values)) continue
 
-    const range = Math.max(...values) - Math.min(...values)
-    const inUnitInterval = values.filter((value) => value >= 0 && value <= 1).length
-    const nonInteger = values.filter((value) => !Number.isInteger(value)).length
-    const repeatedLarge = values.filter((value) => value >= 100).length
+    let valueCount = 0
+    let firstValue: number | null = null
+    let hasVariation = false
+    let min = Infinity
+    let max = -Infinity
+    let inUnitInterval = 0
+    let nonInteger = 0
+    let repeatedLarge = 0
+
+    for (const row of rows) {
+      const value = row.values[index]
+      if (typeof value !== 'number') continue
+
+      valueCount += 1
+      if (firstValue === null) firstValue = value
+      else if (value !== firstValue) hasVariation = true
+      if (value < min) min = value
+      if (value > max) max = value
+      if (value >= 0 && value <= 1) inUnitInterval += 1
+      if (!Number.isInteger(value)) nonInteger += 1
+      if (value >= 100) repeatedLarge += 1
+    }
+
+    if (valueCount < Math.max(3, Math.ceil(rows.length * 0.75))) continue
+    if (!hasVariation) continue
+
+    const range = max - min
     const score = inUnitInterval * 6 + nonInteger * 3 + range - repeatedLarge * 6 - index
-    candidates.push({ index, score })
+
+    if (score > bestScore) {
+      bestScore = score
+      bestIndex = index
+    }
   }
 
-  return candidates.sort((a, b) => b.score - a.score)[0]?.index ?? null
+  return bestIndex
 }
 
 function inferGenericMetricLabel(caption: string, columnIndex: number): string {
@@ -1873,6 +1971,13 @@ LABEL QUALITY RULE:
 - Each chart category label must be a SHORT IDENTIFIER (≤ 30 characters) representing a formula name, group name, treatment name, or time point
 - Labels must NOT be: column header descriptions, statistical parameter names, biometric parameter names, or sentence fragments
 - If the only available labels look like column headers ("Parameter Age (y) SE (D) CDVA", "with a vertex distance of", "SD values for K"), return {"charts": []}
+
+CHART ORDERING AND DIRECTION RULE:
+- Preserve the natural/source order of ordered categories. Do NOT reverse an ordered x-axis for visual variety.
+- If labels are numeric doses, add powers, diopters, time points, thresholds, follow-up visits, or intervals, order them from lowest to highest / earliest to latest unless the source explicitly presents a different meaningful order.
+- For line charts, the left-to-right direction must match the scientific conclusion. If values increase with larger labels, the line should increase left-to-right; if values decrease with larger labels, it should decrease left-to-right.
+- Do NOT sort by y-value unless the chart is explicitly a ranking chart. For non-ranking charts, x-axis order is determined by the source/category order, not by the plotted values.
+- Captions/sourceDescription must state the metric, units, and source context, not generic text like "Opis wyników".
 
 CRITICAL REQUIREMENTS:
 1. Extract ONLY data that is explicitly present in the document - DO NOT make up, estimate, round, or infer any numbers. Every value MUST be copy-pasted from the source.

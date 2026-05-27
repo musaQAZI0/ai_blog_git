@@ -253,7 +253,8 @@ export function createStrictChartContext(charts: ExtractedChartData[]): string {
 
     const lines: string[] = [
         '\n\n=== VERIFIED CHART DATA FOR ARTICLE GENERATION ===',
-        'CRITICAL: ONLY use the exact numbers and labels listed below. DO NOT invent or estimate any values.\n'
+        'CRITICAL: ONLY use the exact numbers and labels listed below. DO NOT invent or estimate any values.',
+        'CRITICAL: Preserve the listed x-axis label order when describing charts. Do not reverse ordered numeric labels, thresholds, time points, or doses.\n'
     ]
 
     for (let i = 0; i < charts.length; i++)
@@ -293,6 +294,7 @@ CONSTRAINTS FOR ARTICLE WRITER:
 5. Do not interpret, estimate, or extrapolate values
 6. Do not mention charts that are not listed above
 7. If you need to mention a value, cite which dataset it comes from
+8. When describing chart direction, follow the listed X-Axis/Labels order exactly
 `)
 
     return lines.join('\n')

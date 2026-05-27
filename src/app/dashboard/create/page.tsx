@@ -161,7 +161,6 @@ function CreateArticleContent() {
       }
       const isMobile = isMobileBrowser()
       const extractTimeout = isMobile ? 90000 : 120000
-      const generateTimeout = isMobile ? 120000 : 150000
       const headers = { authorization: `Bearer ${idToken}` }
       const audience = lockedTargetAudience || targetAudience
 
@@ -210,18 +209,16 @@ function CreateArticleContent() {
       setGenerationStage('generating')
 
       const requestGeneration = async (options?: {
-        mobileSafeRetry?: boolean
         provider?: 'gemini' | 'openai'
         maxChars?: number
       }) => {
-        const mobileSafeRetry = Boolean(options?.mobileSafeRetry)
         const provider = options?.provider || 'gemini'
-        const maxChars = options?.maxChars || (audience === 'professional' ? 14000 : 8000)
+        const maxChars = options?.maxChars || (audience === 'professional' ? 24000 : 8000)
         const bodyPdfContent = maxChars
           ? extractedPdfContent.slice(0, maxChars)
           : extractedPdfContent
 
-        const response = await fetchWithTimeout(
+        const response = await fetch(
           '/api/ai/generate',
           {
             method: 'POST',
@@ -237,8 +234,7 @@ function CreateArticleContent() {
               generateImage: true,
               generationMode: 'full',
             }),
-          },
-          mobileSafeRetry ? 180000 : generateTimeout
+          }
         )
         const data = await readJsonResponse(response)
 
@@ -255,7 +251,7 @@ function CreateArticleContent() {
         setGenerationStage('generating')
         const sanitized = await requestGeneration({
           provider: 'gemini',
-          maxChars: audience === 'professional' ? 14000 : 8000,
+          maxChars: audience === 'professional' ? 24000 : 8000,
         })
 
         setGenerationStage('finalizing')
@@ -270,9 +266,8 @@ function CreateArticleContent() {
           try
           {
             const sanitized = await requestGeneration({
-              mobileSafeRetry: true,
               provider: 'openai',
-              maxChars: audience === 'professional' ? 10000 : 6000,
+              maxChars: audience === 'professional' ? 20000 : 6000,
             })
             setGenerationStage('finalizing')
             setGeneratedContent(sanitized)
@@ -290,9 +285,8 @@ function CreateArticleContent() {
 
         if (generateErr instanceof Error && generateErr.name === 'AbortError')
         {
-          const minutes = Math.floor(generateTimeout / 60000)
           throw new Error(
-            `Generowanie trwało zbyt długo (> ${minutes} min). System wyłączył obrazy i uruchamia fallback modeli, ale ten dokument nadal jest zbyt ciężki.`
+            'Polaczenie zostalo przerwane przez przegladarke podczas generowania. Sprobuj ponownie bez odswiezania strony.'
           )
         }
         throw generateErr

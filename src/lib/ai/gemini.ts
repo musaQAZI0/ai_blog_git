@@ -206,13 +206,18 @@ NON-SIGNIFICANT COMPARISONS - MANDATORY:
 
 ENDPOINT REPORTING - MANDATORY:
 8. Identify the actual primary and secondary endpoints used in the source document. Do not assume endpoints such as RMSAE, prediction error, subgroup eye length, formula comparison, or IOL type unless they are explicitly present in the paper. When subgroups are explicitly analyzed, report both the main endpoint and notable secondary endpoint findings without cherry-picking only the most favorable result.
+8a. Preserve exact endpoint wording in titles, excerpts, headings, and key claims. Do not shorten a specific endpoint such as "mean vector magnitude prediction error" to a broader claim such as "prediction error" or "accuracy" unless the source uses that broader endpoint.
+8b. P-value scope must be exact. Never write "all comparisons p<..." unless the source explicitly states that all relevant pairwise comparisons share that threshold. Distinguish overall p-values, pairwise p-values, subgroup p-values, and measured-versus-predicted comparisons.
 
 CLINICAL VS STATISTICAL INTERPRETATION:
 9. Separate statistical significance from clinical relevance. If the paper says a statistically significant difference is small, minor, modest, or unlikely to be clinically meaningful, include that qualification. Do not convert statistical significance into clinical importance unless the authors support it.
 For the Vivity contrast-sensitivity trade-off, if the source describes the absolute difference as small or unlikely clinically meaningful, write that qualification explicitly. Do not phrase it simply as "the price/cost is reduced contrast sensitivity."
 
 LIMITATIONS - MANDATORY:
-10. In "Ograniczenia", separate limitations explicitly stated or directly documented in the paper from editorially inferred limitations. Mark inferred limitations as "ograniczenie interpretacyjne" or "wniosek redakcyjny".`
+10. In "Ograniczenia", separate limitations explicitly stated or directly documented in the paper from editorially inferred limitations. Mark inferred limitations as "ograniczenie interpretacyjne" or "wniosek redakcyjny".
+
+SOURCE STATUS - MANDATORY:
+11. Preserve the publication status shown in the source. If the document is a manuscript draft, preprint, accepted manuscript, conference abstract, or submission without final volume/pages/DOI, state that status and do not invent final citation details.`
 
 function extractJsonObject(text: string): string {
   const trimmed = (text || '').trim()
@@ -356,10 +361,13 @@ export async function generateArticleWithGemini(
 - Extract only details present in the document (numbers, protocols, outcomes); do not invent details or citations.
 - Write a concise professional review. Use about 500 words for the "content" field when the document contains enough information.
 - Identify the actual endpoints used in the source document; do not assume formula-study endpoints or subgroup structures unless explicitly present.
+- Preserve exact endpoint wording in the title, excerpt, headings, chart captions, and key claims; do not replace a specific endpoint with a broader generic claim.
 - Do not claim superiority for any comparison unless the relevant pairwise p-value supports it. State non-significant comparisons when clinically relevant.
+- Scope p-values precisely: distinguish overall, pairwise, subgroup, and method-comparison p-values. Never say "all comparisons" unless the source explicitly says all relevant comparisons meet that threshold.
 - When reporting EMV vs monofocal intermediate vision, or any similar multi-endpoint comparison, distinguish uncorrected and corrected endpoints (for example UIVA vs DCIVA). Do not summarize both as significant unless both pairwise p-values are significant.
 - Do not write "klinicznie istotna poprawa" unless the paper explicitly supports clinical meaningfulness. For small but significant differences, use "statystycznie istotna, umiarkowana poprawa" and name the exact endpoint.
 - For charted outcomes, name the source table/figure and preserve the direction of interpretation (for example, lower logMAR means better visual acuity).
+- For ordered threshold/proportion charts, describe them as ordered cutoffs or cumulative thresholds, not as time trends unless the x-axis is time.
 ${generateImage ? '- For charts, use the provided chart placeholder URL or a token in the format {{CHART:dataset_name:chart_type}}.' : '- Do not include chart placeholders or image references.'}
 - For "suggestedCategory", pick the BEST match from: ${validCategories.join(', ')}.
 `
@@ -398,6 +406,7 @@ ${figureInstructions}
 11. MUST include a "## Źródło" section at the END of the content with the original article reference extracted from the PDF.
 12. Reference format: Authors (one line), Title (one line), Journal. Year;volume(issue if available):pages if true page range is available. doi:DOI if available.
 12a. Never write "Pages" followed by an article ID, manuscript ID, DOI suffix, or number like S595557/595557. If no true page range is available, omit pages and include doi instead.
+12b. If the source says manuscript draft, preprint, accepted manuscript, conference abstract, or submission and does not provide final bibliographic details, keep that status in the source section and do not invent year/volume/pages/DOI.
 13. Example reference format:
     ## Źródło
 

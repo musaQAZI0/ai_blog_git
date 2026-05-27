@@ -38,6 +38,53 @@ function cleanGeneratedProfessionalContent(content: string, pdfContent: string):
   return cleaned.trim()
 }
 
+function countWords(text: string): number {
+  return (text || '')
+    .replace(/https?:\/\/\S+/g, ' ')
+    .replace(/[#*_>`\-[\](){}]/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length
+}
+
+function isJsonishText(text: string): boolean {
+  const trimmed = (text || '').trim()
+  return (
+    trimmed.startsWith('{') ||
+    trimmed.startsWith('[') ||
+    trimmed.includes('{"title"') ||
+    trimmed.includes('"content"') ||
+    trimmed.includes('"seoMeta"')
+  )
+}
+
+function assertUsableArticleResponse(
+  article: AIGenerationResponse,
+  targetAudience: AIGenerationRequest['targetAudience']
+): void {
+  const title = (article.title || '').trim()
+  const content = (article.content || '').trim()
+  const excerpt = (article.excerpt || '').trim()
+  const wordCount = countWords(content)
+  const minimumWords = targetAudience === 'professional' ? 260 : 170
+  const hasSourceSection =
+    targetAudience !== 'professional' ||
+    /\u0179r\u00f3d\u0142o|Zrodlo|Source/i.test(content)
+
+  const problems: string[] = []
+
+  if (title.length < 12 || isJsonishText(title)) problems.push('invalid title')
+  if (content.length < 900 || wordCount < minimumWords || isJsonishText(content)) {
+    problems.push('invalid or too short content')
+  }
+  if (excerpt && isJsonishText(excerpt)) problems.push('invalid excerpt')
+  if (!hasSourceSection) problems.push('missing source section')
+
+  if (problems.length > 0) {
+    throw new Error(`Generated article response failed quality checks: ${problems.join(', ')}`)
+  }
+}
+
 const PROVIDER_ORDER: Record<AIProvider, AIProvider[]> = {
   gemini: ['gemini', 'openai', 'claude'],
   openai: ['openai', 'claude', 'gemini'],
@@ -161,6 +208,7 @@ export async function generateArticle(
         if (targetAudience === 'professional') {
           normalized.content = cleanGeneratedProfessionalContent(normalized.content, preparedPdfContent)
         }
+        assertUsableArticleResponse(normalized, targetAudience)
         return normalized
       } catch (error)
       {

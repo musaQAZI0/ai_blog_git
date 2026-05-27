@@ -34,8 +34,27 @@ function parseGenerationMode(value: unknown): AIGenerationMode {
 
 function compactPdfContentForGeneration(pdfContent: string, targetAudience: TargetAudience): string {
   const normalized = normalizeExtractedPdfText(pdfContent)
-  const maxChars = targetAudience === 'professional' ? 14000 : 8000
+  const maxChars = targetAudience === 'professional' ? 24000 : 8000
   if (normalized.length <= maxChars) return normalized
+
+  const tableBlocks = Array.from(
+    normalized.matchAll(/\[TABLE:[\s\S]*?(?=\n\s*\[TABLE:|\n\s*---\s*\n|$)/g)
+  )
+    .map((match) => match[0].trim())
+    .filter(Boolean)
+    .join('\n\n')
+
+  if (targetAudience === 'professional' && tableBlocks) {
+    const headBudget = Math.max(6000, maxChars - tableBlocks.length - 3000)
+    const tailBudget = 2500
+    return [
+      normalized.slice(0, headBudget).trim(),
+      '\n\n[...zachowano tabele wynikow dla generowania wykresow...]\n\n',
+      tableBlocks.slice(0, Math.max(0, maxChars - headBudget - tailBudget)).trim(),
+      '\n\n[...koniec dokumentu / zrodla...]\n\n',
+      normalized.slice(-tailBudget).trim(),
+    ].filter(Boolean).join('')
+  }
 
   const headLength = Math.floor(maxChars * 0.72)
   const tailLength = maxChars - headLength

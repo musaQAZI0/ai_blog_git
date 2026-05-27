@@ -50,8 +50,17 @@ export function LoginForm() {
       return
     }
 
-    console.log('[auth] login success, redirecting to /dashboard')
-    router.push('/dashboard')
+    const nextPath =
+      typeof window !== 'undefined'
+        ? new URLSearchParams(window.location.search).get('next')
+        : null
+    const redirectPath =
+      nextPath && nextPath.startsWith('/') && !nextPath.startsWith('//')
+        ? nextPath
+        : '/dashboard'
+
+    console.log('[auth] login success, redirecting', redirectPath)
+    router.push(redirectPath)
   }
 
   return (

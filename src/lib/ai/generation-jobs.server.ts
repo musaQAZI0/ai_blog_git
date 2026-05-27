@@ -19,6 +19,7 @@ export type GenerationJobSnapshot = {
 }
 
 type CreateGenerationJobInput = {
+  jobId?: string
   createdBy: string
   pdfContent: string
   targetAudience: TargetAudience
@@ -49,7 +50,16 @@ function publicErrorMessage(error: unknown): string {
 
 export async function createGenerationJob(input: CreateGenerationJobInput): Promise<string> {
   const db = getAdminDb()
-  const ref = db.collection(COLLECTION).doc()
+  const ref = input.jobId ? db.collection(COLLECTION).doc(input.jobId) : db.collection(COLLECTION).doc()
+  const existing = await ref.get()
+
+  if (existing.exists) {
+    const data = existing.data() || {}
+    if (data.createdBy !== input.createdBy) {
+      throw new Error('Generation job id is already in use.')
+    }
+    return ref.id
+  }
 
   await ref.set({
     status: 'queued',

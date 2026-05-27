@@ -94,6 +94,58 @@ function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function createClientJobId(): string {
+  const random =
+    typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : `${Date.now()}-${Math.random().toString(36).slice(2)}`
+  return `article-${random.replace(/[^a-zA-Z0-9_-]/g, '')}`
+}
+
+function isTransientFetchError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false
+  const message = error.message.toLowerCase()
+  return (
+    error.name === 'AbortError' ||
+    error.name === 'TypeError' ||
+    message.includes('failed to fetch') ||
+    message.includes('networkerror') ||
+    message.includes('load failed') ||
+    message.includes('network request failed')
+  )
+}
+
+async function fetchJsonWithRetry(
+  input: RequestInfo | URL,
+  init: RequestInit,
+  options: {
+    timeoutMs?: number
+    retries?: number
+    retryDelayMs?: number
+  } = {}
+): Promise<{ response: Response; data: any }> {
+  const retries = options.retries ?? 2
+  const retryDelayMs = options.retryDelayMs ?? 1200
+  let lastError: unknown
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response =
+        options.timeoutMs && options.timeoutMs > 0
+          ? await fetchWithTimeout(input, init, options.timeoutMs)
+          : await fetch(input, init)
+      const data = await readJsonResponse(response)
+      return { response, data }
+    } catch (error) {
+      lastError = error
+      if (!isTransientFetchError(error) || attempt === retries) break
+      await delay(retryDelayMs * (attempt + 1))
+    }
+  }
+
+  throw lastError
+}
+
 function sanitizeGeneratedPayload(data: AIGenerationResponse): AIGenerationResponse {
   const payload = normalizeAIGenerationResponse(data)
   const seoTitle = (payload.seoMeta?.title || payload.title || '').slice(0, 60)
@@ -170,16 +222,19 @@ function CreateArticleContent() {
 
       try
       {
-        const extractResponse = await fetchWithTimeout(
+        const { response: extractResponse, data: extractPayload } = await fetchJsonWithRetry(
           '/api/ai/generate',
           {
             method: 'POST',
             body: formData,
             headers,
           },
-          extractTimeout
+          {
+            timeoutMs: extractTimeout,
+            retries: isMobile ? 2 : 1,
+            retryDelayMs: 1800,
+          }
         )
-        const extractPayload = await readJsonResponse(extractResponse)
 
         if (!extractResponse.ok)
         {
@@ -211,54 +266,93 @@ function CreateArticleContent() {
         const bodyPdfContent = maxChars
           ? extractedPdfContent.slice(0, maxChars)
           : extractedPdfContent
+        const clientJobId = createClientJobId()
+        let jobId = clientJobId
+        let startConfirmed = false
 
-        const startResponse = await fetch(
-          '/api/ai/generate/jobs',
-          {
-            method: 'POST',
-            headers: {
-              'content-type': 'application/json',
-              ...(headers || {}),
+        try {
+          const { response: startResponse, data: startData } = await fetchJsonWithRetry(
+            '/api/ai/generate/jobs',
+            {
+              method: 'POST',
+              headers: {
+                'content-type': 'application/json',
+                ...(headers || {}),
+              },
+              cache: 'no-store',
+              body: JSON.stringify({
+                action: 'generate',
+                clientJobId,
+                pdfContent: bodyPdfContent,
+                targetAudience: audience,
+                provider,
+                generateImage: true,
+                generationMode: 'full',
+              }),
             },
-            body: JSON.stringify({
-              action: 'generate',
-              pdfContent: bodyPdfContent,
-              targetAudience: audience,
-              provider,
-              generateImage: true,
-              generationMode: 'full',
-            }),
+            {
+              timeoutMs: 30000,
+              retries: isMobile ? 3 : 2,
+              retryDelayMs: 1500,
+            }
+          )
+
+          if (!startResponse.ok)
+          {
+            throw new Error(startData?.error || 'Nie udalo sie uruchomic zadania generowania')
           }
-        )
-        const startData = await readJsonResponse(startResponse)
 
-        if (!startResponse.ok)
-        {
-          throw new Error(startData?.error || 'Nie udalo sie uruchomic zadania generowania')
-        }
-
-        const jobId = String(startData?.data?.jobId || '')
-        if (!jobId) {
-          throw new Error('Serwer nie zwrocil identyfikatora zadania generowania')
+          jobId = String(startData?.data?.jobId || clientJobId)
+          startConfirmed = true
+        } catch (startError) {
+          if (!isTransientFetchError(startError)) {
+            throw startError
+          }
+          console.warn('[create-article] Job start response was lost; polling client job id', startError)
         }
 
         let pollCount = 0
+        let consecutivePollFailures = 0
         while (true) {
           await delay(pollCount < 8 ? 2500 : 5000)
           pollCount += 1
 
-          const statusResponse = await fetchWithTimeout(
-            `/api/ai/generate/jobs/${encodeURIComponent(jobId)}`,
-            {
-              method: 'GET',
-              headers,
-              cache: 'no-store',
-            },
-            20000
-          )
-          const statusData = await readJsonResponse(statusResponse)
+          let statusResponse: Response
+          let statusData: any
+
+          try {
+            const result = await fetchJsonWithRetry(
+              `/api/ai/generate/jobs/${encodeURIComponent(jobId)}`,
+              {
+                method: 'GET',
+                headers,
+                cache: 'no-store',
+              },
+              {
+                timeoutMs: 25000,
+                retries: isMobile ? 2 : 1,
+                retryDelayMs: 1500,
+              }
+            )
+            statusResponse = result.response
+            statusData = result.data
+            consecutivePollFailures = 0
+          } catch (pollError) {
+            if (isTransientFetchError(pollError) && consecutivePollFailures < 18) {
+              consecutivePollFailures += 1
+              console.warn(
+                `[create-article] Poll failed (${consecutivePollFailures}); keeping job alive`,
+                pollError
+              )
+              continue
+            }
+            throw pollError
+          }
 
           if (!statusResponse.ok) {
+            if (!startConfirmed && statusResponse.status === 404 && pollCount <= 12) {
+              continue
+            }
             throw new Error(statusData?.error || 'Nie udalo sie sprawdzic statusu generowania')
           }
 
@@ -284,7 +378,13 @@ function CreateArticleContent() {
     } catch (err)
     {
       console.error('[create-article] Generation error:', err)
-      setError(err instanceof Error ? err.message : 'Wystapil blad')
+      if (isTransientFetchError(err)) {
+        setError(
+          'Polaczenie mobilne chwilowo przerwalo kontakt z serwerem. Zadanie moglo nadal dzialac po stronie serwera; odswiez strone dopiero po kilku minutach albo sprobuj ponownie na stabilnym WiFi.'
+        )
+      } else {
+        setError(err instanceof Error ? err.message : 'Wystapil blad')
+      }
     } finally
     {
       setGenerationStage(null)

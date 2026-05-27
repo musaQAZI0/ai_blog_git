@@ -11,8 +11,8 @@ export function Footer({
   const currentYear = new Date().getFullYear()
 
   return (
-    <footer className={cn('border-t border-black/10 bg-white', wrapperClassName)}>
-      <div className={cn('mx-auto w-full max-w-7xl px-6 py-10 sm:px-8 lg:px-10', containerClassName)}>
+    <footer className={cn('min-h-[278px] border-t border-black/10 bg-white sm:min-h-[252px]', wrapperClassName)}>
+      <div className={cn('mx-auto w-full max-w-7xl px-6 py-8 sm:px-8 sm:py-9 lg:px-10', containerClassName)}>
         <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="lg:col-span-2">
             <Link href="/" className="inline-flex items-center gap-2">
@@ -75,7 +75,7 @@ export function Footer({
       </div>
 
       <div className="border-t border-black/5">
-        <div className={cn('mx-auto flex w-full max-w-7xl flex-col gap-2 px-6 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10', containerClassName)}>
+        <div className={cn('mx-auto flex w-full max-w-7xl flex-col gap-2 px-6 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8 lg:px-10', containerClassName)}>
           <p className="text-xs text-black/65">
             &copy; {currentYear} Dr hab. n. med. Janusz Skrzypecki. Wszelkie prawa zastrzeżone.
           </p>

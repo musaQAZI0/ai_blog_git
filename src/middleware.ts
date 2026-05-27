@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
+const AUTH_HINT_COOKIE = 'app_auth_hint'
+const PROTECTED_PREFIXES = ['/dashboard', '/admin', '/patient/generate', '/professional']
+
 // Rate limiting configuration
 const RATE_LIMIT_MAX_REQUESTS = parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100', 10)
 const RATE_LIMIT_WINDOW_MS = parseInt(process.env.RATE_LIMIT_WINDOW_MS || '900000', 10) // 15 minutes
@@ -78,6 +81,17 @@ export function middleware(request: NextRequest) {
     response.headers.set('X-RateLimit-Reset', Math.floor(resetTime / 1000).toString())
 
     return response
+  }
+
+  const isProtectedRoute = PROTECTED_PREFIXES.some(
+    (path) => pathname === path || pathname.startsWith(`${path}/`)
+  )
+
+  if (isProtectedRoute && !request.cookies.has(AUTH_HINT_COOKIE)) {
+    const loginUrl = request.nextUrl.clone()
+    loginUrl.pathname = '/login'
+    loginUrl.searchParams.set('next', `${pathname}${request.nextUrl.search}`)
+    return NextResponse.redirect(loginUrl)
   }
 
   // Security headers

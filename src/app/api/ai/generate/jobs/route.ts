@@ -32,11 +32,16 @@ export async function POST(request: NextRequest) {
         provider?: string
         generateImage?: boolean
         generationMode?: string
+        clientJobId?: string
       }
     | null
 
   const pdfContent = typeof body?.pdfContent === 'string' ? body.pdfContent : ''
   const targetAudience = body?.targetAudience
+  const clientJobId =
+    typeof body?.clientJobId === 'string' && /^[a-zA-Z0-9_-]{12,80}$/.test(body.clientJobId)
+      ? body.clientJobId
+      : undefined
 
   if (!targetAudience || !['patient', 'professional'].includes(targetAudience)) {
     return NextResponse.json(
@@ -53,6 +58,7 @@ export async function POST(request: NextRequest) {
   }
 
   const jobId = await createGenerationJob({
+    jobId: clientJobId,
     createdBy: user.uid,
     pdfContent,
     targetAudience,
@@ -61,5 +67,13 @@ export async function POST(request: NextRequest) {
     generationMode: parseGenerationMode(body?.generationMode),
   })
 
-  return NextResponse.json({ success: true, data: { jobId } }, { status: 202 })
+  return NextResponse.json(
+    { success: true, data: { jobId } },
+    {
+      status: 202,
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      },
+    }
+  )
 }

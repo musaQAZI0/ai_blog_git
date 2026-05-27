@@ -13,6 +13,17 @@ import { auth, db, ensureFirebaseInitialized, isFirebaseConfigured } from './con
 import { User, UserRegistrationData, UserStatus } from '@/types'
 import { subscribeToNewsletter } from './newsletter'
 
+const AUTH_HINT_COOKIE = 'app_auth_hint'
+
+function setAuthHintCookie(enabled: boolean) {
+  if (typeof document === 'undefined') return
+
+  const secureFlag = window.location.protocol === 'https:' ? '; Secure' : ''
+  document.cookie = enabled
+    ? `${AUTH_HINT_COOKIE}=1; Path=/; Max-Age=604800; SameSite=Lax${secureFlag}`
+    : `${AUTH_HINT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secureFlag}`
+}
+
 function removeUndefined<T extends Record<string, unknown>>(data: T): Partial<T> {
   const entries = Object.entries(data).filter(([, value]) => value !== undefined)
   return Object.fromEntries(entries) as Partial<T>
@@ -101,6 +112,7 @@ export async function signIn(email: string, password: string): Promise<{ user: F
     const firestore = ensureDb()
     const userCredential = await signInWithEmailAndPassword(firebaseAuth, email, password)
     console.log('[auth] firebase signIn ok', { uid: userCredential.user.uid })
+    setAuthHintCookie(true)
 
     // Check if user is approved
     const userRef = doc(firestore, 'users', userCredential.user.uid)
@@ -175,6 +187,7 @@ export async function signOut(): Promise<void> {
   await ensureFirebaseInitialized()
   const firebaseAuth = ensureAuth()
   await firebaseSignOut(firebaseAuth)
+  setAuthHintCookie(false)
 }
 
 export async function resetPassword(email: string): Promise<{ success: boolean; error?: string }> {

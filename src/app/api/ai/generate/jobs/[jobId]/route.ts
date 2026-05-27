@@ -30,14 +30,21 @@ export async function GET(
     return NextResponse.json({ success: false, error: 'Forbidden' }, { status: 403 })
   }
 
-  return NextResponse.json({
-    success: true,
-    data: {
-      id: job.id,
-      status: job.status,
-      stage: job.stage,
-      error: job.error,
-      result: job.result,
+  return NextResponse.json(
+    {
+      success: true,
+      data: {
+        id: job.id,
+        status: job.status,
+        stage: job.stage,
+        error: job.error,
+        result: job.result,
+      },
     },
-  })
+    {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+      },
+    }
+  )
 }

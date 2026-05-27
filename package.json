@@ -2,6 +2,21 @@
   "name": "ai-medical-blog",
   "version": "1.0.0",
   "private": true,
+  "browserslist": {
+    "production": [
+      "Chrome >= 100",
+      "Edge >= 100",
+      "Firefox >= 100",
+      "Safari >= 15.4",
+      "iOS >= 15.4",
+      "Android >= 100"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
   "scripts": {
     "dev": "next dev",
     "build": "node scripts/verify-env.js && next build",

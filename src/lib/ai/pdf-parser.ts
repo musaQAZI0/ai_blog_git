@@ -39,9 +39,9 @@ function groupItemsByLine(items: PositionedTextItem[]): PositionedTextItem[][] {
   const yTolerance = 2
 
   for (const item of sorted) {
-    const line = lines.find((candidate) => Math.abs((candidate[0]?.y || 0) - item.y) <= yTolerance)
-    if (line) {
-      line.push(item)
+    const lastLine = lines[lines.length - 1]
+    if (lastLine && Math.abs((lastLine[0]?.y || 0) - item.y) <= yTolerance) {
+      lastLine.push(item)
     } else {
       lines.push([item])
     }

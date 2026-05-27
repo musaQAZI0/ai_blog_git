@@ -49,16 +49,6 @@ const ArticleEditor = dynamic(
 
 type GenerationStage = 'extracting' | 'generating' | 'finalizing'
 
-function isMobileBrowser(): boolean {
-  if (typeof navigator === 'undefined') return false
-
-  const ua = navigator.userAgent || ''
-  const coarsePointer =
-    typeof window !== 'undefined' ? window.matchMedia?.('(pointer: coarse)').matches : false
-
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || Boolean(coarsePointer)
-}
-
 async function fetchWithTimeout(
   input: RequestInfo | URL,
   init: RequestInit,
@@ -205,8 +195,7 @@ function CreateArticleContent() {
       if (!idToken) {
         throw new Error('Sesja logowania wygasla. Zaloguj sie ponownie przed generowaniem artykulu.')
       }
-      const isMobile = isMobileBrowser()
-      const extractTimeout = isMobile ? 90000 : 120000
+      const extractTimeout = 120000
       const headers = { authorization: `Bearer ${idToken}` }
       const audience = lockedTargetAudience || targetAudience
 
@@ -231,7 +220,7 @@ function CreateArticleContent() {
           },
           {
             timeoutMs: extractTimeout,
-            retries: isMobile ? 2 : 1,
+            retries: 2,
             retryDelayMs: 1800,
           }
         )
@@ -247,9 +236,7 @@ function CreateArticleContent() {
         if (extractErr instanceof Error && extractErr.name === 'AbortError')
         {
           throw new Error(
-            isMobile
-              ? 'Przetwarzanie PDF trwa zbyt dlugo. Sprobuj polaczyc sie z WiFi lub uzyc krotszego pliku.'
-              : 'Przetwarzanie PDF trwa zbyt dlugo. Sprobuj z mniejszym plikiem PDF.'
+            'Przetwarzanie PDF trwa zbyt dlugo. Sprobuj z mniejszym plikiem PDF lub szybszym polaczeniem.'
           )
         }
         throw extractErr
@@ -292,7 +279,7 @@ function CreateArticleContent() {
             },
             {
               timeoutMs: 30000,
-              retries: isMobile ? 3 : 2,
+              retries: 3,
               retryDelayMs: 1500,
             }
           )
@@ -314,7 +301,9 @@ function CreateArticleContent() {
         let pollCount = 0
         let consecutivePollFailures = 0
         while (true) {
-          await delay(pollCount < 8 ? 2500 : 5000)
+          if (pollCount > 0) {
+            await delay(pollCount < 8 ? 2500 : 5000)
+          }
           pollCount += 1
 
           let statusResponse: Response
@@ -330,7 +319,7 @@ function CreateArticleContent() {
               },
               {
                 timeoutMs: 25000,
-                retries: isMobile ? 2 : 1,
+                retries: 2,
                 retryDelayMs: 1500,
               }
             )
@@ -418,15 +407,13 @@ function CreateArticleContent() {
 
       const idToken = await firebaseUser?.getIdToken?.()
 
-      // Detect mobile and adjust timeout accordingly
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      const timeoutDuration = isMobile ? 180000 : 120000 // 3 min for mobile, 2 min for desktop
+      const isMobile = false
+      const timeoutDuration = 180000
 
-      // Create AbortController with adaptive timeout
       const controller = new AbortController()
       const timeoutId = setTimeout(() => controller.abort(), timeoutDuration)
 
-      console.log(`[create-article] Starting generation (${isMobile ? 'mobile' : 'desktop'}, ${timeoutDuration / 1000}s timeout)`)
+      console.log(`[create-article] Starting generation (${timeoutDuration / 1000}s timeout)`)
 
       try
       {
@@ -563,8 +550,8 @@ function CreateArticleContent() {
             <PDFUploader
               onFilesSelected={handleFilesSelected}
               disabled={generating}
-              maxFiles={typeof window !== 'undefined' && isMobileBrowser() ? 2 : 5}
-              maxTotalSizeMb={typeof window !== 'undefined' && isMobileBrowser() ? 12 : 30}
+              maxFiles={5}
+              maxTotalSizeMb={30}
             />
 
             <div className="rounded-2xl border border-border bg-muted/70 p-4">

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useCallback, useState, useEffect } from 'react'
+import React, { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { Upload, X, FileText, Sparkles } from 'lucide-react'
 import { Button, Alert, AlertDescription } from '@/components/ui'
@@ -13,31 +13,14 @@ interface PDFUploaderProps {
   disabled?: boolean
 }
 
-function isMobileBrowser(): boolean {
-  if (typeof navigator === 'undefined') return false
-  const ua = navigator.userAgent || ''
-  const coarsePointer =
-    typeof window !== 'undefined' ? window.matchMedia?.('(pointer: coarse)').matches : false
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || Boolean(coarsePointer)
-}
-
 export function PDFUploader({
   onFilesSelected,
   maxFiles,
   maxTotalSizeMb,
   disabled,
 }: PDFUploaderProps) {
-  // Device-specific limits: mobile 2 files / 12 MB, desktop 5 files / 30 MB
-  const [isMobile, setIsMobile] = useState(false)
-  const [deviceMaxFiles, setDeviceMaxFiles] = useState(maxFiles ?? 5)
-  const [deviceMaxTotalSizeMb, setDeviceMaxTotalSizeMb] = useState(maxTotalSizeMb ?? 30)
-
-  useEffect(() => {
-    const mobile = isMobileBrowser()
-    setIsMobile(mobile)
-    setDeviceMaxFiles(maxFiles ?? (mobile ? 2 : 5))
-    setDeviceMaxTotalSizeMb(maxTotalSizeMb ?? (mobile ? 12 : 30))
-  }, [maxFiles, maxTotalSizeMb])
+  const deviceMaxFiles = maxFiles ?? 5
+  const deviceMaxTotalSizeMb = maxTotalSizeMb ?? 30
   const [files, setFiles] = useState<File[]>([])
   const [error, setError] = useState<string | null>(null)
   const totalSizeMb = files.reduce((sum, file) => sum + file.size, 0) / 1024 / 1024

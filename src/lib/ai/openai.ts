@@ -199,6 +199,32 @@ Required JSON format:
 
   let generatedImageUrl: string | undefined
   let content: string = articleData.content || ''
+  const canUseGemini = Boolean(process.env.GEMINI_API_KEY)
+  const coverImagePromise: Promise<string | undefined> = !generateImage
+    ? Promise.resolve(undefined)
+    : canUseGemini
+      ? generateAndUploadImagen(
+          articleData.coverImagePrompt ||
+            `Professional medical illustration related to ophthalmology for an article titled "${articleData.title}". Clean, modern medical aesthetic. No text in the image.`,
+          'cover',
+          'ai-cover',
+          'cover'
+        ).catch((error) => {
+          console.error('Gemini cover image generation failed:', error)
+          return undefined
+        })
+      : openai.images.generate({
+          model: 'dall-e-3',
+          prompt: `Professional medical illustration for an ophthalmology article titled "${articleData.title}". Clean, modern, medical aesthetic. No text in the image.`,
+          n: 1,
+          size: '1792x1024',
+          quality: 'standard',
+        })
+          .then((imageResponse) => imageResponse.data?.[0]?.url)
+          .catch((error) => {
+            console.error('Image generation failed:', error)
+            return undefined
+          })
 
   function countWords(text: string): number {
     return text
@@ -283,6 +309,8 @@ Required JSON format:
     content = await ensureProfessionalSpecificity(content)
   }
 
+  generatedImageUrl = await coverImagePromise
+
   function injectFigure(options: {
     content: string
     placeholder: string
@@ -310,24 +338,7 @@ Required JSON format:
     prompt?: string
   }> = Array.isArray(articleData.figures) ? articleData.figures : []
 
-  const canUseGemini = Boolean(process.env.GEMINI_API_KEY)
-
   if (canUseGemini && generateImage) {
-    try {
-      const coverPrompt: string =
-        articleData.coverImagePrompt ||
-        `Professional medical illustration related to ophthalmology for an article titled "${articleData.title}". Clean, modern medical aesthetic. No text in the image.`
-
-      generatedImageUrl = await generateAndUploadImagen(
-        coverPrompt,
-        'cover',
-        'ai-cover',
-        'cover'
-      )
-    } catch (error) {
-      console.error('Gemini cover image generation failed:', error)
-    }
-
     if (targetAudience === 'patient') {
       // Patient articles: use AI image generation for anatomical illustrations
       const limitedFigures = figures.slice(0, 3)
@@ -375,21 +386,6 @@ Required JSON format:
       .replace(/\{\{FIGURE_\d+_URL\}\}/g, '')
       .replace(/https?:\/\/www\.google\.com\/search\?q=%7B%7BFIGURE_\d+_URL%7D%7D/g, '')
       .replace(/\n{3,}/g, '\n\n')
-  } else if (generateImage) {
-    // Fallback to DALL·E if Gemini is not configured
-    try {
-      const imageResponse = await openai.images.generate({
-        model: 'dall-e-3',
-        prompt: `Professional medical illustration for an ophthalmology article titled "${articleData.title}". Clean, modern, medical aesthetic. No text in the image.`,
-        n: 1,
-        size: '1792x1024',
-        quality: 'standard',
-      })
-
-      generatedImageUrl = imageResponse.data?.[0]?.url
-    } catch (error) {
-      console.error('Image generation failed:', error)
-    }
   }
 
   // Final fallback: always provide a cover image URL so cards show a thumbnail even if generation/upload fails.

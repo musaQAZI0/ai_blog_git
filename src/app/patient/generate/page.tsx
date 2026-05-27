@@ -21,14 +21,6 @@ import { ArticleCreateData, AIGenerationResponse } from '@/types'
 import { ArrowLeft, FileText, Loader2, Send, Wand2 } from 'lucide-react'
 import { normalizeAIGenerationResponse } from '@/lib/ai/normalize'
 
-function isMobileBrowser(): boolean {
-  if (typeof navigator === 'undefined') return false
-  const ua = navigator.userAgent || ''
-  const coarsePointer =
-    typeof window !== 'undefined' ? window.matchMedia?.('(pointer: coarse)').matches : false
-  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(ua) || Boolean(coarsePointer)
-}
-
 export default function PatientGeneratePage() {
   const router = useRouter()
   const { firebaseUser } = useAuth()
@@ -56,13 +48,12 @@ export default function PatientGeneratePage() {
     setError(null)
     try
     {
-      const isMobile = isMobileBrowser()
       const formData = new FormData()
       files.forEach((file) => formData.append('files', file))
       formData.append('targetAudience', 'patient')
-      formData.append('provider', isMobile ? 'gemini' : 'openai')
-      formData.append('generateImage', String(!isMobile))
-      formData.append('generationMode', isMobile ? 'fast' : 'full')
+      formData.append('provider', 'openai')
+      formData.append('generateImage', 'true')
+      formData.append('generationMode', 'full')
 
       const idToken = await firebaseUser?.getIdToken?.()
 

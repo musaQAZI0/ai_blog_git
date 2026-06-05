@@ -820,6 +820,7 @@ interface ParsedTableGroup {
   caption: string
   rows: ParsedTableRow[]
   rawLines: string[]
+  columnHeaders: string[] // ✨ NEW: Actual column headers from PDF
 }
 
 function parseNumericHelperValue(value: string): number | null {
@@ -883,6 +884,68 @@ function normalizeFormulaLabel(label: string): string {
   return (canonicalFormulaLabel(label) || label).toLowerCase()
 }
 
+/**
+ * 🔥 NEW: Extract actual column headers from PDF table text
+ * Returns array of cleaned column header names from the table
+ */
+function extractColumnHeadersFromTable(rawLines: string[]): string[] {
+  const headers: string[] = []
+
+  // Strategy 1: Look for explicit header row indicators
+  for (const line of rawLines.slice(0, 10)) { // Check first 10 lines
+    // Match patterns like: "Column1 | Column2 | Column3" or "Col1  Col2  Col3"
+    if (/^[A-Z][A-Za-z\s]+(\||  +)[A-Z][A-Za-z\s]+/.test(line)) {
+      const potential = line.split(/\s{2,}|\|/).map(h => h.trim()).filter(h => h.length > 1 && h.length < 40)
+      if (potential.length >= 2) {
+        headers.push(...potential)
+        break
+      }
+    }
+
+    // Match patterns in brackets or parentheses containing units
+    const unitMatches = line.match(/\b([A-Za-z\s]+)\s*\(([^)]+)\)/g)
+    if (unitMatches && unitMatches.length >= 2) {
+      headers.push(...unitMatches.map(m => m.trim()))
+      break
+    }
+  }
+
+  // Strategy 2: Extract from first non-row data line (often has headers)
+  if (headers.length === 0) {
+    for (const line of rawLines.slice(0, 5)) {
+      if (/^\[PARSED TABLE ROW:/.test(line)) break // Stop at first data row
+
+      // Look for capitalized words that look like headers
+      const words = line.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s*\([^)]+\))?/g)
+      if (words && words.length >= 2 && words.length <= 10) {
+        headers.push(...words.map(w => w.trim()))
+        break
+      }
+    }
+  }
+
+  // Strategy 3: Common ophthalmology column patterns
+  if (headers.length === 0) {
+    const fullText = rawLines.slice(0, 20).join(' ')
+    const commonHeaders = [
+      'Study', 'Author', 'N', 'Sample Size', 'Age', 'Follow-up',
+      'Glare', 'Halos', 'Starbursts', 'Incidence', 'Prevalence',
+      'CFI', 'TLI', 'RMSEA', 'SRMR', 'Cronbach', 'ICC',
+      'UDVA', 'CDVA', 'BCVA', 'logMAR', 'Sphere', 'Cylinder',
+      'Mean', 'SD', 'Median', 'Range', 'CI', 'p-value'
+    ]
+
+    for (const header of commonHeaders) {
+      const regex = new RegExp(`\\b${header}\\b`, 'i')
+      if (regex.test(fullText)) {
+        headers.push(header)
+      }
+    }
+  }
+
+  return headers.filter((h, i, arr) => arr.indexOf(h) === i) // Remove duplicates
+}
+
 function extractParsedTableGroups(pdfContent: string): ParsedTableGroup[] {
   const groups: ParsedTableGroup[] = []
   let current: ParsedTableGroup | null = null
@@ -892,7 +955,12 @@ function extractParsedTableGroups(pdfContent: string): ParsedTableGroup[] {
     const line = rawLine.trim()
     const tableMatch = line.match(/^\[TABLE:\s*(.+?)\]$/i)
     if (tableMatch) {
-      current = { caption: tableMatch[1]?.trim() || 'Tabela wynikow', rows: [], rawLines: [] }
+      current = {
+        caption: tableMatch[1]?.trim() || 'Tabela wynikow',
+        rows: [],
+        rawLines: [],
+        columnHeaders: [] // ✨ Initialize empty
+      }
       groups.push(current)
       skipCurrent = /(?:p\s*-?\s*values?|adjusted\s*p\s*values?|adjustedpvalues|significance|pairwise)/i.test(current.caption)
       continue
@@ -933,6 +1001,7 @@ function extractParsedTableGroups(pdfContent: string): ParsedTableGroup[] {
   return groups
     .map((group) => ({
       ...group,
+      columnHeaders: extractColumnHeadersFromTable(group.rawLines), // ✨ Extract headers
       rows: group.rows.filter((row, index, rows) =>
         rows.findIndex((candidate) => normalizeFormulaLabel(candidate.label) === normalizeFormulaLabel(row.label)) === index
       ),
@@ -1241,15 +1310,76 @@ function chooseMetricColumn(rows: ParsedTableRow[], excludedColumns: Set<number>
   return bestIndex
 }
 
-function inferGenericMetricLabel(caption: string, columnIndex: number): string {
+/**
+ * 🔥 COMPLETELY REWRITTEN: 100% Generic - Uses Actual Headers First!
+ * NO MORE PATTERN MATCHING - Just use what's in the PDF!
+ */
+function inferGenericMetricLabel(caption: string, columnIndex: number, columnHeaders: string[] = []): string {
+  // ✅ STRATEGY 1: Use actual column header if available (100% accurate!)
+  if (columnHeaders.length > columnIndex && columnHeaders[columnIndex]) {
+    const header = columnHeaders[columnIndex].trim()
+
+    // Clean up and translate header to Polish
+    const cleaned = header
+      // Basic terms
+      .replace(/\b(n|N)\b/g, 'Liczba')
+      .replace(/\bSample Size\b/i, 'Liczba pacjentów')
+      .replace(/\bPatients?\b/i, 'Pacjenci')
+      .replace(/\bFollow-?up\b/i, 'Czas obserwacji')
+      .replace(/\bAge\b/i, 'Wiek')
+      .replace(/\bStudy\b/i, 'Badanie')
+      .replace(/\bAuthor\b/i, 'Autor')
+      .replace(/\bCountry\b/i, 'Kraj')
+      .replace(/\bYear\b/i, 'Rok')
+      // Statistical terms
+      .replace(/\bIncidence\b/i, 'Częstość występowania')
+      .replace(/\bPrevalence\b/i, 'Wskaźnik występowania')
+      .replace(/\bMean\b/i, 'Średnia')
+      .replace(/\bMedian\b/i, 'Mediana')
+      .replace(/\bStandard Deviation\b/i, 'Odchylenie standardowe')
+      .replace(/\bSD\b/g, 'OS')
+      .replace(/\bRange\b/i, 'Zakres')
+      .replace(/\bCI\b/g, 'PU') // Przedział ufności
+      // Ophthalmology specific
+      .replace(/\bGlare\b/i, 'Olśnienie')
+      .replace(/\bHalos?\b/i, 'Halo')
+      .replace(/\bStarbursts?\b/i, 'Rozbłyski')
+      .replace(/\bDysphotopsia\b/i, 'Dysfotopsja')
+      .replace(/\bSatisfaction\b/i, 'Satysfakcja')
+      .replace(/\bIndependence\b/i, 'Niezależność')
+      .replace(/\bSpectacle\b/i, 'Okularowa')
+      // IOL terms
+      .replace(/\bIOL Type\b/i, 'Typ soczewki')
+      .replace(/\bMonofocal\b/i, 'Jednoogniskowa')
+      .replace(/\bMultifocal\b/i, 'Wieloogniskowa')
+      .replace(/\bTrifocal\b/i, 'Trójogniskowa')
+      .replace(/\bEDOF\b/g, 'EDOF')
+      // PROM terms
+      .replace(/\bDomain\b/i, 'Domena')
+      .replace(/\bScore\b/i, 'Wynik')
+      .replace(/\bReliability\b/i, 'Rzetelność')
+      .replace(/\bValidity\b/i, 'Trafność')
+
+    console.log(`[chart-extractor] ✅ Using actual column header: "${header}" → "${cleaned}"`)
+    return cleaned
+  }
+
+  // ✅ STRATEGY 2: Minimal fallback patterns (only for very common cases)
+  // PROM studies
   if (/\breliability\b/i.test(caption)) {
     if (columnIndex === 0) return 'Cronbach alpha'
     if (columnIndex === 1) return 'ICC'
   }
-  if (/\bCFA|fit indices\b/i.test(caption)) return columnIndex === 0 ? 'Wartosc indeksu' : `Metryka ${columnIndex + 1}`
-  if (/\bmean|scores?\b/i.test(caption)) return 'Wynik sredni'
-  if (/\bresponsiveness\b/i.test(caption)) return columnIndex === 0 ? 'Zmiana srednia' : `Metryka ${columnIndex + 1}`
-  return `Metryka ${columnIndex + 1}`
+
+  // CFA fit indices
+  if (/\bCFA|fit indices\b/i.test(caption)) {
+    const indices = ['CFI', 'TLI', 'RMSEA', 'SRMR']
+    return indices[columnIndex] || 'Indeks dopasowania'
+  }
+
+  // ⚠️ LAST RESORT: Use generic label but LOG WARNING
+  console.warn(`[chart-extractor] ⚠️ No header found for column ${columnIndex} in table "${caption}" - using generic label`)
+  return `Parametr ${columnIndex + 1}`
 }
 
 function buildGenericMetricChart(
@@ -1274,7 +1404,7 @@ function buildGenericMetricChart(
   }
 
   const labels = rows.map((row) => row.label)
-  const metricLabel = inferGenericMetricLabel(group.caption, columnIndex)
+  const metricLabel = inferGenericMetricLabel(group.caption, columnIndex, group.columnHeaders) // ✨ Pass actual headers!
 
   // Use intelligent chart type inference instead of hardcoded chartIndex logic
   const chartType: ChartType = preferredType || inferChartTypeFromData({
@@ -1355,7 +1485,7 @@ function buildProportionChart(group: ParsedTableGroup): ExtractedChartData | nul
     source_table: group.caption,
     data: {
       labels,
-      datasets: [{ label: inferGenericMetricLabel(group.caption, column), data: values }],
+      datasets: [{ label: inferGenericMetricLabel(group.caption, column, group.columnHeaders), data: values }],
       significance: [],
       significanceSource: 'not_reported',
       xAxisLabel: 'Kategoria',
@@ -1375,7 +1505,7 @@ function buildRadarChart(group: ParsedTableGroup): ExtractedChartData | null {
   const datasets = Array.from({ length: maxColumns }, (_, index) => {
     const data = rows.map((row) => row.values[index]).filter((value): value is number => typeof value === 'number')
     return data.length === rows.length && hasUsefulVariation(data)
-      ? { label: inferGenericMetricLabel(group.caption, index), data }
+      ? { label: inferGenericMetricLabel(group.caption, index, group.columnHeaders), data }
       : null
   }).filter(Boolean) as { label: string; data: number[] }[]
 

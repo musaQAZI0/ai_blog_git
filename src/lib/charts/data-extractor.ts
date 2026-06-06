@@ -891,17 +891,55 @@ function normalizeFormulaLabel(label: string): string {
 function extractColumnHeadersFromTable(rawLines: string[]): string[] {
   // STEP 1: Count exact columns from actual data rows
   const dataRows = rawLines.filter(line => /^\[PARSED TABLE ROW:/.test(line))
-  if (dataRows.length === 0) {
-    console.log(`[chart-extractor] No data rows found`)
-    return []
+
+  let expectedColumnCount = 0
+
+  if (dataRows.length > 0) {
+    // Try multiple delimiter patterns to count columns accurately
+    const columnCounts = dataRows.slice(0, 10).map(row => {
+      const match = row.match(/\[PARSED TABLE ROW:\s*(.+?)\]/)
+      if (!match) return 0
+
+      const rowData = match[1]
+
+      // Try different splitting strategies
+      let counts = [
+        rowData.split('\t').filter(v => v.trim()).length,  // Tabs
+        rowData.split(/\s{2,}/).filter(v => v.trim()).length,  // Multiple spaces
+        rowData.split('|').filter(v => v.trim()).length,  // Pipes
+        rowData.split(/\s+/).filter(v => v.trim() && v.length > 0).length,  // Any whitespace
+      ]
+
+      // Return the count that makes most sense (between 3-20 columns typically)
+      counts = counts.filter(c => c >= 3 && c <= 20)
+      return counts.length > 0 ? Math.min(...counts) : Math.max(...counts.concat([6]))  // Default to 6 if unsure
+    })
+
+    expectedColumnCount = Math.max(...columnCounts)
+    console.log(`[chart-extractor] Column counts from data rows: [${columnCounts.join(', ')}] → using ${expectedColumnCount}`)
   }
 
-  const columnCounts = dataRows.slice(0, 10).map(row => {
-    const match = row.match(/\[PARSED TABLE ROW:\s*(.+?)\]/)
-    if (!match) return 0
-    return match[1].split(/\t|  +/).filter(v => v.trim()).length
-  })
-  const expectedColumnCount = Math.max(...columnCounts)
+  // FALLBACK: If no data rows or count seems wrong, estimate from header text
+  if (expectedColumnCount === 0 || expectedColumnCount === 1) {
+    console.log(`[chart-extractor] No valid data rows found, estimating from header text...`)
+
+    // Get header area text
+    const headerLines = []
+    for (const line of rawLines.slice(0, 20)) {
+      if (/^\[PARSED TABLE ROW:/.test(line)) break
+      if (line.trim().length > 10 && !/^\[TABLE:/i.test(line)) {
+        headerLines.push(line.trim())
+      }
+    }
+
+    const headerText = headerLines.join(' ')
+
+    // Count capitalized words as rough column estimate
+    const capWords = (headerText.match(/\b[A-Z][a-z]+/g) || []).length
+    expectedColumnCount = Math.min(Math.max(Math.floor(capWords / 2), 4), 12)  // Reasonable range: 4-12
+
+    console.log(`[chart-extractor] Estimated ${expectedColumnCount} columns from ${capWords} capitalized words in headers`)
+  }
 
   console.log(`[chart-extractor] Data analysis: need ${expectedColumnCount} headers`)
 
@@ -914,13 +952,32 @@ function extractColumnHeadersFromTable(rawLines: string[]): string[] {
     }
   }
 
-  const headerText = headerLines.join(' ')
+  let headerText = headerLines.join(' ')
   if (!headerText) {
     console.log(`[chart-extractor] No header text found`)
     return Array(expectedColumnCount).fill('').map((_, i) => `Column ${i + 1}`)
   }
 
-  console.log(`[chart-extractor] Header text: "${headerText.substring(0, 150)}..."`)
+  console.log(`[chart-extractor] Raw header text: "${headerText.substring(0, 200)}..."`)
+
+  // STEP 2.5: Clean header text - remove data that might be mixed in
+  const dataStartPatterns = [
+    /\b[a-z]\s+[A-Z][a-z]+\s+et\s+al\./,  // "d Nattis et al."
+    /\[\s*\d+\s*\]/,  // "[32]"
+    /\(\s*N\s*=\s*\d+\s*\)/,  // "( N = 580 )"
+    /\b(Prospective|Retrospective|Randomized)\b/,  // Study design
+  ]
+
+  for (const pattern of dataStartPatterns) {
+    const match = headerText.match(pattern)
+    if (match && match.index && match.index > 20) {
+      headerText = headerText.substring(0, match.index).trim()
+      console.log(`[chart-extractor] Trimmed data from headers at position ${match.index}`)
+      break
+    }
+  }
+
+  console.log(`[chart-extractor] Clean header text: "${headerText.substring(0, 150)}..."`)
 
   // STEP 3: Try delimiter-based split first (tabs, pipes, double spaces)
   let headers: string[] = []

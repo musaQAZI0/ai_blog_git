@@ -266,12 +266,39 @@ function addParsedTableRowHints(text: string): string {
   return output.join('\n')
 }
 
+function filterEmbeddedChartCaptions(text: string): string {
+  const lines = text.split('\n')
+  const output: string[] = []
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] || ''
+    const trimmed = line.trim()
+
+    // Skip lines that look like embedded chart/figure image captions
+    // These are standalone descriptive lines for charts embedded in PDFs
+    const isChartCaption =
+      /^(design|measures|figure|fig\.|chart|graph|diagram|wykres|rysunek)\s+wedlug\s+kategorii/i.test(trimmed) ||
+      /^(design|measures|figure|fig\.|chart|graph)\s+according\s+to\s+(category|categories)/i.test(trimmed) ||
+      /^(design|measures)\s*$/i.test(trimmed)
+
+    if (isChartCaption) {
+      console.log(`[pdf-normalizer] Filtered out embedded chart caption: "${trimmed}"`)
+      continue
+    }
+
+    output.push(line)
+  }
+
+  return output.join('\n')
+}
+
 export function normalizeExtractedPdfText(text: string): string {
   const withTables = wrapDetectedTables(text || '')
   const withJoinedRows = joinBrokenTableRows(withTables)
   const withParsedRows = addParsedTableRowHints(withJoinedRows)
+  const withoutChartCaptions = filterEmbeddedChartCaptions(withParsedRows)
 
-  return withParsedRows
+  return withoutChartCaptions
     .replace(/[ \t]+/g, ' ')
     .replace(/\n{4,}/g, '\n\n\n')
     .trim()

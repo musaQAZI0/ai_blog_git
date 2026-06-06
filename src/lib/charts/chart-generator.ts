@@ -21,6 +21,22 @@ import {
 import { ChartJSNodeCanvas } from 'chartjs-node-canvas'
 import { BoxPlotController, BoxAndWiskers } from '@sgratzl/chartjs-chart-boxplot'
 
+// ⚡ OPTIMIZATION: Reuse canvas instances to avoid initialization overhead
+const canvasPool = new Map<string, ChartJSNodeCanvas>()
+
+function getOrCreateCanvas(width: number, height: number): ChartJSNodeCanvas {
+  const key = `${width}x${height}`
+
+  if (!canvasPool.has(key)) {
+    console.log(`[chart-generator] Creating new canvas instance for ${key}`)
+    canvasPool.set(key, new ChartJSNodeCanvas({ width, height, backgroundColour: 'white' }))
+  } else {
+    console.log(`[chart-generator] ♻️ Reusing cached canvas instance for ${key}`)
+  }
+
+  return canvasPool.get(key)!
+}
+
 // Register all chart types and components
 Chart.register(
   BarController,
@@ -561,7 +577,8 @@ export async function generateChartImage(
 
   let chartJSNodeCanvas: any
   try {
-    chartJSNodeCanvas = new ChartJSNodeCanvas({ width, height, backgroundColour: 'white' })
+    // ⚡ OPTIMIZATION: Use pooled canvas instance instead of creating new one each time
+    chartJSNodeCanvas = getOrCreateCanvas(width, height)
   } catch (canvasInitError) {
     const msg = canvasInitError instanceof Error ? canvasInitError.message : String(canvasInitError)
     throw new Error(`[chart-generator] Canvas native library unavailable — chart skipped. (${msg})`)

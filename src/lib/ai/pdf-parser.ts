@@ -1,5 +1,16 @@
 // Note: pdf-parse should be used on the server side only
 import pdf from 'pdf-parse'
+import { LRUCache } from 'lru-cache'
+import crypto from 'crypto'
+
+// ⚡ OPTIMIZATION: Cache parsed PDF text to avoid re-parsing same files
+// Max 50 PDFs in cache, each entry expires after 1 hour
+const pdfCache = new LRUCache<string, string>({
+  max: 50,
+  ttl: 1000 * 60 * 60, // 1 hour
+  maxSize: 50 * 1024 * 1024, // 50MB total cache size
+  sizeCalculation: (value) => value.length,
+})
 
 // Suppress harmless font-table warnings from pdfjs (e.g. "Required 'glyf' table is not found")
 // These appear when PDFs use embedded fonts without a complete glyph table and don't affect extraction.
@@ -105,10 +116,26 @@ async function renderPageWithLayout(pageData: any): Promise<string> {
 }
 
 export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
+  // ⚡ OPTIMIZATION: Check cache first to avoid re-parsing same PDF
+  const bufferHash = crypto.createHash('sha256').update(buffer).digest('hex')
+
+  const cached = pdfCache.get(bufferHash)
+  if (cached) {
+    console.log('[pdf-parser] ✅ Cache hit - returning cached text')
+    return cached
+  }
+
+  console.log('[pdf-parser] Cache miss - parsing PDF...')
+
   try {
     const data = await pdf(buffer, {
       pagerender: renderPageWithLayout,
     })
+
+    // Cache the parsed text for future requests
+    pdfCache.set(bufferHash, data.text)
+    console.log(`[pdf-parser] Cached PDF text (${data.text.length} chars)`)
+
     return data.text
   } catch (error) {
     console.error('PDF parsing error:', error)

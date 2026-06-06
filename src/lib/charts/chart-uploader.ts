@@ -106,16 +106,17 @@ export async function extractGenerateAndUploadCharts(
   })
 
   const renderableCharts = enforceChartTypeVariety(validCharts)
-  const generatedCharts: GeneratedChart[] = []
 
-  for (let i = 0; i < renderableCharts.length; i++) {
-    const extractedChart = renderableCharts[i]
+  // ⚡ OPTIMIZATION: Generate all charts in parallel for better performance
+  console.log(`[chart-pipeline] Generating ${renderableCharts.length} charts in parallel...`)
+
+  const chartPromises = renderableCharts.map(async (extractedChart, i) => {
+    const chartId = `chart-${i + 1}`
+    const placeholder = `https://www.google.com/search?q=%7B%7BFIGURE_${i + 1}_URL%7D%7D`
+
+    console.log(`[chart-pipeline] Starting chart ${i + 1}: ${extractedChart.chartTitle} (${extractedChart.chartType})`)
 
     try {
-      const chartId = `chart-${i + 1}`
-      const placeholder = `https://www.google.com/search?q=%7B%7BFIGURE_${i + 1}_URL%7D%7D`
-
-      console.log(`[chart-pipeline] Generating chart ${i + 1}: ${extractedChart.chartTitle} (${extractedChart.chartType})`)
       const url = await generateAndUploadChart(
         extractedChart.data,
         extractedChart.chartTitle,
@@ -123,7 +124,9 @@ export async function extractGenerateAndUploadCharts(
         extractedChart.chartType
       )
 
-      generatedCharts.push({
+      console.log(`[chart-pipeline] ✅ Chart ${i + 1} completed: ${url}`)
+
+      return {
         id: chartId,
         url,
         title: extractedChart.chartTitle,
@@ -131,13 +134,23 @@ export async function extractGenerateAndUploadCharts(
         caption: `Rysunek ${i + 1}: ${extractedChart.chartTitle}`,
         placeholder,
         sourceDescription: extractedChart.sourceDescription,
-      })
-
-      console.log(`[chart-pipeline] Chart ${i + 1} uploaded successfully: ${url}`)
+      }
     } catch (error) {
-      console.error(`[chart-pipeline] Failed to generate/upload chart ${i + 1}:`, error)
+      console.error(`[chart-pipeline] ❌ Failed to generate chart ${i + 1}:`, error)
+      return null
     }
-  }
+  })
+
+  const chartResults = await Promise.allSettled(chartPromises)
+
+  // Filter out failed charts and extract successful results
+  const generatedCharts: GeneratedChart[] = chartResults
+    .filter((result): result is PromiseFulfilledResult<GeneratedChart | null> =>
+      result.status === 'fulfilled' && result.value !== null
+    )
+    .map(result => result.value!)
+
+  console.log(`[chart-pipeline] Generated ${generatedCharts.length}/${renderableCharts.length} charts successfully`)
 
   return generatedCharts
 }

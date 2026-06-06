@@ -5,9 +5,25 @@ import { normalizeExtractedPdfText } from '@/lib/ai/pdf-text-normalizer'
 import { AIGenerationMode, AIProvider, TargetAudience } from '@/types'
 import { getRequestUser } from '@/lib/auth/server'
 import { rateLimit } from '@/lib/rate-limit'
+import crypto from 'crypto'
 
 export const dynamic = 'force-dynamic'
 export const maxDuration = 300
+
+// ⚡ OPTIMIZATION: Request deduplication to prevent duplicate generations
+// Stores in-flight generation requests by content hash
+const inFlightGenerations = new Map<string, Promise<any>>()
+
+function getRequestHash(params: {
+  pdfContent: string
+  targetAudience: TargetAudience
+  provider: AIProvider
+  generateImage: boolean
+  generationMode: AIGenerationMode
+}): string {
+  const data = JSON.stringify(params)
+  return crypto.createHash('sha256').update(data).digest('hex')
+}
 
 function getClientIp(request: NextRequest): string {
   const xff = request.headers.get('x-forwarded-for')
@@ -177,13 +193,44 @@ export async function POST(request: NextRequest) {
     console.log(`[api/generate] Table tags prepared for AI: ${(pdfContent.match(/\[TABLE:/g) || []).length}`)
     console.log(`[api/generate] Starting article generation with ${provider} for ${targetAudience} audience...`)
 
-    const generatedContent = await generateArticle({
+    // ⚡ OPTIMIZATION: Deduplicate identical requests in-flight
+    const requestHash = getRequestHash({
       pdfContent,
       targetAudience,
       provider,
       generateImage,
       generationMode,
     })
+
+    // Check if this exact request is already being processed
+    const existingRequest = inFlightGenerations.get(requestHash)
+    if (existingRequest) {
+      console.log(`[api/generate] ⚡ Deduplicating request - returning existing generation`)
+      const generatedContent = await existingRequest
+      return NextResponse.json({
+        success: true,
+        data: generatedContent,
+        deduplicated: true,
+      })
+    }
+
+    // Start new generation and store the promise
+    const generationPromise = generateArticle({
+      pdfContent,
+      targetAudience,
+      provider,
+      generateImage,
+      generationMode,
+    }).finally(() => {
+      // Clean up after completion (success or failure)
+      inFlightGenerations.delete(requestHash)
+      console.log(`[api/generate] Cleaned up in-flight request for hash ${requestHash.slice(0, 8)}...`)
+    })
+
+    inFlightGenerations.set(requestHash, generationPromise)
+    console.log(`[api/generate] Started new generation (hash: ${requestHash.slice(0, 8)}...)`)
+
+    const generatedContent = await generationPromise
 
     return NextResponse.json({
       success: true,

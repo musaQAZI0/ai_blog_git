@@ -889,61 +889,149 @@ function normalizeFormulaLabel(label: string): string {
  * Returns array of cleaned column header names from the table
  */
 function extractColumnHeadersFromTable(rawLines: string[]): string[] {
-  const headers: string[] = []
+  // Step 1: Determine how many columns we actually have from data rows
+  const dataRows = rawLines.filter(line => /^\[PARSED TABLE ROW:/.test(line))
+  let expectedColumnCount = 0
 
-  // Strategy 1: Look for explicit header row indicators
-  for (const line of rawLines.slice(0, 10)) { // Check first 10 lines
-    // Match patterns like: "Column1 | Column2 | Column3" or "Col1  Col2  Col3"
-    if (/^[A-Z][A-Za-z\s]+(\||  +)[A-Z][A-Za-z\s]+/.test(line)) {
-      const potential = line.split(/\s{2,}|\|/).map(h => h.trim()).filter(h => h.length > 1 && h.length < 40)
-      if (potential.length >= 2) {
-        headers.push(...potential)
-        break
+  if (dataRows.length > 0) {
+    // Parse a few data rows to find the most common column count
+    const columnCounts = dataRows.slice(0, 5).map(row => {
+      const match = row.match(/\[PARSED TABLE ROW:\s*(.+?)\]/)
+      if (!match) return 0
+      // Count values separated by tabs or multiple spaces
+      return match[1].split(/\t|  +/).filter(v => v.trim()).length
+    })
+    expectedColumnCount = Math.max(...columnCounts)
+  }
+
+  console.log(`[chart-extractor] Expected ${expectedColumnCount} columns based on data rows`)
+
+  let headers: string[] = []
+
+  // Strategy 1: Parse header lines with common medical table patterns
+  for (const line of rawLines.slice(0, 15)) {
+    if (/^\[PARSED TABLE ROW:/.test(line)) break // Stop at data rows
+
+    // Skip lines that are too short or look like captions
+    if (line.length < 10 || /^Table \d+/i.test(line)) continue
+
+    // Try multiple parsing approaches
+    let potentialHeaders: string[] = []
+
+    // Approach 1a: Split by pipes or tabs
+    if (line.includes('|') || line.includes('\t')) {
+      potentialHeaders = line.split(/[|\t]/).map(h => h.trim()).filter(h => h.length > 0)
+    }
+
+    // Approach 1b: Split by multiple spaces (2 or more)
+    if (potentialHeaders.length < 2) {
+      potentialHeaders = line.split(/  +/).map(h => h.trim()).filter(h => h.length > 1 && h.length < 50)
+    }
+
+    // Approach 1c: Match individual header patterns with units
+    // Pattern: "Word(s) (unit)" or "Word(s)"
+    if (potentialHeaders.length < 2) {
+      const headerPattern = /\b([A-Z][A-Za-z\-]*(?:\s+[A-Z]?[a-z\-]+)*)\s*(?:\(([^)]+)\))?/g
+      const matches = Array.from(line.matchAll(headerPattern))
+      if (matches.length >= 2) {
+        potentialHeaders = matches.map(m => {
+          const base = m[1].trim()
+          const unit = m[2] ? ` (${m[2]})` : ''
+          return base + unit
+        }).filter(h => h.length > 1)
       }
     }
 
-    // Match patterns in brackets or parentheses containing units
-    const unitMatches = line.match(/\b([A-Za-z\s]+)\s*\(([^)]+)\)/g)
-    if (unitMatches && unitMatches.length >= 2) {
-      headers.push(...unitMatches.map(m => m.trim()))
+    // Check if we found enough headers
+    if (potentialHeaders.length >= 2 && potentialHeaders.length >= expectedColumnCount - 1) {
+      headers = potentialHeaders
+      console.log(`[chart-extractor] Extracted ${headers.length} headers from line: "${line.substring(0, 100)}"`)
       break
     }
   }
 
-  // Strategy 2: Extract from first non-row data line (often has headers)
-  if (headers.length === 0) {
-    for (const line of rawLines.slice(0, 5)) {
-      if (/^\[PARSED TABLE ROW:/.test(line)) break // Stop at first data row
+  // Strategy 2: If still not enough, try to extract individual words as separate headers
+  if (headers.length < expectedColumnCount) {
+    console.log(`[chart-extractor] Attempting to split concatenated headers (have ${headers.length}, need ${expectedColumnCount})`)
 
-      // Look for capitalized words that look like headers
-      const words = line.match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*(?:\s*\([^)]+\))?/g)
-      if (words && words.length >= 2 && words.length <= 10) {
-        headers.push(...words.map(w => w.trim()))
-        break
+    const allHeaderText = rawLines
+      .slice(0, 10)
+      .filter(line => !line.includes('[PARSED TABLE ROW:') && !line.includes('[TABLE:'))
+      .join(' ')
+
+    // Extract all capitalized words/phrases that look like column headers
+    const wordPattern = /\b([A-Z][a-z]+(?:\-[A-Za-z]+)?)\b/g
+    const words = Array.from(allHeaderText.matchAll(wordPattern)).map(m => m[1])
+
+    // Common multi-word headers to keep together
+    const multiWordHeaders = [
+      'Sample Size', 'Follow-up', 'Follow up', 'Standard Deviation',
+      'Mean Age', 'Visual Acuity', 'IOL Type', 'IOL Model'
+    ]
+
+    let reconstructed: string[] = []
+    let i = 0
+    while (i < words.length && reconstructed.length < expectedColumnCount) {
+      // Check if this starts a multi-word header
+      let matched = false
+      for (const multiWord of multiWordHeaders) {
+        const multiWords = multiWord.split(' ')
+        if (words.slice(i, i + multiWords.length).join(' ').toLowerCase() === multiWord.toLowerCase()) {
+          reconstructed.push(multiWord)
+          i += multiWords.length
+          matched = true
+          break
+        }
       }
+
+      if (!matched) {
+        reconstructed.push(words[i])
+        i++
+      }
+    }
+
+    if (reconstructed.length >= expectedColumnCount) {
+      headers = reconstructed.slice(0, expectedColumnCount)
+      console.log(`[chart-extractor] Reconstructed ${headers.length} headers from words`)
     }
   }
 
-  // Strategy 3: Common ophthalmology column patterns
-  if (headers.length === 0) {
+  // Strategy 3: Fill remaining columns with common medical table headers
+  if (headers.length < expectedColumnCount) {
     const fullText = rawLines.slice(0, 20).join(' ')
     const commonHeaders = [
-      'Study', 'Author', 'N', 'Sample Size', 'Age', 'Follow-up',
-      'Glare', 'Halos', 'Starbursts', 'Incidence', 'Prevalence',
-      'CFI', 'TLI', 'RMSEA', 'SRMR', 'Cronbach', 'ICC',
-      'UDVA', 'CDVA', 'BCVA', 'logMAR', 'Sphere', 'Cylinder',
-      'Mean', 'SD', 'Median', 'Range', 'CI', 'p-value'
+      'Study', 'Author', 'Year', 'N', 'Sample', 'Size', 'Patients', 'Age', 'Follow-up', 'Design',
+      'Country', 'Countries', 'Male', 'Female', 'Sex', 'Gender', 'IOL', 'Lens',
+      'Glare', 'Halos', 'Halo', 'Starbursts', 'Incidence', 'Prevalence', 'Frequency',
+      'Mean', 'SD', 'Median', 'Range', 'Measure', 'Measures', 'Outcome',
+      'UDVA', 'CDVA', 'BCVA', 'VA', 'logMAR', 'Sphere', 'Cylinder', 'SE',
+      'CFI', 'TLI', 'RMSEA', 'SRMR', 'Cronbach', 'ICC', 'Alpha'
     ]
 
     for (const header of commonHeaders) {
+      if (headers.length >= expectedColumnCount) break
+
+      // Check if this header appears in text but not already in our list
       const regex = new RegExp(`\\b${header}\\b`, 'i')
-      if (regex.test(fullText)) {
+      if (regex.test(fullText) && !headers.some(h => h.toLowerCase().includes(header.toLowerCase()))) {
         headers.push(header)
       }
     }
+
+    if (headers.length > 0) {
+      console.log(`[chart-extractor] Filled to ${headers.length} headers using common terms`)
+    }
   }
 
-  return headers.filter((h, i, arr) => arr.indexOf(h) === i) // Remove duplicates
+  // Remove duplicates and trim
+  headers = headers
+    .filter((h, i, arr) => arr.findIndex(x => x.toLowerCase() === h.toLowerCase()) === i)
+    .map(h => h.trim())
+    .filter(h => h.length > 0)
+
+  console.log(`[chart-extractor] Final extracted headers (${headers.length}): [${headers.join(', ')}]`)
+
+  return headers
 }
 
 function extractParsedTableGroups(pdfContent: string): ParsedTableGroup[] {

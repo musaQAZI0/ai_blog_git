@@ -1001,45 +1001,11 @@ function extractColumnHeadersFromTable(rawLines: string[]): string[] {
 
     console.log(`[chart-extractor] Extracted ${allTokens.length} tokens from header area`)
 
-    // STEP 5: Intelligently group tokens into N headers
-    headers = []
-    let i = 0
+    // STEP 5: Simple approach - just take first N tokens, they're usually correct
+    // Token pattern already captures compounds like "Study/Author" and "Follow-up"
+    headers = allTokens.slice(0, expectedColumnCount)
 
-    while (i < allTokens.length && headers.length < expectedColumnCount) {
-      let headerPhrase = allTokens[i]
-      let tokensConsumed = 1
-
-      // Look ahead: should next token(s) be part of this header?
-      while (i + tokensConsumed < allTokens.length &&
-             tokensConsumed < 4 &&  // Max 4 tokens per header
-             headers.length + (allTokens.length - i - tokensConsumed) >= expectedColumnCount) {  // Don't consume too many
-
-        const nextToken = allTokens[i + tokensConsumed]
-        const combinedPhrase = `${headerPhrase} ${nextToken}`
-
-        // Heuristics: combine if it makes sense
-        const shouldCombine = (
-          combinedPhrase.length <= 35 &&  // Not too long
-          (
-            nextToken.length <= 4 ||  // Short connector word
-            /^[a-z]/.test(nextToken) ||  // Lowercase word
-            (tokensConsumed === 1 && nextToken.length <= 10)  // First extension
-          )
-        )
-
-        if (shouldCombine) {
-          headerPhrase = combinedPhrase
-          tokensConsumed++
-        } else {
-          break
-        }
-      }
-
-      headers.push(headerPhrase)
-      i += tokensConsumed
-    }
-
-    console.log(`[chart-extractor] Grouped into ${headers.length} phrases`)
+    console.log(`[chart-extractor] Took first ${headers.length} tokens from ${allTokens.length} available`)
   }
 
   // STEP 6: Adjust count - trim if too many, split if too few

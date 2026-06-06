@@ -885,151 +885,157 @@ function normalizeFormulaLabel(label: string): string {
 }
 
 /**
- * 🔥 NEW: Extract actual column headers from PDF table text
- * Returns array of cleaned column header names from the table
+ * 🔥 100% GENERIC: Extract column headers from PDF table text
+ * NO hardcoded patterns - purely data-driven approach that works for ANY table structure
  */
 function extractColumnHeadersFromTable(rawLines: string[]): string[] {
-  // Step 1: Determine how many columns we actually have from data rows
+  // STEP 1: Count exact columns from actual data rows
   const dataRows = rawLines.filter(line => /^\[PARSED TABLE ROW:/.test(line))
-  let expectedColumnCount = 0
-
-  if (dataRows.length > 0) {
-    // Parse a few data rows to find the most common column count
-    const columnCounts = dataRows.slice(0, 5).map(row => {
-      const match = row.match(/\[PARSED TABLE ROW:\s*(.+?)\]/)
-      if (!match) return 0
-      // Count values separated by tabs or multiple spaces
-      return match[1].split(/\t|  +/).filter(v => v.trim()).length
-    })
-    expectedColumnCount = Math.max(...columnCounts)
+  if (dataRows.length === 0) {
+    console.log(`[chart-extractor] No data rows found`)
+    return []
   }
 
-  console.log(`[chart-extractor] Expected ${expectedColumnCount} columns based on data rows`)
+  const columnCounts = dataRows.slice(0, 10).map(row => {
+    const match = row.match(/\[PARSED TABLE ROW:\s*(.+?)\]/)
+    if (!match) return 0
+    return match[1].split(/\t|  +/).filter(v => v.trim()).length
+  })
+  const expectedColumnCount = Math.max(...columnCounts)
 
+  console.log(`[chart-extractor] Data analysis: need ${expectedColumnCount} headers`)
+
+  // STEP 2: Extract header area (everything before first data row)
+  const headerLines = []
+  for (const line of rawLines) {
+    if (/^\[PARSED TABLE ROW:/.test(line)) break
+    if (line.trim().length > 3 && !/^\[TABLE:/i.test(line)) {
+      headerLines.push(line.trim())
+    }
+  }
+
+  const headerText = headerLines.join(' ')
+  if (!headerText) {
+    console.log(`[chart-extractor] No header text found`)
+    return Array(expectedColumnCount).fill('').map((_, i) => `Column ${i + 1}`)
+  }
+
+  console.log(`[chart-extractor] Header text: "${headerText.substring(0, 150)}..."`)
+
+  // STEP 3: Try delimiter-based split first (tabs, pipes, double spaces)
   let headers: string[] = []
 
-  // Strategy 1: Parse header lines with common medical table patterns
-  for (const line of rawLines.slice(0, 15)) {
-    if (/^\[PARSED TABLE ROW:/.test(line)) break // Stop at data rows
-
-    // Skip lines that are too short or look like captions
-    if (line.length < 10 || /^Table \d+/i.test(line)) continue
-
-    // Try multiple parsing approaches
-    let potentialHeaders: string[] = []
-
-    // Approach 1a: Split by pipes or tabs
-    if (line.includes('|') || line.includes('\t')) {
-      potentialHeaders = line.split(/[|\t]/).map(h => h.trim()).filter(h => h.length > 0)
-    }
-
-    // Approach 1b: Split by multiple spaces (2 or more)
-    if (potentialHeaders.length < 2) {
-      potentialHeaders = line.split(/  +/).map(h => h.trim()).filter(h => h.length > 1 && h.length < 50)
-    }
-
-    // Approach 1c: Match individual header patterns with units
-    // Pattern: "Word(s) (unit)" or "Word(s)"
-    if (potentialHeaders.length < 2) {
-      const headerPattern = /\b([A-Z][A-Za-z\-]*(?:\s+[A-Z]?[a-z\-]+)*)\s*(?:\(([^)]+)\))?/g
-      const matches = Array.from(line.matchAll(headerPattern))
-      if (matches.length >= 2) {
-        potentialHeaders = matches.map(m => {
-          const base = m[1].trim()
-          const unit = m[2] ? ` (${m[2]})` : ''
-          return base + unit
-        }).filter(h => h.length > 1)
+  for (const delimiter of ['\t', '|', '  ']) {
+    if (headerText.includes(delimiter)) {
+      const parts = headerText.split(delimiter).map(h => h.trim()).filter(h => h.length > 0)
+      if (parts.length >= expectedColumnCount * 0.7) {  // At least 70% match
+        headers = parts
+        console.log(`[chart-extractor] Split by '${delimiter}': found ${headers.length} parts`)
+        break
       }
-    }
-
-    // Check if we found enough headers
-    if (potentialHeaders.length >= 2 && potentialHeaders.length >= expectedColumnCount - 1) {
-      headers = potentialHeaders
-      console.log(`[chart-extractor] Extracted ${headers.length} headers from line: "${line.substring(0, 100)}"`)
-      break
     }
   }
 
-  // Strategy 2: If still not enough, try to extract individual words as separate headers
+  // STEP 4: If delimiters didn't work, extract all meaningful words
   if (headers.length < expectedColumnCount) {
-    console.log(`[chart-extractor] Attempting to split concatenated headers (have ${headers.length}, need ${expectedColumnCount})`)
+    // Extract ALL words/tokens that could be headers (capitalized, numbers, acronyms)
+    const tokenPattern = /\b([A-Z][A-Za-z0-9]*(?:[\-\/\.][A-Za-z0-9]+)*)\b/g
+    const allTokens = Array.from(headerText.matchAll(tokenPattern)).map(m => m[1])
 
-    const allHeaderText = rawLines
-      .slice(0, 10)
-      .filter(line => !line.includes('[PARSED TABLE ROW:') && !line.includes('[TABLE:'))
-      .join(' ')
+    console.log(`[chart-extractor] Extracted ${allTokens.length} tokens from header area`)
 
-    // Extract all capitalized words/phrases that look like column headers
-    const wordPattern = /\b([A-Z][a-z]+(?:\-[A-Za-z]+)?)\b/g
-    const words = Array.from(allHeaderText.matchAll(wordPattern)).map(m => m[1])
-
-    // Common multi-word headers to keep together
-    const multiWordHeaders = [
-      'Sample Size', 'Follow-up', 'Follow up', 'Standard Deviation',
-      'Mean Age', 'Visual Acuity', 'IOL Type', 'IOL Model'
-    ]
-
-    let reconstructed: string[] = []
+    // STEP 5: Intelligently group tokens into N headers
+    headers = []
     let i = 0
-    while (i < words.length && reconstructed.length < expectedColumnCount) {
-      // Check if this starts a multi-word header
-      let matched = false
-      for (const multiWord of multiWordHeaders) {
-        const multiWords = multiWord.split(' ')
-        if (words.slice(i, i + multiWords.length).join(' ').toLowerCase() === multiWord.toLowerCase()) {
-          reconstructed.push(multiWord)
-          i += multiWords.length
-          matched = true
+
+    while (i < allTokens.length && headers.length < expectedColumnCount) {
+      let headerPhrase = allTokens[i]
+      let tokensConsumed = 1
+
+      // Look ahead: should next token(s) be part of this header?
+      while (i + tokensConsumed < allTokens.length &&
+             tokensConsumed < 4 &&  // Max 4 tokens per header
+             headers.length + (allTokens.length - i - tokensConsumed) >= expectedColumnCount) {  // Don't consume too many
+
+        const nextToken = allTokens[i + tokensConsumed]
+        const combinedPhrase = `${headerPhrase} ${nextToken}`
+
+        // Heuristics: combine if it makes sense
+        const shouldCombine = (
+          combinedPhrase.length <= 35 &&  // Not too long
+          (
+            nextToken.length <= 4 ||  // Short connector word
+            /^[a-z]/.test(nextToken) ||  // Lowercase word
+            (tokensConsumed === 1 && nextToken.length <= 10)  // First extension
+          )
+        )
+
+        if (shouldCombine) {
+          headerPhrase = combinedPhrase
+          tokensConsumed++
+        } else {
           break
         }
       }
 
-      if (!matched) {
-        reconstructed.push(words[i])
-        i++
-      }
+      headers.push(headerPhrase)
+      i += tokensConsumed
     }
 
-    if (reconstructed.length >= expectedColumnCount) {
-      headers = reconstructed.slice(0, expectedColumnCount)
-      console.log(`[chart-extractor] Reconstructed ${headers.length} headers from words`)
-    }
+    console.log(`[chart-extractor] Grouped into ${headers.length} phrases`)
   }
 
-  // Strategy 3: Fill remaining columns with common medical table headers
+  // STEP 6: Adjust count - trim if too many, split if too few
+  if (headers.length > expectedColumnCount) {
+    headers = headers.slice(0, expectedColumnCount)
+    console.log(`[chart-extractor] Trimmed to ${expectedColumnCount} headers`)
+  }
+
   if (headers.length < expectedColumnCount) {
-    const fullText = rawLines.slice(0, 20).join(' ')
-    const commonHeaders = [
-      'Study', 'Author', 'Year', 'N', 'Sample', 'Size', 'Patients', 'Age', 'Follow-up', 'Design',
-      'Country', 'Countries', 'Male', 'Female', 'Sex', 'Gender', 'IOL', 'Lens',
-      'Glare', 'Halos', 'Halo', 'Starbursts', 'Incidence', 'Prevalence', 'Frequency',
-      'Mean', 'SD', 'Median', 'Range', 'Measure', 'Measures', 'Outcome',
-      'UDVA', 'CDVA', 'BCVA', 'VA', 'logMAR', 'Sphere', 'Cylinder', 'SE',
-      'CFI', 'TLI', 'RMSEA', 'SRMR', 'Cronbach', 'ICC', 'Alpha'
-    ]
+    console.log(`[chart-extractor] Need to expand ${headers.length} → ${expectedColumnCount}`)
 
-    for (const header of commonHeaders) {
-      if (headers.length >= expectedColumnCount) break
-
-      // Check if this header appears in text but not already in our list
-      const regex = new RegExp(`\\b${header}\\b`, 'i')
-      if (regex.test(fullText) && !headers.some(h => h.toLowerCase().includes(header.toLowerCase()))) {
-        headers.push(header)
+    // Split multi-word headers to get more columns
+    const expanded: string[] = []
+    for (const header of headers) {
+      const words = header.split(/\s+/)
+      if (words.length > 1 && expanded.length + words.length <= expectedColumnCount + 2) {
+        expanded.push(...words)
+      } else {
+        expanded.push(header)
       }
     }
 
-    if (headers.length > 0) {
-      console.log(`[chart-extractor] Filled to ${headers.length} headers using common terms`)
+    if (expanded.length >= expectedColumnCount) {
+      headers = expanded.slice(0, expectedColumnCount)
+      console.log(`[chart-extractor] Expanded by splitting: now ${headers.length}`)
     }
   }
 
-  // Remove duplicates and trim
+  // STEP 7: Final fill if still short (extract remaining tokens)
+  if (headers.length < expectedColumnCount) {
+    const tokenPattern = /\b([A-Z][A-Za-z0-9]*(?:[\-\/\.][A-Za-z0-9]+)*)\b/g
+    const allTokens = Array.from(headerText.matchAll(tokenPattern)).map(m => m[1])
+    const usedWords = new Set(headers.flatMap(h => h.toLowerCase().split(/\s+/)))
+
+    const unused = allTokens.filter(t =>
+      !usedWords.has(t.toLowerCase()) &&
+      t.length > 1 &&
+      !/^(Table|Figure|Study|and|or|the|in|of|at|to)$/i.test(t)
+    )
+
+    const needed = expectedColumnCount - headers.length
+    headers.push(...unused.slice(0, needed))
+
+    console.log(`[chart-extractor] Filled with ${needed} unused tokens`)
+  }
+
+  // STEP 8: Final cleanup
   headers = headers
-    .filter((h, i, arr) => arr.findIndex(x => x.toLowerCase() === h.toLowerCase()) === i)
     .map(h => h.trim())
     .filter(h => h.length > 0)
+    .slice(0, expectedColumnCount)
 
-  console.log(`[chart-extractor] Final extracted headers (${headers.length}): [${headers.join(', ')}]`)
+  console.log(`[chart-extractor] FINAL: ${headers.length} headers → [${headers.join(', ')}]`)
 
   return headers
 }

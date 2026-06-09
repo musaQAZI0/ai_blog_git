@@ -24,13 +24,19 @@ import { BoxPlotController, BoxAndWiskers } from '@sgratzl/chartjs-chart-boxplot
 // ⚡ OPTIMIZATION: Reuse canvas instances to avoid initialization overhead
 const canvasPool = new Map<string, ChartJSNodeCanvas>()
 
+export function clearChartCanvasPool() {
+  canvasPool.clear()
+}
+
 function getOrCreateCanvas(width: number, height: number): ChartJSNodeCanvas {
   const key = `${width}x${height}`
 
-  if (!canvasPool.has(key)) {
+  if (!canvasPool.has(key))
+  {
     console.log(`[chart-generator] Creating new canvas instance for ${key}`)
     canvasPool.set(key, new ChartJSNodeCanvas({ width, height, backgroundColour: 'white' }))
-  } else {
+  } else
+  {
     console.log(`[chart-generator] ♻️ Reusing cached canvas instance for ${key}`)
   }
 
@@ -84,13 +90,15 @@ const radarAllSpokeTicksPlugin = {
     ctx.textBaseline = 'middle'
 
     // For each spoke (skip the first one at index 0 since Chart.js already draws ticks there)
-    for (let spokeIndex = 1; spokeIndex < numLabels; spokeIndex++) {
+    for (let spokeIndex = 1; spokeIndex < numLabels; spokeIndex++)
+    {
       // Calculate the angle for this spoke
       // Chart.js radar starts at top (negative Y) and goes clockwise
       const angle = (Math.PI * 2 * spokeIndex) / numLabels - Math.PI / 2
 
       // For each tick value, draw the label along this spoke
-      for (let tickIndex = 0; tickIndex < ticks.length; tickIndex++) {
+      for (let tickIndex = 0; tickIndex < ticks.length; tickIndex++)
+      {
         const tick = ticks[tickIndex]
         if (tick.label === undefined || tick.label === '' || tick.label === '0') continue
 
@@ -219,7 +227,8 @@ function createSignificanceLegendPlugin(chartData: ChartData) {
       ctx.font = "11px 'DejaVu Sans', 'Noto Sans', 'Arial', sans-serif"
       ctx.textBaseline = 'middle'
 
-      for (const status of items) {
+      for (const status of items)
+      {
         const item = SIG_COLORS[status]
         ctx.fillStyle = item.bg
         ctx.fillRect(x, y - 5, 10, 10)
@@ -264,10 +273,12 @@ function createBarValueLabelsPlugin(isHorizontalBar: boolean) {
         if (!label) return
 
         const position = element.tooltipPosition()
-        if (isHorizontalBar) {
+        if (isHorizontalBar)
+        {
           ctx.textAlign = 'left'
           ctx.fillText(label, position.x + 7, position.y)
-        } else {
+        } else
+        {
           ctx.textAlign = 'center'
           ctx.fillText(label, position.x, position.y - 10)
         }
@@ -304,10 +315,12 @@ export async function generateChartImage(
   console.log(`[chart-generator] 🎨 Generating chart with type: "${type}" (Chart.js type: "${chartJsType}")`)
 
   // Verify the requested controller exists by checking if Chart.js can create it
-  try {
+  try
+  {
     const testController = Chart.registry.getController(chartJsType)
     console.log(`[chart-generator] ✓ Controller for "${chartJsType}" is registered:`, !!testController)
-  } catch (error) {
+  } catch (error)
+  {
     console.error(`[chart-generator] ❌ Controller for "${chartJsType}" NOT found! Chart will fail to render.`)
   }
 
@@ -409,7 +422,8 @@ export async function generateChartImage(
             // For pie/doughnut charts, show values in legend
             generateLabels: isPieStyle ? (chart) => {
               const data = chart.data
-              if (data.labels && data.datasets && data.datasets.length > 0) {
+              if (data.labels && data.datasets && data.datasets.length > 0)
+              {
                 const dataset = data.datasets[0]
                 const total = (dataset.data as number[]).reduce((acc, val) => acc + val, 0)
 
@@ -576,41 +590,51 @@ export async function generateChartImage(
   }
 
   let chartJSNodeCanvas: any
-  try {
+  try
+  {
     // ⚡ OPTIMIZATION: Use pooled canvas instance instead of creating new one each time
     chartJSNodeCanvas = getOrCreateCanvas(width, height)
-  } catch (canvasInitError) {
+  } catch (canvasInitError)
+  {
     const msg = canvasInitError instanceof Error ? canvasInitError.message : String(canvasInitError)
     throw new Error(`[chart-generator] Canvas native library unavailable — chart skipped. (${msg})`)
   }
 
   // Add the custom plugin for radar charts to show tick labels on all spokes
-  if (type === 'radar') {
-    if (!configuration.plugins) {
+  if (type === 'radar')
+  {
+    if (!configuration.plugins)
+    {
       configuration.plugins = []
     }
     configuration.plugins.push(radarAllSpokeTicksPlugin)
   }
 
   const significanceLegendPlugin = useSignificanceEncoding ? createSignificanceLegendPlugin(chartData) : null
-  if (significanceLegendPlugin) {
-    if (!configuration.plugins) {
+  if (significanceLegendPlugin)
+  {
+    if (!configuration.plugins)
+    {
       configuration.plugins = []
     }
     configuration.plugins.push(significanceLegendPlugin)
   }
 
-  if ((type === 'bar' || type === 'horizontalBar') && chartData.datasets.length === 1) {
-    if (!configuration.plugins) {
+  if ((type === 'bar' || type === 'horizontalBar') && chartData.datasets.length === 1)
+  {
+    if (!configuration.plugins)
+    {
       configuration.plugins = []
     }
     configuration.plugins.push(createBarValueLabelsPlugin(isHorizontalBar))
   }
 
-  try {
+  try
+  {
     const imageBuffer = await chartJSNodeCanvas.renderToBuffer(configuration)
     return imageBuffer
-  } catch (renderError) {
+  } catch (renderError)
+  {
     const msg = renderError instanceof Error ? renderError.message : String(renderError)
     throw new Error(`[chart-generator] Failed to render chart "${title}": ${msg}`)
   }

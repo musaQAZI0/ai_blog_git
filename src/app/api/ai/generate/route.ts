@@ -32,7 +32,8 @@ function getClientIp(request: NextRequest): string {
 }
 
 function parseProvider(value: string | null | undefined): AIProvider {
-  if (value === 'openai' || value === 'claude' || value === 'gemini') {
+  if (value === 'openai' || value === 'claude' || value === 'gemini')
+  {
     return value
   }
   return 'gemini'
@@ -60,7 +61,8 @@ function compactPdfContentForGeneration(pdfContent: string, targetAudience: Targ
     .filter(Boolean)
     .join('\n\n')
 
-  if (targetAudience === 'professional' && tableBlocks) {
+  if (targetAudience === 'professional' && tableBlocks)
+  {
     const headBudget = Math.max(6000, maxChars - tableBlocks.length - 3000)
     const tailBudget = 2500
     return [
@@ -81,12 +83,27 @@ function compactPdfContentForGeneration(pdfContent: string, targetAudience: Targ
   ].join('')
 }
 
+function normalizeGenerationResponse(result: unknown) {
+  if (
+    result &&
+    typeof result === 'object' &&
+    'success' in result &&
+    'data' in result
+  )
+  {
+    return (result as any).data
+  }
+  return result
+}
+
 export async function POST(request: NextRequest) {
-  try {
+  try
+  {
     const user = await getRequestUser(request)
     const ip = getClientIp(request)
 
-    if (user.role !== 'admin') {
+    if (user.role !== 'admin')
+    {
       return NextResponse.json(
         { success: false, error: 'Forbidden' },
         { status: user.role === 'guest' ? 401 : 403 }
@@ -94,7 +111,8 @@ export async function POST(request: NextRequest) {
     }
 
     const rl = rateLimit(`ai-generate:${ip}`, { limit: 60, windowMs: 60 * 60 * 1000 })
-    if (!rl.ok) {
+    if (!rl.ok)
+    {
       return NextResponse.json(
         { success: false, error: 'Za duzo zapytan. Sprobuj ponownie pozniej.' },
         { status: 429 }
@@ -110,16 +128,17 @@ export async function POST(request: NextRequest) {
     let action = 'generate'
     let targetAudience: TargetAudience | null = null
 
-    if (contentType.includes('application/json')) {
+    if (contentType.includes('application/json'))
+    {
       const body = (await request.json().catch(() => null)) as
         | {
-            action?: string
-            pdfContent?: string
-            targetAudience?: TargetAudience
-            provider?: string
-            generateImage?: boolean
-            generationMode?: string
-          }
+          action?: string
+          pdfContent?: string
+          targetAudience?: TargetAudience
+          provider?: string
+          generateImage?: boolean
+          generationMode?: string
+        }
         | null
 
       action = body?.action || 'generate'
@@ -128,7 +147,8 @@ export async function POST(request: NextRequest) {
       generateImage = parseGenerateImage(body?.generateImage)
       generationMode = parseGenerationMode(body?.generationMode)
       targetAudience = (body?.targetAudience as TargetAudience | undefined) || null
-    } else {
+    } else
+    {
       const formData = await request.formData()
       files = formData.getAll('files') as File[]
       action = String(formData.get('action') || 'generate')
@@ -139,14 +159,16 @@ export async function POST(request: NextRequest) {
       targetAudience = (formData.get('targetAudience') as TargetAudience | null) || null
     }
 
-    if (!targetAudience || !['patient', 'professional'].includes(targetAudience)) {
+    if (!targetAudience || !['patient', 'professional'].includes(targetAudience))
+    {
       return NextResponse.json(
         { success: false, error: 'Nieprawidlowa grupa docelowa' },
         { status: 400 }
       )
     }
 
-    if (!pdfContent && files.length > 0) {
+    if (!pdfContent && files.length > 0)
+    {
       const buffers = await Promise.all(
         files.map(async (file) => {
           const arrayBuffer = await file.arrayBuffer()
@@ -156,11 +178,13 @@ export async function POST(request: NextRequest) {
 
       console.log('[api/generate] Extracting text from PDFs...')
       pdfContent = normalizeExtractedPdfText(await extractTextFromMultiplePDFs(buffers))
-    } else if (pdfContent) {
+    } else if (pdfContent)
+    {
       pdfContent = normalizeExtractedPdfText(pdfContent)
     }
 
-    if (!pdfContent || pdfContent.length < 100) {
+    if (!pdfContent || pdfContent.trim().length < 10)
+    {
       return NextResponse.json(
         {
           success: false,
@@ -173,7 +197,8 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    if (action === 'extract') {
+    if (action === 'extract')
+    {
       const generationContent = compactPdfContentForGeneration(pdfContent, targetAudience)
 
       return NextResponse.json({
@@ -204,9 +229,10 @@ export async function POST(request: NextRequest) {
 
     // Check if this exact request is already being processed
     const existingRequest = inFlightGenerations.get(requestHash)
-    if (existingRequest) {
+    if (existingRequest)
+    {
       console.log(`[api/generate] ⚡ Deduplicating request - returning existing generation`)
-      const generatedContent = await existingRequest
+      const generatedContent = normalizeGenerationResponse(await existingRequest)
       return NextResponse.json({
         success: true,
         data: generatedContent,
@@ -230,13 +256,14 @@ export async function POST(request: NextRequest) {
     inFlightGenerations.set(requestHash, generationPromise)
     console.log(`[api/generate] Started new generation (hash: ${requestHash.slice(0, 8)}...)`)
 
-    const generatedContent = await generationPromise
+    const generatedContent = normalizeGenerationResponse(await generationPromise)
 
     return NextResponse.json({
       success: true,
       data: generatedContent,
     })
-  } catch (error) {
+  } catch (error)
+  {
     console.error('[api/generate] Error:', error)
 
     const errorMessage = error instanceof Error ? error.message : 'Blad generowania artykulu'
@@ -257,7 +284,7 @@ export async function POST(request: NextRequest) {
             ? 'Dostawca AI jest chwilowo przeciazony. System sprobowal ponownie i uruchomil fallback, ale zadanie nadal sie nie powiodlo.'
             : errorMessage,
       },
-      { status: isTimeout ? 504 : isOverloaded ? 503 : 500 }
+      { status: isOverloaded ? 503 : 500 }
     )
   }
 }

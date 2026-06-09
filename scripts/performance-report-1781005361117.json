@@ -1,0 +1,30 @@
+{
+  "timestamp": "2026-06-09T11:42:41.117Z",
+  "metrics": {
+    "pdfParsing": [],
+    "chartGeneration": [],
+    "cacheHit": [],
+    "parallelCharts": [],
+    "memoryUsage": [
+      {
+        "rss": "44.13",
+        "heapTotal": "5.56",
+        "heapUsed": "4.30",
+        "external": "1.48",
+        "arrayBuffers": "0.01"
+      },
+      {
+        "rss": "44.21",
+        "heapTotal": "5.56",
+        "heapUsed": "4.44",
+        "external": "1.48",
+        "arrayBuffers": "0.01"
+      }
+    ]
+  },
+  "summary": {
+    "pdfParsingAvg": null,
+    "chartGenerationAvg": null,
+    "parallelSpeedup": "N/A"
+  }
+}

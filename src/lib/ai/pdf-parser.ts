@@ -12,6 +12,10 @@ const pdfCache = new LRUCache<string, string>({
   sizeCalculation: (value) => value.length,
 })
 
+export function clearPdfCache() {
+  pdfCache.clear()
+}
+
 // Suppress harmless font-table warnings from pdfjs (e.g. "Required 'glyf' table is not found")
 // These appear when PDFs use embedded fonts without a complete glyph table and don't affect extraction.
 const _origWarn = console.warn.bind(console)
@@ -49,11 +53,14 @@ function groupItemsByLine(items: PositionedTextItem[]): PositionedTextItem[][] {
   const lines: PositionedTextItem[][] = []
   const yTolerance = 2
 
-  for (const item of sorted) {
+  for (const item of sorted)
+  {
     const lastLine = lines[lines.length - 1]
-    if (lastLine && Math.abs((lastLine[0]?.y || 0) - item.y) <= yTolerance) {
+    if (lastLine && Math.abs((lastLine[0]?.y || 0) - item.y) <= yTolerance)
+    {
       lastLine.push(item)
-    } else {
+    } else
+    {
       lines.push([item])
     }
   }
@@ -66,7 +73,8 @@ function renderLineWithLayout(line: PositionedTextItem[], charWidth: number): st
   let cursor = 0
   const minX = Math.min(...line.map((item) => item.x))
 
-  for (const item of line) {
+  for (const item of line)
+  {
     const target = Math.max(0, Math.round((item.x - minX) / charWidth))
     const neededSpaces = Math.max(1, target - cursor)
     if (text.length > 0) text += ' '.repeat(neededSpaces)
@@ -120,14 +128,16 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
   const bufferHash = crypto.createHash('sha256').update(buffer).digest('hex')
 
   const cached = pdfCache.get(bufferHash)
-  if (cached) {
+  if (cached)
+  {
     console.log('[pdf-parser] ✅ Cache hit - returning cached text')
     return cached
   }
 
   console.log('[pdf-parser] Cache miss - parsing PDF...')
 
-  try {
+  try
+  {
     const data = await pdf(buffer, {
       pagerender: renderPageWithLayout,
     })
@@ -137,7 +147,8 @@ export async function extractTextFromPDF(buffer: Buffer): Promise<string> {
     console.log(`[pdf-parser] Cached PDF text (${data.text.length} chars)`)
 
     return data.text
-  } catch (error) {
+  } catch (error)
+  {
     console.error('PDF parsing error:', error)
     throw new Error('Failed to parse PDF file')
   }
